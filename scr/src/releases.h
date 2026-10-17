@@ -49,7 +49,8 @@ struct RotationPlan {
 //  5. a Module leading a Randomize list still plays first, whatever the
 //     filter; it stands in for a copy of itself in the bag.
 // `available` (optional) drops ids whose file is missing before step 3, so a
-// present copy stands in for a missing one.
+// present copy stands in for a missing one; a module that lacks the release
+// it needs (Catalog::lacks_release) is dropped the same way, always.
 RotationPlan effective_rotation(const Settings& s, const Catalog& c,
                                 const std::function<bool(const std::string&)>& available = nullptr);
 

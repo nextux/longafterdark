@@ -11,7 +11,14 @@
 // one it sent 0x783 with 0 and posted WM_CLOSE (6:005E). The host stands in
 // for BESTSHOT.EXE: the block, the command line, the message and a window
 // for the player to know (user16_host_window). The task is the protocol's
-// one call, as scr's is: every frame ends inside it.
+// one call, as scr's is: every frame ends inside it. The Desktop
+// Pythonizer's scenes ("7L" 01 00, product "Python": INTERACT\*.BIN and
+// three in PYTHON, and its Desktop Extras' FOOT.BIN and PENGUINS.BIN) run
+// the same way with its own, older player, PYTHON.EXE (PYTHU001, PYTHA001,
+// PYTHS001, PYTHR001), as its desktop program PYTHIZER.EXE started them
+// (8:00E6: the same block, command line, message and stop); the scene's
+// product picks the player and the stand-in's windows (package.hh
+// SeventhProduct).
 #include <windows.h>
 
 #include <algorithm>
@@ -55,16 +62,39 @@ bool host_file(const std::string& p) {
 }
 
 // BESTSHOT.EXE's message to its player (6:03AD, 6:0073): wParam its main
-// window when the scene starts, 0 when it stops it.
+// window when the scene starts, 0 when it stops it (PYTHIZER.EXE's 8:03D0,
+// 8:0073 the same).
 constexpr uint16_t kMsgParent = 0x783;
 // BESTSHOT.EXE's main window (4:07A1): class and title "Take Your Best Shot",
 // WS_OVERLAPPEDWINDOW. The block's +0x6A is its other top-level window
 // (4:07EE), its UI: class "Take Your Best Shot " (the trailing space is
-// BESTSHOT's), WS_POPUP | WS_CLIPCHILDREN.
-constexpr const char* kMainClass = "Take Your Best Shot";
-constexpr const char* kUiClass = "Take Your Best Shot ";
+// BESTSHOT's), WS_POPUP | WS_CLIPCHILDREN. PYTHIZER.EXE's: "Pythonizer"
+// (5:0CDD) and the UI "Pythonizer " (5:0D2A, class and title), the same
+// styles (SeventhProduct).
 // The scenes the installer's script listed under [Games] (7THLEVEL.INI).
 constexpr const char* kGames[] = {"headshot.bin", "hotshot.bin", "lineshot.bin"};
+
+// The 7th Level files of `dir` whose header names the product, but the
+// desktop program's own, lower case, in name order.
+std::vector<std::string> scenes_of(const std::string& dir, const SeventhProduct& product) {
+  WIN32_FIND_DATAW fd;
+  std::vector<std::string> names;
+  HANDLE f = FindFirstFileW(widen(dir + "\\*.BIN").c_str(), &fd);
+  if (f != INVALID_HANDLE_VALUE) {
+    do {
+      if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+      const std::string n = lower(narrow(fd.cFileName));
+      std::string p;
+      if (n != product.own_scene && seventh_header(dir + "\\" + narrow(fd.cFileName), &p, nullptr) &&
+          _stricmp(p.c_str(), product.product) == 0) {
+        names.push_back(n);
+      }
+    } while (FindNextFileW(f, &fd));
+    FindClose(f);
+  }
+  std::sort(names.begin(), names.end());
+  return names;
+}
 
 }  // namespace
 
@@ -124,8 +154,8 @@ bool seventh_header(const std::string& host_path, std::string* product, std::str
   DWORD got = 0;
   if (!ReadFile(h, head, sizeof(head), &got, nullptr)) got = 0;
   CloseHandle(h);
-  if (got < 6 || memcmp(head, "7L\x02\x00", 4) != 0) return false;
-  // "7L" 02 00, a length byte, the product (NUL), the title (to a NUL or 0xFB).
+  if (got < 6 || !seventh_level_header(head)) return false;
+  // "7L" 02 00 (or 01 00), a length byte, the product (NUL), the title (to a NUL or 0xFB).
   size_t i = 5;
   std::string p, t;
   while (i < got && head[i]) p += head[i++];
@@ -142,8 +172,14 @@ std::string seventh_command_tail(const std::string& guest_scene, uint16_t hblock
   return " " + guest_scene + " /p" + hex;
 }
 
-// The guest's disk (INTERACTION.md §7.2): one Windows 3.1 machine with Take
-// Your Best Shot installed from its CD in the drive:
+std::string seventh_guest_scene(const Ne16Layout& layout, const SeventhProduct& product, const SeventhPlayer& player) {
+  const std::string name = file_of(layout.module_path);
+  if (player.addon) return std::string(product.install_dir) + "\\" + win16::upper16(name);
+  return std::string(kSeventhCdDrive) + "\\" + win16::upper16(file_of(layout.module_dir)) + "\\" + name;
+}
+
+// The guest's disk (INTERACTION.md §7.2): one Windows 3.1 machine with the
+// product installed from its CD in the drive — Take Your Best Shot's:
 //   C:\7THLEVEL\BESTSHOT  the player's folder (PLYMPTON.EXE and its DLLs:
 //                         the installer's 0:, its default destination) and
 //                         the current directory, under a copy-on-write upper
@@ -156,64 +192,104 @@ std::string seventh_command_tail(const std::string& guest_scene, uint16_t hblock
 //                         player and its libraries read and write
 //   C:\WINDOWS\SYSTEM     the engine dir (none), read-only
 //   H:\<L>\…              the host's drives, read-only, 8.3 names
-// Without ADSTATE every upper layer is memory. The profile seeds (win16/dos16.hh
-// seed_seventh_level): 7THLEVEL.INI as the installer wrote it, WIN.INI's desktop.
-void mount_seventh_disk(Runtime16& rt, const Env& env, const Ne16Layout& layout) {
+// The Desktop Pythonizer's: C:\7THLEVEL\PYTHON over the package's PYTHON
+// (PYTHON.EXE and its DLLs), D:\INTERACT and D:\PYTHON (its CD's scenes:
+// 1:interact, 1:python); with its Desktop Extras' scene, the Pythonizer's
+// package is the CD and the player's folder, and the Extras' scenes are in
+// C:\7THLEVEL\PYTHON beside PYTHON.EXE (the floppy's 0:), read from the
+// add-on's folder. Without ADSTATE every upper layer is memory. The profile
+// seeds (win16/dos16.hh seed_seventh_level): 7THLEVEL.INI as the installers
+// wrote it, WIN.INI's desktop.
+void mount_seventh_disk(Runtime16& rt, const Env& env, const Ne16Layout& layout, const SeventhProduct& product,
+                        const SeventhPlayer& player) {
   const win16::Runtime16Options& o = rt.options();
   win32::Vfs& vfs = rt.vfs();
   const std::string pkg = package_state_dir(env, layout.module_path);
-  const std::string player = seventh_player_dir(layout);
-  const std::string cd_dir = std::string(kSeventhCdDrive) + "\\" + win16::upper16(file_of(layout.module_dir));
+  const size_t cut = player.dir.find_last_of("\\/");
+  const std::string cd_root = cut == std::string::npos ? std::string(".") : player.dir.substr(0, cut);
   if (env.state_persistent()) vfs.set_state_root(env.state_root);
   vfs.mount_overlay(o.windows_dir, layout.windows_dir, pkg.empty() ? "" : pkg + "\\WINDOWS");
-  vfs.mount_overlay(o.guest_dir, player, pkg.empty() ? "" : pkg + "\\" + kSeventhPlayerDir);
-  vfs.mount(cd_dir, layout.module_dir, /*writable=*/false);
+  vfs.mount_overlay(o.guest_dir, player.dir, pkg.empty() ? "" : pkg + "\\" + product.player_dir);
+  // The CD: the scene's folder (not an add-on's), then the product's other
+  // scene folders from the player's package.
+  std::vector<std::pair<std::string, std::string>> cd;  // guest folder, host folder
+  if (!player.addon) cd.emplace_back(win16::upper16(file_of(layout.module_dir)), layout.module_dir);
+  for (const char* const* f = product.cd_folders; *f; ++f) {
+    const std::string host = cd_root + "\\" + *f;
+    const DWORD a = GetFileAttributesW(widen(host).c_str());
+    if (a == INVALID_FILE_ATTRIBUTES || !(a & FILE_ATTRIBUTE_DIRECTORY)) continue;
+    if (std::none_of(cd.begin(), cd.end(), [&](const auto& c) { return c.first == *f; })) cd.emplace_back(*f, host);
+  }
+  std::string cd_text;
+  for (const auto& [guest, host] : cd) {
+    vfs.mount(std::string(kSeventhCdDrive) + "\\" + guest, host, /*writable=*/false);
+    cd_text += (cd_text.empty() ? "" : ", ") + std::string(kSeventhCdDrive) + "\\" + guest + " over " + host;
+  }
   vfs.mount(o.system_dir, layout.engine_dir, /*writable=*/false);
   vfs.mount_host_drives(/*short_names=*/true);
   vfs.set_cwd(o.guest_dir);
-  rt.modules().add_search_dir(player);
+  rt.modules().add_search_dir(player.dir);
   win16::SeventhLevelSeeds seeds;
+  seeds.product = product.product;
   seeds.install_dir = o.guest_dir;
   seeds.cd = kSeventhCdDrive;
-  // The scenes the installer's script listed are the CD's: here, the 7th
-  // Level files of the scene folder but the desktop program's own
-  // (BESTSHOT.BIN, its UI), in name order.
-  WIN32_FIND_DATAW fd;
-  std::vector<std::string> names;
-  HANDLE f = FindFirstFileW(widen(layout.module_dir + "\\*.BIN").c_str(), &fd);
-  if (f != INVALID_HANDLE_VALUE) {
-    do {
-      if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-      std::string n = lower(narrow(fd.cFileName));
-      if (n != "bestshot.bin" && seventh_header(layout.module_dir + "\\" + narrow(fd.cFileName), nullptr, nullptr)) {
-        names.push_back(n);
+  // The scenes the installers' scripts listed: the CD's, here the 7th Level
+  // files of the product in its folders but the desktop program's own
+  // (BESTSHOT.BIN, HERALD.BIN), in name order, folder by folder; an add-on's
+  // in the player's folder.
+  for (const auto& [guest, host] : cd) {
+    for (const std::string& n : scenes_of(host, product)) {
+      const std::string key = std::string(kSeventhCdDrive) + "\\" + lower(guest) + "\\" + n;
+      seeds.scenes.push_back(key);
+      if (product.max_mode >= uint16_t(SeventhMode::game) &&
+          std::find(std::begin(kGames), std::end(kGames), n) != std::end(kGames)) {
+        seeds.games.push_back(key);
       }
-    } while (FindNextFileW(f, &fd));
-    FindClose(f);
+    }
   }
-  std::sort(names.begin(), names.end());
-  seeds.scenes = names;
-  for (const char* g : kGames) {
-    if (std::find(names.begin(), names.end(), g) != names.end()) seeds.games.push_back(g);
+  if (player.addon) {
+    for (const std::string& n : scenes_of(layout.module_dir, product)) {
+      std::vector<uint8_t> bytes;
+      HANDLE h = CreateFileW(widen(layout.module_dir + "\\" + n).c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+                             OPEN_EXISTING, 0, nullptr);
+      if (h == INVALID_HANDLE_VALUE) continue;
+      LARGE_INTEGER size{};
+      DWORD got = 0;
+      if (GetFileSizeEx(h, &size) && size.QuadPart < LONGLONG(win32::Vfs::kMaxFileSize)) {
+        bytes.resize(size_t(size.QuadPart));
+        if (!ReadFile(h, bytes.data(), DWORD(bytes.size()), &got, nullptr) || got != bytes.size()) bytes.clear();
+      }
+      CloseHandle(h);
+      if (bytes.empty()) continue;
+      vfs.add_virtual_file(o.guest_dir + "\\" + win16::upper16(n), std::move(bytes));
+      seeds.scenes.push_back(o.guest_dir + "\\" + n);
+    }
   }
   win16::seed_seventh_level(rt, seeds);
-  trace("lane", "disk: %s over %s, %s over %s (read-only), C:\\WINDOWS over %s%s; seeds: 7THLEVEL.INI with %zu scene(s)",
-        o.guest_dir.c_str(), player.c_str(), cd_dir.c_str(), layout.module_dir.c_str(),
+  trace("lane", "disk: %s over %s, %s (read-only)%s, C:\\WINDOWS over %s%s; seeds: 7THLEVEL.INI (%s) with %zu scene(s)",
+        o.guest_dir.c_str(), player.dir.c_str(), cd_text.c_str(),
+        player.addon ? (", the add-on's scenes in " + o.guest_dir + " from " + layout.module_dir).c_str() : "",
         pkg.empty() ? "memory (no ADSTATE)" : pkg.c_str(),
-        layout.windows_dir.empty() ? "" : (" and " + layout.windows_dir).c_str(), names.size());
+        layout.windows_dir.empty() ? "" : (" and " + layout.windows_dir).c_str(), product.product, seeds.scenes.size());
 }
 
 namespace {
 
 class SeventhProtocol : public Protocol16 {
  public:
-  explicit SeventhProtocol(const Ne16Layout& layout) : layout_(layout), module_name_(file_of(layout.module_path)) {}
+  explicit SeventhProtocol(const Ne16Layout& layout) : layout_(layout), module_name_(file_of(layout.module_path)) {
+    // The scene's header names the product, the product its player (package.hh).
+    if (!seventh_header(layout_.module_path, &product_name_, &title_)) return;
+    header_ = true;
+    product_ = seventh_product(product_name_);
+    if (product_) player_ = seventh_find_player(layout_, *product_);
+  }
 
   const char* name() const override { return "7thlevel"; }
   void configure_runtime(win16::Runtime16Options& opts, LaneContext& ctx) override;
   void mount(Runtime16& rt, const Env& env) override {
     env_ = &env;
-    mount_seventh_disk(rt, env, layout_);
+    if (product_ && !player_.dir.empty()) mount_seventh_disk(rt, env, layout_, *product_, player_);
   }
   bool load(Runtime16& rt, uint16_t hwnd, uint16_t hdc, LaneContext& ctx) override;
   Call call() override;
@@ -259,8 +335,17 @@ class SeventhProtocol : public Protocol16 {
   // Whether the player running now is that one, and takes the input.
   bool plays_now() const { return caps_ && !closing_ && !restart_ && !ended_; }
 
+  // The guest's install folder: the product's, else Take Your Best Shot's.
+  const char* install_dir() const {
+    return product_ ? product_->install_dir : seventh_product("BestShot")->install_dir;
+  }
+
   Ne16Layout layout_;
   std::string module_name_;
+  // The scene's header was read; its product and the product's player (its folder "" when none).
+  bool header_ = false;
+  const SeventhProduct* product_ = nullptr;
+  SeventhPlayer player_;
   const Env* env_ = nullptr;
   Runtime16* rt_ = nullptr;
   uint16_t hinstance_ = 0, hblock_ = 0, main_ = 0, ui_ = 0, player_wnd_ = 0;
@@ -271,7 +356,7 @@ class SeventhProtocol : public Protocol16 {
   // is being stopped, to start again); its game ended by itself (until Caps
   // Lock goes off).
   bool caps_ = false, restart_ = false, game_over_ = false;
-  std::string title_, product_;
+  std::string title_, product_name_;
   SeventhBlock block_;
   // The guest's blocks before the player started (end_player frees the rest).
   std::vector<uint16_t> blocks_before_;
@@ -281,7 +366,7 @@ class SeventhProtocol : public Protocol16 {
 };
 
 void SeventhProtocol::configure_runtime(win16::Runtime16Options& opts, LaneContext& ctx) {
-  opts.guest_dir = kSeventhInstallDir;
+  opts.guest_dir = install_dir();
   // Sound off is a PC without a sound card (no wave device; ADSOUNDDEV still
   // decides when set): PLYMA001 then plays nothing and the scene runs on. The
   // silent device would not do — it never answers waveOutWrite (AUDIO.md §3,
@@ -295,30 +380,37 @@ bool SeventhProtocol::load(Runtime16& rt, uint16_t hwnd, uint16_t hdc, LaneConte
   (void)hdc;
   rt_ = &rt;
   env_ = &ctx.env;
-  const std::string player_host = seventh_player_dir(layout_) + "\\" + kSeventhPlayer;
-  if (!host_file(player_host)) {
-    log("%s: no 7th Level Runtime Player (%s)", module_name_.c_str(), player_host.c_str());
-    return false;
-  }
-  if (!seventh_header(layout_.module_path, &product_, &title_)) {
+  if (!header_) {
     log("%s: not a 7th Level resource file", module_name_.c_str());
     return false;
   }
-  game_ = seventh_is_game(module_name_);
+  if (!product_) {
+    log("%s: no 7th Level Runtime Player for the product \"%s\"", module_name_.c_str(), product_name_.c_str());
+    return false;
+  }
+  const std::string player_host = player_.dir + "\\" + product_->player;
+  if (player_.dir.empty() || !host_file(player_host)) {
+    log("%s: no 7th Level Runtime Player (%s\\%s, for the product %s, beside the scene's folder or in a package "
+        "beside its own)",
+        module_name_.c_str(), product_->player_dir, product_->player, product_->product);
+    return false;
+  }
+  // [Games]: Best Shot's; the Pythonizer's player takes no mode 6.
+  game_ = product_->max_mode >= uint16_t(SeventhMode::game) && seventh_is_game(module_name_);
   wallpaper_ = ctx.env.flag("ADWALLPAPER");
   // The libraries ran under Windows 3.1's loader: WEP when they go.
   rt.modules().set_call_wep(true);
-  // BESTSHOT.EXE's two top-level windows: the main one, which 0x783 names,
-  // and the UI, the block's +0x6A (neither shown: the saver covers them).
-  main_ = win16::user16_host_window(rt, kMainClass, kMainClass, WS_OVERLAPPEDWINDOW);
-  ui_ = win16::user16_host_window(rt, kUiClass, kMainClass, WS_POPUP | WS_CLIPCHILDREN);
+  // The desktop program's two top-level windows: the main one, which 0x783
+  // names, and the UI, the block's +0x6A (neither shown: the saver covers them).
+  main_ = win16::user16_host_window(rt, product_->main_class, product_->main_class, WS_OVERLAPPEDWINDOW);
+  ui_ = win16::user16_host_window(rt, product_->ui_class, product_->ui_title, WS_POPUP | WS_CLIPCHILDREN);
   win16::user16_set_app_task(rt, true);
   return start_player();
 }
 
 bool SeventhProtocol::start_player() {
   Runtime16& rt = *rt_;
-  const std::string player_host = seventh_player_dir(layout_) + "\\" + kSeventhPlayer;
+  const std::string player_host = player_.dir + "\\" + product_->player;
   caps_ = wants_caps();
   restart_ = ended_ = told_ = false;
   player_wnd_ = 0;
@@ -336,10 +428,9 @@ bool SeventhProtocol::start_player() {
   rt.write_bytes(fp, bytes.data(), bytes.size());
   rt.global().unlock(hblock_);
   // WinExec("<player> <scene> /p<hBlock>", SW_SHOWMAXIMIZED): the PSP's tail.
-  std::string scene = rt.vfs().to_guest(layout_.module_path);
-  if (scene.empty()) scene = std::string(kSeventhCdDrive) + "\\" + win16::upper16(module_name_);
+  const std::string scene = seventh_guest_scene(layout_, *product_, player_);
   const std::string tail = seventh_command_tail(scene, hblock_);
-  const std::string guest = std::string(kSeventhInstallDir) + "\\" + kSeventhPlayer;
+  const std::string guest = std::string(product_->install_dir) + "\\" + product_->player;
   uint16_t err = 0;
   win16::Module16* m = rt.modules().load_task(player_host, guest, tail, &err);
   if (!m || !rt.modules().task()) {
@@ -355,7 +446,8 @@ bool SeventhProtocol::start_player() {
   const std::string nth = starts_ > 1 ? ", start " + std::to_string(starts_) : "";
   trace("lane", "%s: package %s, kind 7thlevel, \"%s\" (product %s), the player %s (%s), mode %u%s, block %04X, "
         "command tail \"%s\"%s",
-        module_name_.c_str(), layout_.packaged ? layout_.package_id.c_str() : "legacy", title_.c_str(), product_.c_str(),
+        module_name_.c_str(), layout_.packaged ? layout_.package_id.c_str() : "legacy", title_.c_str(),
+        product_name_.c_str(),
         guest.c_str(), m->image->description().c_str(), unsigned(block_.mode),
         block_.mode == SeventhMode::saver && !block_.not_interactive ? " (interactive)" : "", hblock_, tail.c_str(),
         nth.c_str());
@@ -396,7 +488,7 @@ void SeventhProtocol::on_receive() {
     return;
   }
   const uint32_t r = win16::user16_send_message(*rt_, player_wnd_, kMsgParent, main_, 0);
-  trace("lane", "%s: SendMessage(%04X, 0x783, %04X, 0) -> %08X (BESTSHOT.EXE's, after WinExec)", module_name_.c_str(),
+  trace("lane", "%s: SendMessage(%04X, 0x783, %04X, 0) -> %08X (the desktop program's, after WinExec)", module_name_.c_str(),
         player_wnd_, main_, r);
 }
 
@@ -515,7 +607,7 @@ bool SeventhProtocol::check_button(int slot, std::string* why) {
 
 void SeventhProtocol::configure_button_runtime(win16::Runtime16Options& opts, const Env& env) {
   (void)env;
-  opts.guest_dir = kSeventhInstallDir;
+  opts.guest_dir = install_dir();
 }
 
 Protocol16::Button SeventhProtocol::button(Runtime16& rt, int slot, uint16_t owner16, LaneContext& ctx) {

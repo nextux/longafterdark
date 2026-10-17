@@ -76,6 +76,12 @@ PACKAGES = {
     "intermission": ((), "packages/intermission", ("SAVER", "ENGINE")),
     # The CD. No ENGINE: the scenes' player is in BESTSHOT.
     "bestshot": (("e0df0601cfc552ebafded6cce695928a",), "packages/bestshot", ("BESTACT", "BESTSHOT")),
+    # The CD, and the raw BIN of the same disc (the same files). No ENGINE: the
+    # player is in PYTHON, beside three of the scenes.
+    "pythonizer": (("c0938e04fa566c6fd2770db5f1eef686", "0f8551cc1d13e54064115da1d59bce90"), "packages/pythonizer",
+                   ("INTERACT", "PYTHON")),
+    # The floppy. Its two scenes are in the package root ("" below: no folder).
+    "pythonle": (("5088f268077e88dacfd3aef0bb4e823b",), "packages/pythonle", ("",)),
 }
 
 # packages.cc: the build the package's own fields describe (Package::build),
@@ -237,7 +243,10 @@ def main():
         p = f["path"]
         parts = p.split("/")
         prefix = root.split("/")
-        if parts[:len(prefix)] != prefix or len(parts) < len(prefix) + 2 or parts[len(prefix)] not in dirs:
+        # A file directly in the package root only where "" is one of its folders.
+        in_root = len(parts) == len(prefix) + 1 and "" in dirs
+        if parts[:len(prefix)] != prefix or (not in_root and (len(parts) < len(prefix) + 2 or
+                                                            parts[len(prefix)] not in dirs)):
             sys.exit("unexpected path %r" % p)
         for c in parts[len(prefix):]:
             if c in (".", "..") or not COMPONENT.fullmatch(c) or c.endswith((" ", ".")):

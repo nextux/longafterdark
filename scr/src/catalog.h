@@ -11,7 +11,9 @@
 // `screen`, the fixed screen of a module that composes a scene of that size
 // ("640x480" for Star Trek: The Screen Saver's, ScreamSavers' and Marvel's;
 // absent = none). A 7th Level scene's `game` (true on the three that are
-// games too) is the host's business: the saver reads nothing of it.
+// games too) is the host's business: the saver reads nothing of it. An
+// add-on's scene's `requires` and `requiresTitle` (the release whose player
+// plays it: Monty Python's Limited Edition Desktop Extras') are optional too.
 //
 // Control shapes, as the generator (adimport, importer/catalog.h;
 // ABI.md §2.10)
@@ -133,6 +135,13 @@ struct Module {
   // No " (<short title>)" suffix: the list groups by release instead.
   std::string name;
   std::string same_as;             // `sameAs`: the id of the first module with the same bytes, or ""
+  // An add-on's scene (`requires`, `requiresTitle`): the release whose player
+  // plays it ("pythonizer": Monty Python's Limited Edition Desktop Extras play
+  // with the Desktop Pythonizer's) and that release's title. "" for every
+  // other module. While the catalog lists no such release
+  // (Catalog::lacks_release), the module is shown as needing it
+  // (needs_text), never started, and Random leaves it out.
+  std::string requires_release, requires_title;
   int release = -1;                // index into Catalog::releases (always set by parse_catalog)
 
   const Control* control(int index) const;
@@ -172,7 +181,15 @@ struct Catalog {
   int release_index(const std::string& id) const;   // -1 when not installed
   // Modules listed for release `index`.
   size_t modules_in(int index) const;
+  // Whether `m` needs a release this catalog doesn't list (Module::
+  // requires_release): it can't play until that release is imported too.
+  bool lacks_release(const Module& m) const;
 };
+
+// What the settings window says of a module that lacks the release it needs
+// ("Needs Monty Python's Flying Circus Desktop Pythonizer"; the release's id
+// when the catalog gives no title), where it says "Coming soon".
+std::string needs_text(const Module& m);
 
 bool parse_catalog(const std::string& json_text, Catalog& out, std::string* error);
 bool load_catalog(const std::wstring& path, Catalog& out, std::string* error);

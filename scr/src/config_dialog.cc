@@ -281,11 +281,20 @@ constexpr wchar_t kPlaysFirst[] = L"Plays first";
 
 // Whether this adhostwin can run the module (module_run): it waits while
 // the host is asked; it is "Coming soon" when the host doesn't list its lane
-// or its ABI, or when a run of this very module exited 3.
+// or its ABI, or when a run of this very module exited 3. A module that lacks
+// the release it needs (Catalog::lacks_release: an add-on's scene without
+// its player's release) can't run either, whatever the host: it is treated
+// as "Coming soon" is, but says what it needs instead (needs_release).
 ModuleRun run_state(const State& st, const Module& m) {
+  if (st.catalog.lacks_release(m)) return ModuleRun::coming_soon;
   return module_run(m, st.caps, st.probing, st.cant_run.count(m.id) != 0);
 }
 bool coming_soon(const State& st, const Module& m) { return run_state(st, m) == ModuleRun::coming_soon; }
+bool needs_release(const State& st, const Module& m) { return st.catalog.lacks_release(m); }
+// What a module that can't run says: what it needs, else "Coming soon".
+std::wstring cant_run_text(const State& st, const Module& m) {
+  return needs_release(st, m) ? widen(needs_text(m)) : std::wstring(L"Coming soon");
+}
 
 // A module button the dialog can press (INTERACTION.md §6.3): the host opens
 // module windows for its lane (--capabilities: configure=…) and the module
@@ -425,7 +434,11 @@ void refresh_preview(State& st) {
   }
   switch (run_state(st, m)) {
     case ModuleRun::coming_soon:
-      live_preview_message(st.preview, L"Coming soon", L"Modules like this one will run in a future version.");
+      if (needs_release(st, m))
+        live_preview_message(st.preview, cant_run_text(st, m),
+                             L"Import that release too, and this module plays with it.");
+      else
+        live_preview_message(st.preview, L"Coming soon", L"Modules like this one will run in a future version.");
       return;
     case ModuleRun::waiting:
       // The host is being asked what it runs; start nothing yet.
@@ -1385,7 +1398,7 @@ void show_details(State& st, int module_index) {
       badge += badge.empty() ? L"File missing" : L" · File missing";
       st.badge_kind = BadgeKind::critical;
     } else if (coming_soon(st, m)) {
-      badge += L" · Coming soon";
+      badge += L" · " + cant_run_text(st, m);
       st.badge_kind = BadgeKind::caution;
     }
     about = widen(tidy_about(m.about, m.name));
@@ -1921,8 +1934,18 @@ void draw_group_headers(State& st, HDC dc) {
     // a title too long for what is left ("Star Wars Screen Entertainment" in
     // the narrowest list) is ellipsized (layout_group_header), and the whole
     // title is its tooltip; screen readers read it whole anyway (group_name).
-    const std::wstring count = std::to_wstring(gc.total), soon = L"Coming soon";
     const bool pill = all_soon && !lg.rows.empty();
+    // A release whose every module lacks the release it needs (an add-on
+    // without it) says what it needs instead, when that fits in half the
+    // header; else "Needs another release" (the details name it).
+    std::wstring soon = L"Coming soon";
+    if (pill && std::all_of(lg.rows.begin(), lg.rows.end(),
+                            [&](const ListRow& row) { return needs_release(st, st.catalog.modules[row.module]); })) {
+      const std::wstring needs = cant_run_text(st, st.catalog.modules[lg.rows.front().module]);
+      const bool fits = measure_text(dc, needs, t.fonts.caption).cx + t.px(16) <= (r.right - r.left) / 2;
+      soon = fits ? needs : std::wstring(L"Needs another release");
+    }
+    const std::wstring count = std::to_wstring(gc.total);
     // The frame: the title after the group's checkbox (Random), the count,
     // the pill 8 DIP short of the scroll bar's gutter (group_header_frame).
     GroupHeaderInput hin = group_header_frame(r.right - r.left, t.dpi, st.random && gc.total, list_scrolls(st));

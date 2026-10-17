@@ -970,6 +970,59 @@ void test_catalog() {
     hr = rotation_for_host(s, j, nullptr, runs_on(with_7l));
     CHECK(hr.plan.ids.size() == 3 && hr.left_out == 0);
   }
+  // An add-on's scene ("requires": made-up ids, as Monty Python's Limited
+  // Edition Desktop Extras need the Desktop Pythonizer's player): while the
+  // catalog lists no such release it lacks it (shown as needing it, never
+  // started): Random and a rotation leave it out, a lead too, and /module
+  // says what it needs; with the release there, it is any module. Every
+  // other module needs nothing.
+  {
+    const std::string scene = R"(
+        {"id": "addon.made", "displayName": "Made", "lane": "ne16", "path": "packages/addon/MADE.BIN",
+         "package": "addon", "packageTitle": "A Made-Up Add-On", "moduleName": "Made", "abi": "7thlevel",
+         "screen": "640x480", "requires": "player", "requiresTitle": "A Made-Up Player"})";
+    const std::string alpha =
+        R"({"id": "ad40.alpha", "displayName": "Alpha", "lane": "pe32", "path": "FILES/AD40/ALPHA.AD"})";
+    const std::string player = R"({"id": "player.one", "displayName": "One", "lane": "ne16",
+         "path": "packages/player/ONE.BIN", "package": "player", "abi": "7thlevel"})";
+    Catalog without, with, listed;
+    CHECK(parse_catalog(R"({"version": 1, "modules": [)" + alpha + "," + scene + "]}", without, &err));
+    CHECK(parse_catalog(R"({"version": 1, "modules": [)" + alpha + "," + player + "," + scene + "]}", with, &err));
+    // A packages array that lists the release (the catalog the importer
+    // writes): the same.
+    CHECK(parse_catalog(R"({"version": 1, "packages": [{"id": "deluxe", "title": "D"}, {"id": "player", "title":
+        "A Made-Up Player"}, {"id": "addon", "title": "A Made-Up Add-On"}], "modules": [)" +
+                            alpha + "," + player + "," + scene + "]}",
+                        listed, &err));
+    const Module* a = without.find("addon.made");
+    CHECK(a && a->requires_release == "player" && a->requires_title == "A Made-Up Player");
+    CHECK(a && without.lacks_release(*a) && needs_text(*a) == "Needs A Made-Up Player");
+    const Module* al = without.find("ad40.alpha");
+    CHECK(al && al->requires_release.empty() && !without.lacks_release(*al));
+    const Module* b = with.find("addon.made");
+    CHECK(b && !with.lacks_release(*b));
+    const Module* l = listed.find("addon.made");
+    CHECK(l && !listed.lacks_release(*l));
+    Module untitled = a ? *a : Module{};
+    untitled.requires_title.clear();
+    CHECK(needs_text(untitled) == "Needs player");
+    Settings s;
+    CHECK(s.rotates());
+    CHECK((effective_rotation(s, without).ids == std::vector<std::string>{"ad40.alpha"}));
+    CHECK((effective_rotation(s, with).ids == std::vector<std::string>{"ad40.alpha", "player.one", "addon.made"}));
+    s.randomize = {"addon.made"};   // a list of only it: every module that can play
+    CHECK((effective_rotation(s, without).ids == std::vector<std::string>{"ad40.alpha"}));
+    CHECK((effective_rotation(s, with).ids == std::vector<std::string>{"addon.made"}));
+    s.randomize = {"ad40.alpha", "addon.made"};
+    s.module = "addon.made";        // the lead: left out without its release
+    CHECK(s.has_lead());
+    CHECK(effective_rotation(s, without).lead.empty() && effective_rotation(s, with).lead == "addon.made");
+    auto all = [](const std::string&) { return true; };
+    WindowModule wm = window_module(without, L"Made", all);
+    CHECK(!wm.module && wm.error == L"\"Made\" (addon.made) needs A Made-Up Player to play: import that release too.");
+    wm = window_module(with, L"Made", all);
+    CHECK(wm.module && wm.module->id == "addon.made" && wm.error.empty());
+  }
   CHECK(c.modules.size() == 46 && c.modules[36].id == "marvel.kilo" && c.modules[45].id == "disney.tango");
 
   // Host controls (catalog "host"): a control whose value goes to the host,
@@ -2286,12 +2339,12 @@ void test_ui() {
   }
 
   // Status text: no closing full stop (the releases' own line is checked in
-  // the releases suite). Not every release is After Dark's: the words fit all twenty-one.
+  // the releases suite). Not every release is After Dark's: the words fit all twenty-three.
   CHECK(assets_summary({}) == L"Nothing imported yet");
   // The not-imported welcome: what importing does.
   CHECK(welcome_text().find(L"The screen saver runs the original modules of After Dark and Star Wars Screen "
                             L"Entertainment from your own discs.\n\n"
-                            L"Import them from any of your discs (twenty-one releases are supported), a disc image, "
+                            L"Import them from any of your discs (twenty-three releases are supported), a disc image, "
                             L"or the Internet Archive download.") == 0);
   CHECK(welcome_text().find(L"After Dark discs") == std::wstring::npos);
   Catalog c;
@@ -2584,8 +2637,9 @@ void test_ui() {
   // doesn't show, there was no room for it.
   {
     HDC dc = CreateCompatibleDC(nullptr);
-    // The twenty-one releases' line, "446 modules from 21 releases", is as
-    // long as the twenty's ("429 modules from 20 releases"), the
+    // The twenty-three releases' line, "470 modules from 23 releases", is as
+    // long as the twenty-one's ("446 modules from 21 releases"), the
+    // twenty's ("429 modules from 20 releases"), the
     // sixteen's ("328 modules from 16 releases"), the
     // fifteen's ("327 modules from 15 releases"), the
     // fourteen's ("314 modules from 14 releases") and the
@@ -2593,9 +2647,9 @@ void test_ui() {
     // seven's ("232 modules from 7 releases"), whose digits were
     // already wider in the caption face, Segoe UI Variable Small, than the
     // six's ("216 modules from 6 releases").
-    const wchar_t* texts[] = {L"Nothing imported yet", L"446 modules from 21 releases",
+    const wchar_t* texts[] = {L"Nothing imported yet", L"470 modules from 23 releases",
                               L"84 modules from After Dark 4.0 Deluxe",
-                              L"446 modules from 21 releases · 2 missing — import again to restore"};
+                              L"470 modules from 23 releases · 2 missing — import again to restore"};
     int shown = 0, hidden = 0, min_twelve = 0;
     std::string min_twelve_at;   // the scales it fits the narrowest window at
     for (int dpi = 96; dpi <= 240; dpi += 24) {
@@ -2652,7 +2706,7 @@ void test_ui() {
           // The status line it sits beside is never under it.
           CHECK(C.box.x > in.assets_right);
         }
-        // Where it matters: with twenty-one releases it shows at the first-open
+        // Where it matters: with twenty-three releases it shows at the first-open
         // size (with room to spare) at every scale; one release's long title
         // and the assets line at its longest (files missing) leave it no room
         // in the minimum window. (In the minimum window beside the releases'
@@ -2680,7 +2734,7 @@ void test_ui() {
         }
       }
     }
-    printf("ui: the credit fits beside \"446 modules from 21 releases\" in the narrowest window at %d of 7 scales (%s)\n",
+    printf("ui: the credit fits beside \"470 modules from 23 releases\" in the narrowest window at %d of 7 scales (%s)\n",
            min_twelve, min_twelve_at.c_str());
     CHECK(shown > 0 && hidden > 0);
     DeleteDC(dc);
@@ -3731,6 +3785,7 @@ void test_strip_wrap() {
   CHECK((strip_grid(15, false, design_area) == StripGrid{2, 8}) && (strip_grid(16, false, design_area) == StripGrid{2, 8}));
   CHECK((strip_grid(20, false, design_area) == StripGrid{3, 8}));   // the twenty releases: 8, 8 and 4
   CHECK((strip_grid(21, false, design_area) == StripGrid{3, 8}));   // the twenty-one releases: 8, 8 and 5
+  CHECK((strip_grid(23, false, design_area) == StripGrid{3, 8}));   // the twenty-three releases: 8, 8 and 7
   CHECK((strip_grid(10, false, 1024) == StripGrid{2, 8}) && (strip_grid(15, false, 1024) == StripGrid{2, 8}));
   CHECK((strip_grid(14, true, 1024) == StripGrid{1, 14}));
   const double min_area = kMinClientW - 48 - kStripStatusW - kStripStatusGap;   // 636
@@ -3809,6 +3864,8 @@ void test_strip_wrap() {
       {20, kDesignClientW, 952, StripMode::compact, true, 2},   // too short for three regular rows: two compact
       {21, kDesignClientW, 1068, StripMode::regular, true, 3},  // twenty-one releases at the first-open size: 8, 8 and 5
       {21, kDesignClientW, 952, StripMode::compact, true, 2},   // too short for three regular rows: two compact
+      {23, kDesignClientW, 1068, StripMode::regular, true, 3},  // twenty-three releases at the first-open size: 8, 8 and 7
+      {23, kDesignClientW, 952, StripMode::compact, true, 3},   // too short for three regular rows: three compact
       {10, 1336, 952, StripMode::regular, true, 2},             // 8 and 2 where 9 would fit
       {7, kDesignClientW, kDesignClientHStrip, StripMode::regular, true, 1},
       {7, kMinClientW, kMinClientHStrip, StripMode::compact, true, 1},

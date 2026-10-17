@@ -20,7 +20,9 @@
 // ZIPs of its June build's disks (FLINTST1..3.ZIP), Intermission 4.0 its three
 // floppy images or the Internet Archive's ZIP of them (research/five/dl: add
 // it to AD_SOURCE_ISO_DIR), Take Your Best Shot the Internet Archive's
-// BESTSHOT.iso (research/bestshot/dl).
+// BESTSHOT.iso (research/bestshot/dl), the Desktop Pythonizer the Internet
+// Archive's ISO of its CD or the raw BIN beside it, and its Desktop Extras
+// the Internet Archive's image of its floppy (research/monty/dl).
 //   1. Each package's image(s) into a fresh root through adimport.exe: exit
 //      0, verified "image", nothing missing, every file matches the package
 //      manifest, the installed files are exactly the manifest (the §4 layout
@@ -70,7 +72,7 @@
 //   2. Every package plus Deluxe (imported --from the installed assets, which
 //      are only read: AD_ASSETS_DIR picks them, e.g.
 //      <repo>/build/win-pkg-setup/assets, else the data folder's) in one root:
-//      446 modules (232 over the first seven), display names unique per lane,
+//      470 modules (232 over the first seven), display names unique per lane,
 //      sameAs consistent (73), and every Deluxe entry's existing fields equal
 //      to the installed catalog's.
 //   3. Re-importing each package into that root changes nothing else.
@@ -138,6 +140,8 @@ const std::map<std::string, Expect> kExpect = {
     {"flintstones", {22, {{"SAVER", 19}, {"ENGINE", 3}}, 15, 0}},
     {"intermission", {73, {{"SAVER", 67}, {"ENGINE", 6}}, 54, 0}},
     {"bestshot", {23, {{"BESTACT", 17}, {"BESTSHOT", 6}}, 17, 0}},
+    {"pythonizer", {27, {{"INTERACT", 19}, {"PYTHON", 8}}, 22, 0}},
+    {"pythonle", {2, {{"FOOT.BIN", 1}, {"PENGUINS.BIN", 1}}, 2, 0}},
 };
 // The catalog over every release with the Deluxe tree: 232 entries over the
 // first seven, 284 with Marvel Comics Screen Posters, Snoopy's Screen Savers,
@@ -145,7 +149,8 @@ const std::map<std::string, Expect> kExpect = {
 // Side and Dilbert, 327 with Star Trek: The Next Generation Screen Saver,
 // 328 with Johnny Castaway, 429 with the Opus 'n Bill Screen Saver, On the
 // Road Again, The Flintstones and Intermission 4.0, 446 with Take Your Best
-// Shot; still 73 of them the same bytes as an earlier entry.
+// Shot, 470 with the Desktop Pythonizer and its Desktop Extras; still 73 of
+// them the same bytes as an earlier entry.
 size_t combined_modules() {
   size_t n = 84;
   for (const auto& [id, e] : kExpect) n += e.modules;
@@ -263,7 +268,7 @@ void check_package_root(const fs::path& win, const Package& p) {
   } else if (is1) {
     // The program and its data in its folder alone: no ENGINE, no WINDOWS.
     CHECK(!fs::exists(root / L"ENGINE") && !fs::exists(root / L"WINDOWS"));
-  } else if (cdc) {
+  } else if (cdc && std::string_view(p.id) == "bestshot") {
     // Take Your Best Shot: the player and its libraries in BESTSHOT, the
     // scenes in BESTACT; no ENGINE, no WINDOWS, nothing of the desktop
     // program.
@@ -271,6 +276,21 @@ void check_package_root(const fs::path& win, const Package& p) {
       CHECK(fs::exists(root / L"BESTSHOT" / to_wide(n)));
     for (const char* n : {"BESTSHOT.EXE", "BESTSAVR.SCR", "BESTSFX.DLL"}) CHECK(!fs::exists(root / L"BESTSHOT" / to_wide(n)));
     CHECK(!fs::exists(root / L"BESTACT" / L"BESTSHOT.BIN"));
+    CHECK(!fs::exists(root / L"ENGINE") && !fs::exists(root / L"WINDOWS"));
+  } else if (cdc && std::string_view(p.id) == "pythonizer") {
+    // The Desktop Pythonizer: the player, its libraries and the three
+    // games' scenes in PYTHON, the other scenes in INTERACT; nothing of
+    // the customizer, its saver stub, its own scene or the OLE server.
+    for (const char* n : {"PYTHON.EXE", "PYTHA001.DLL", "PYTHR001.DLL", "PYTHS001.DLL", "PYTHU001.DLL"})
+      CHECK(fs::exists(root / L"PYTHON" / to_wide(n)));
+    for (const char* n : {"PYTHIZER.EXE", "PYTHSAVR.SCR", "PYTHSFX.DLL", "PYTH_OLE.DLL", "HERALD.BIN"})
+      CHECK(!fs::exists(root / L"PYTHON" / to_wide(n)));
+    CHECK(!fs::exists(root / L"ENGINE") && !fs::exists(root / L"WINDOWS") && !fs::exists(root / L"OLE"));
+  } else if (cdc) {
+    // The Desktop Extras: its two scenes in the package root, no program
+    // (they play with the Desktop Pythonizer's player).
+    for (const char* n : {"FOOT.BIN", "PENGUINS.BIN"}) CHECK(fs::exists(root / to_wide(n)));
+    for (const char* n : {"PYTHONLE.DLL", "SETUP.EXE", "BALLONS.BMP"}) CHECK(!fs::exists(root / to_wide(n)));
     CHECK(!fs::exists(root / L"ENGINE") && !fs::exists(root / L"WINDOWS"));
   } else {
     CHECK(fs::exists(root / L"ENGINE" / L"AD_SND.DLL"));
@@ -323,9 +343,10 @@ void check_catalog_of(const phosg::JSON& cat, const Package& p) {
     CHECK_EQ(m->contains("abi"), imx || is1 || cdc);
     CHECK(!m->contains("game") || cdc);
     if (cdc) {
-      // Take Your Best Shot: 7th Level scenes, each named by its own title,
-      // at the release's 640x480, no entry, nothing to set; the installer's
-      // three games marked.
+      // Take Your Best Shot, the Desktop Pythonizer and its Desktop Extras:
+      // 7th Level scenes, each named by its own title, at the release's
+      // 640x480, no entry, nothing to set; Best Shot's installer's three
+      // games marked; the Extras' scenes requiring the Desktop Pythonizer.
       CHECK_EQ(m->get_string("abi"), std::string("7thlevel"));
       CHECK_EQ(m->get_string("lane"), std::string("ne16"));
       CHECK_EQ(m->get_string("entry"), std::string());
@@ -338,7 +359,19 @@ void check_catalog_of(const phosg::JSON& cat, const Package& p) {
           {"bestshot.headshot", "Head Shot"},   {"bestshot.headsup", "Heads Up"},      {"bestshot.highvolt", "High Voltage"},
           {"bestshot.hotshot", "Hot Shot"},     {"bestshot.knockoff", "Knock Off"},    {"bestshot.lineshot", "Line Shot"},
           {"bestshot.pugnose", "Pug Nose"},     {"bestshot.rebound", "Rebound"},       {"bestshot.screeech", "Screeech"},
-          {"bestshot.shotindr", "A Shot In The Dark"}, {"bestshot.skeet", "Skeet"}};
+          {"bestshot.shotindr", "A Shot In The Dark"}, {"bestshot.skeet", "Skeet"},
+          {"pythonizer.aquarium", "Aquarium"}, {"pythonizer.birdgame", "The Chicken Game"},
+          {"pythonizer.birdman", "Birdman"}, {"pythonizer.bounce", "Queen Victoria"},
+          {"pythonizer.carriage", "Man with Baby Carriage"}, {"pythonizer.dance", "No Time to Lose Woman"},
+          {"pythonizer.elephant", "Hopping Elephants"}, {"pythonizer.fairy", "BBC Fairy"},
+          {"pythonizer.girl", "Walking Girl"}, {"pythonizer.gnthead", "Giant Head"},
+          {"pythonizer.gopher", "The Gopher Game"}, {"pythonizer.greenman", "Hopping Green Man"},
+          {"pythonizer.hopman", "Hopping Man"}, {"pythonizer.iconfess", "I Confess"},
+          {"pythonizer.kilrcars", "Killer Cars"}, {"pythonizer.mouth", "Many Mouths"},
+          {"pythonizer.piggame", "The Pig Game"}, {"pythonizer.rollman", "Rolling Man"},
+          {"pythonizer.silywalk", "Silly Walk"}, {"pythonizer.strytime", "Story Time"},
+          {"pythonizer.train", "Train"}, {"pythonizer.tvisbad", "TV is bad for your eyes"},
+          {"pythonle.foot", "Foot"}, {"pythonle.penguins", "Penguins"}};
       const std::string id = m->get_string("id");
       auto it = titles.find(id);
       CHECK(it != titles.end() && it->second == m->get_string("moduleName"));
@@ -346,6 +379,12 @@ void check_catalog_of(const phosg::JSON& cat, const Package& p) {
       CHECK_EQ(m->contains("game"), game);
       if (game) CHECK(m->get_bool("game"));
       games += game;
+      const bool addon = std::string_view(p.id) == "pythonle";
+      CHECK_EQ(m->contains("requires"), addon);
+      CHECK_EQ(m->contains("requiresTitle"), addon);
+      if (addon)
+        CHECK(m->get_string("requires") == "pythonizer" &&
+              m->get_string("requiresTitle") == "Monty Python's Flying Circus Desktop Pythonizer");
       continue;
     }
     if (is1) {
@@ -1254,17 +1293,18 @@ int main(int argc, char** argv) {
   // ties with the Simpsons (1994-08) and follows it, as in the registry; On
   // the Road Again (1994-09) comes next; Snoopy's Screen Savers, Dilbert and
   // Star Trek: The Next Generation Screen Saver (1994-10) follow them, in
-  // registry order too; Take Your Best Shot (1995-02) next; ScreamSavers
+  // registry order too; the Desktop Extras (1995-01), Take Your Best Shot
+  // (1995-02) and the Desktop Pythonizer (1995-03) next; ScreamSavers
   // ties with the Looney Tunes (1995-04) the same way; the Disney Collection
   // (1995-09) comes after Totally Twisted.
   {
     std::vector<std::string> order;
     for (auto& pk : cat.at("packages").as_list()) order.push_back(pk->get_string("id"));
-    CHECK((order == std::vector<std::string>{"startrek",    "castaway", "opus",     "intermission", "marvel",
-                                             "flintstones", "farside",  "simpsons", "swse",         "opusroad",
-                                             "snoopy",      "dilbert",  "tng",      "bestshot",     "looney",
-                                             "screams",     "ad32",     "tt",       "disney",       "deluxe",
-                                             "ad10"}));
+    CHECK((order == std::vector<std::string>{"startrek", "castaway",   "opus",     "intermission", "marvel",
+                                             "flintstones", "farside", "simpsons", "swse",       "opusroad",
+                                             "snoopy",   "dilbert",    "tng",      "pythonle",   "bestshot",
+                                             "pythonizer", "looney",   "screams",  "ad32",       "tt",
+                                             "disney",   "deluxe",     "ad10"}));
   }
   // The Looney Tunes' Messages comes after 3.2's: it is told apart by its
   // short title.

@@ -158,8 +158,9 @@ class Lane {
 // Intermission gave the reader whose type is the file's extension (INTRMLIB's
 // FINDALLMODULES matched every file's extension against its readers' types):
 // here it is the extension too. So is a 7th Level resource file (it starts
-// "7L" 02 00): a scene of 7th Level's Runtime Player, a Win16 program the
-// ne16 lane runs as its task (Take Your Best Shot's BESTACT\*.BIN).
+// "7L" 02 00, or 01 00): a scene of 7th Level's Runtime Player, a Win16
+// program the ne16 lane runs as its task (Take Your Best Shot's
+// BESTACT\*.BIN, the Desktop Pythonizer's INTERACT\*.BIN).
 enum class LaneKind { pe32, ne16, unsupported, unreadable };
 struct ModuleProbe {
   LaneKind kind = LaneKind::unreadable;
@@ -168,7 +169,7 @@ struct ModuleProbe {
 ModuleProbe probe_module(const std::string& path_utf8);
 // Whether a file's first four bytes are an Intermission ASA animation's header ("AniN" or "AniM").
 bool asa_header(const void* first4);
-// Whether a file's first four bytes are a 7th Level resource file's ("7L" 02 00).
+// Whether a file's first four bytes are a 7th Level resource file's ("7L" 02 00, or 01 00: the Desktop Pythonizer's).
 bool seventh_level_header(const void* first4);
 // The Intermission data type a file name's extension names, upper case
 // ("FLI", "FLC", "MRF" or "MSV"; any case in the name), else nullptr. ASA is

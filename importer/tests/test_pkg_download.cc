@@ -903,7 +903,8 @@ int main(int argc, char** argv) {
     CHECK(downloadable_packages() ==
           std::vector<std::string>({"deluxe", "ad10", "ad32", "tt", "simpsons", "swse", "startrek", "marvel", "snoopy",
                                     "looney", "screams", "disney", "farside", "dilbert", "tng", "castaway", "opus",
-                                    "opusroad", "flintstones", "intermission", "bestshot"}));
+                                    "opusroad", "flintstones", "intermission", "bestshot", "pythonizer",
+                                    "pythonle"}));
     for (const Package& p : builtin_packages()) {
       CHECK(!p.downloads.empty());
       std::map<std::string, std::wstring> name_of_md5;
@@ -1119,19 +1120,19 @@ int main(int argc, char** argv) {
     CHECK(out.find("download 2.6 MB (ZIP of the install files)") != std::string::npos);
     CHECK(out.find("download 381.7 MB (disc image)") != std::string::npos);
     CHECK(out.find("download 6.9 MB (disc image)") != std::string::npos);  // swse
-    CHECK(out.find("  startrek     Star Trek: The Screen Saver                  "
+    CHECK(out.find("  startrek     Star Trek: The Screen Saver                     "
                    "not installed; download 2.8 MB (2 floppy images)") != std::string::npos);
-    CHECK(out.find("  looney       The Looney Tunes Screen Saver                "
+    CHECK(out.find("  looney       The Looney Tunes Screen Saver                   "
                    "not installed; download 2.8 MB (ZIP of the install files)") != std::string::npos);
-    CHECK(out.find("  screams      ScreamSavers                                 "
+    CHECK(out.find("  screams      ScreamSavers                                    "
                    "not installed; download 3.3 MB (ZIP of the install files)") != std::string::npos);
-    CHECK(out.find("  marvel       Marvel Comics Screen Posters                 "
+    CHECK(out.find("  marvel       Marvel Comics Screen Posters                    "
                    "not installed; download 1.9 MB (ZIP of the install files)") != std::string::npos);
-    CHECK(out.find("  snoopy       Snoopy's Screen Savers                       "
+    CHECK(out.find("  snoopy       Snoopy's Screen Savers                          "
                    "not installed; download 1.9 MB (ZIP of the install files)") != std::string::npos);
-    CHECK(out.find("  farside      The Far Side Screen Saver Collection         "
+    CHECK(out.find("  farside      The Far Side Screen Saver Collection            "
                    "not installed; download 5.5 MB (5 ZIPs of the install disks' files)") != std::string::npos);
-    CHECK(out.find("  dilbert      Scott Adams' Dilbert Screen Saver Collection "
+    CHECK(out.find("  dilbert      Scott Adams' Dilbert Screen Saver Collection    "
                    "not installed; download 4.3 MB (ZIP of the install files)") != std::string::npos);
     CHECK(!fs::exists(dir / L"cli-empty"));
 

@@ -152,6 +152,14 @@ const Module* Catalog::find(const std::string& id) const {
   return nullptr;
 }
 
+bool Catalog::lacks_release(const Module& m) const {
+  if (m.requires_release.empty()) return false;
+  for (const Module& x : modules) {
+    if (x.package == m.requires_release) return false;
+  }
+  return true;
+}
+
 SizeI screen_of(const std::string& s) {
   const size_t x = s.find_first_of("xX");
   if (x == std::string::npos) return {};
@@ -208,6 +216,8 @@ bool load_catalog(const std::string& path, Catalog& out, std::string* error) {
     }
     m.package_title = item.str("packageTitle", m.package);
     m.same_as = item.str("sameAs");
+    m.requires_release = item.str("requires");
+    m.requires_title = item.str("requiresTitle");
     m.host_env = host_env_of(item);
     out.modules.push_back(std::move(m));
   }

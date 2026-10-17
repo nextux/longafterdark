@@ -572,8 +572,8 @@ int run_cli(const Args& a) {
 int run_list_packages(const Args& a) {
   fs::path root = a.dest.empty() ? default_assets_root() : a.dest;
   printf("packages in %s\n", to_utf8(win_assets_dir(root).wstring()).c_str());
-  // The id and title columns fit the longest id ("intermission") and title ("Scott Adams'
-  // Dilbert Screen Saver Collection").
+  // The id and title columns fit the longest id ("intermission") and title ("Monty Python's
+  // Flying Circus Desktop Pythonizer").
   int id_w = 0, title_w = 0;
   for (const Package& p : builtin_packages()) {
     id_w = std::max(id_w, int(strlen(p.id)));

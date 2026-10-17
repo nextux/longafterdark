@@ -583,7 +583,7 @@ class App {
   bool d3d_wanted() const { return looks.any() || (hooks.present == PresentWay::d3d11 && !preview); }
   Catalog catalog;
   std::wstring win_dir, host_exe;
-  std::vector<std::string> available;      // ids whose module file exists
+  std::vector<std::string> available;      // ids whose module file exists (and whose required release is there)
   bool is_available(const std::string& id) const {
     return std::find(available.begin(), available.end(), id) != available.end();
   }
@@ -1766,6 +1766,10 @@ bool App::load() {
     log_line("catalog: %s", err.c_str());
   } else {
     for (const auto& m : catalog.modules) {
+      // A module that lacks the release it needs (its player's: Monty
+      // Python's Limited Edition Desktop Extras without the Desktop
+      // Pythonizer) can't play: never chosen, never in a rotation.
+      if (catalog.lacks_release(m)) continue;
       if (file_exists(resolve_module_path(win_dir, m.path))) available.push_back(m.id);
     }
   }

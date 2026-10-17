@@ -2975,13 +2975,13 @@ void test_seventh_level() {
   for (const std::string& d : {root + "\\packages", pkg, act, player}) CreateDirectoryA(d.c_str(), nullptr);
   const std::string alpha = act + "\\ALPHA.BIN", game = act + "\\HEADSHOT.BIN", own = act + "\\BESTSHOT.BIN",
                     notes = act + "\\NOTES.BIN", exe = player + "\\PLYMPTON.EXE";
-  write_file(alpha, std::string("7L\x02\x00\x20" "Prod\0Alpha One\xFB" "lib.dll\0", 24));
-  write_file(game, std::string("7L\x02\x00\x10" "Prod\0Game\0", 15));
-  write_file(own, std::string("7L\x02\x00\x10" "Prod\0Own\0", 14));
+  write_file(alpha, std::string("7L\x02\x00\x20" "BestShot\0Alpha One\xFB" "lib.dll\0", 28));
+  write_file(game, std::string("7L\x02\x00\x10" "BestShot\0Game\0", 19));
+  write_file(own, std::string("7L\x02\x00\x10" "BestShot\0Own\0", 18));
   write_file(notes, "MZ not a scene");
   write_file(exe, "MZ");
   std::string product, title;
-  CHECK(ne16::seventh_header(alpha, &product, &title) && product == "Prod" && title == "Alpha One",
+  CHECK(ne16::seventh_header(alpha, &product, &title) && product == "BestShot" && title == "Alpha One",
         "the header: the product, the title up to 0xFB (%s, %s)", product.c_str(), title.c_str());
   CHECK(ne16::seventh_header(game, nullptr, &title) && title == "Game", "a title up to its NUL (%s)", title.c_str());
   CHECK(!ne16::seventh_header(notes, &product, &title) && !ne16::seventh_header(root + "\\none.bin", nullptr, nullptr),
@@ -3039,17 +3039,24 @@ void test_seventh_level() {
   CHECK(ne16::seventh_command_tail("D:\\BESTACT\\ALPHA.BIN", 0x2A6) == " D:\\BESTACT\\ALPHA.BIN /p2A6",
         "the command tail: \" %%s /p%%lX\"");
 
-  // The player: <package root>\BESTSHOT, the scene folder's parent's.
+  // The player: the product's, <package root>\BESTSHOT, the scene folder's parent's.
   const ne16::Ne16Layout l = ne16::resolve_layout(alpha, root, [](const std::string&) { return false; });
-  CHECK(ne16::seventh_player_dir(l) == player, "the player's folder (%s)", ne16::seventh_player_dir(l).c_str());
+  const ne16::SeventhProduct* best = ne16::seventh_product("bestshot");
+  CHECK(best && std::string(best->player) == "PLYMPTON.EXE" && best->max_mode == 6 &&
+            std::string(best->install_dir) == "C:\\7THLEVEL\\BESTSHOT" && !ne16::seventh_product("Prod"),
+        "the product by the header's name, any case; an unknown one has none");
+  const ne16::SeventhPlayer pl = ne16::seventh_find_player(l, *best);
+  CHECK(pl.dir == player && !pl.addon, "the player's folder (%s)", pl.dir.c_str());
+  CHECK(ne16::seventh_guest_scene(l, *best, pl) == "D:\\BESTACT\\ALPHA.BIN", "the scene on the CD (%s)",
+        ne16::seventh_guest_scene(l, *best, pl).c_str());
 
   // The guest's disk and the installer's 7THLEVEL.INI (no ADSTATE: memory).
   VirtualClock clock{VirtualClock::Mode::fixed_step, 16667};
   win16::Runtime16Options o;
-  o.guest_dir = ne16::kSeventhInstallDir;
+  o.guest_dir = best->install_dir;
   win16::Runtime16 rt{o, clock};
   win16::register_all16(rt);
-  ne16::mount_seventh_disk(rt, Env::parse({}), l);
+  ne16::mount_seventh_disk(rt, Env::parse({}), l, *best, pl);
   win32::IniStore& ini = win16::profiles16(rt);
   auto get = [&](const char* f, const char* sec, const std::string& k) {
     return ini.get(std::string("C:\\WINDOWS\\") + f, sec, k).value_or("(none)");
@@ -3079,6 +3086,91 @@ void test_seventh_level() {
   if (h >= 0) dos.close(uint16_t(h));
   for (const std::string& f : {alpha, game, own, notes, exe}) DeleteFileA(f.c_str());
   for (const std::string& d : {act, player, pkg, root + "\\packages", root}) RemoveDirectoryA(d.c_str());
+}
+
+// The Desktop Pythonizer's scenes ("7L" 01 00, product "Python"; made-up
+// files) and an add-on's: the player PYTHON\PYTHON.EXE beside INTERACT and
+// holding scenes itself; an add-on's scenes in its package root find the
+// player in a package beside it, the first in name order; the guest's disk
+// and 7THLEVEL.INI as the two installers left them.
+void test_seventh_level_python() {
+  const std::string root = temp_dir("seventhpy"), pk = root + "\\packages";
+  const std::string py = pk + "\\py", act = py + "\\INTERACT", player = py + "\\PYTHON", le = pk + "\\le",
+                    aa = pk + "\\aa", zz = pk + "\\zz", zzp = zz + "\\PYTHON";
+  for (const std::string& d : {pk, py, act, player, le, aa, zz, zzp}) CreateDirectoryA(d.c_str(), nullptr);
+  const std::string aq = act + "\\AQUARIUM.BIN", birds = player + "\\BIRDGAME.BIN", herald = player + "\\HERALD.BIN",
+                    exe = player + "\\PYTHON.EXE", foot = le + "\\FOOT.BIN", other = le + "\\BEST.BIN",
+                    decoy = zzp + "\\PYTHON.EXE";
+  write_file(aq, std::string("7L\x01\x00\x10" "Python\0Aquarium\0", 21));
+  write_file(birds, std::string("7L\x01\x00\x18" "Python\0The Chicken Game\0", 29));
+  write_file(herald, std::string("7L\x01\x00\x02\0\0", 7));
+  write_file(foot, std::string("7L\x01\x00\x0C" "Python\0Foot\0", 17));
+  write_file(other, std::string("7L\x02\x00\x10" "BestShot\0Best\0", 19));
+  write_file(exe, "MZ");
+  write_file(decoy, "MZ");
+  std::string product, title;
+  CHECK(ne16::seventh_header(aq, &product, &title) && product == "Python" && title == "Aquarium",
+        "a version-1 header: the product, the title (%s, %s)", product.c_str(), title.c_str());
+  CHECK(ne16::seventh_header(herald, &product, &title) && product.empty() && !ne16::seventh_product(product),
+        "the desktop program's own file: no product, no player");
+  const ne16::SeventhProduct* p = ne16::seventh_product("Python");
+  CHECK(p && std::string(p->player) == "PYTHON.EXE" && p->max_mode == 5 &&
+            std::string(p->install_dir) == "C:\\7THLEVEL\\PYTHON" && std::string(p->main_class) == "Pythonizer" &&
+            std::string(p->ui_class) == "Pythonizer ",
+        "the Pythonizer: its player, its install folder, PYTHIZER.EXE's windows");
+  auto layout = [&](const std::string& f) {
+    return ne16::resolve_layout(f, root, [](const std::string&) { return false; });
+  };
+  const ne16::Ne16Layout la = layout(aq), lb = layout(birds), lf = layout(foot);
+  const ne16::SeventhPlayer pa = ne16::seventh_find_player(la, *p), pb = ne16::seventh_find_player(lb, *p),
+                            pf = ne16::seventh_find_player(lf, *p);
+  CHECK(pa.dir == player && !pa.addon && pb.dir == player && !pb.addon,
+        "INTERACT's and PYTHON's own scenes: the package's PYTHON (%s, %s)", pa.dir.c_str(), pb.dir.c_str());
+  CHECK(pf.dir == player && pf.addon, "an add-on: the first package beside it with the player, by name (%s)",
+        pf.dir.c_str());
+  CHECK(ne16::seventh_guest_scene(la, *p, pa) == "D:\\INTERACT\\AQUARIUM.BIN" &&
+            ne16::seventh_guest_scene(lb, *p, pb) == "D:\\PYTHON\\BIRDGAME.BIN" &&
+            ne16::seventh_guest_scene(lf, *p, pf) == "C:\\7THLEVEL\\PYTHON\\FOOT.BIN",
+        "the scenes' guest paths: the CD's, the add-on's beside the player");
+  DeleteFileA(exe.c_str());
+  CHECK(ne16::seventh_find_player(la, *p).dir.empty() && ne16::seventh_find_player(lf, *p).dir == zzp,
+        "no player in the scene's package: none for its own scenes; an add-on takes the next by name");
+  write_file(exe, "MZ");
+
+  // An add-on's run: the Pythonizer's CD in the drive, the add-on's scenes in its folder.
+  VirtualClock clock{VirtualClock::Mode::fixed_step, 16667};
+  win16::Runtime16Options o;
+  o.guest_dir = p->install_dir;
+  win16::Runtime16 rt{o, clock};
+  win16::register_all16(rt);
+  ne16::mount_seventh_disk(rt, Env::parse({}), lf, *p, pf);
+  win32::IniStore& ini = win16::profiles16(rt);
+  auto get = [&](const char* sec, const std::string& k) {
+    return ini.get("C:\\WINDOWS\\7THLEVEL.INI", sec, k).value_or("(none)");
+  };
+  CHECK(get("APPS", "Python") == "C:\\7THLEVEL\\PYTHON\\python.exe" && get("Python", "PATH") == "C:\\7THLEVEL\\PYTHON\\" &&
+            get("PythonizerPaths", "KeyboardSoundsPath") == "D:\\python" &&
+            get("PythonizerPaths", "TelephoneMessagesPath") == "D:\\telephon" &&
+            get("ICONS", "C:\\WINDOWS\\PYTHICON.DLL") == "1" && get("BestShotPaths", "BestShotPath") == "(none)",
+        "7THLEVEL.INI: the Pythonizer's script, its prefixes resolved");
+  CHECK(get("Screen Savers", "D:\\interact\\aquarium.bin") == "1" &&
+            get("Living Wallpapers", "D:\\python\\birdgame.bin") == "1" &&
+            get("Screen Savers", "C:\\7THLEVEL\\PYTHON\\foot.bin") == "1" &&
+            get("Living Wallpapers", "C:\\7THLEVEL\\PYTHON\\foot.bin") == "1" &&
+            get("Screen Savers", "D:\\python\\herald.bin") == "(none)" &&
+            get("Screen Savers", "C:\\7THLEVEL\\PYTHON\\best.bin") == "(none)" &&
+            get("Games", "D:\\python\\birdgame.bin") == "(none)",
+        "the scenes: the CD's 1:interact and 1:python, the add-on's 0: (its product's only); no [Games]");
+  CHECK(rt.vfs().cwd() == "C:\\7THLEVEL\\PYTHON" && rt.vfs().exists("C:\\7THLEVEL\\PYTHON\\PYTHON.EXE") &&
+            rt.vfs().exists("C:\\7THLEVEL\\PYTHON\\FOOT.BIN") && !rt.vfs().exists("C:\\7THLEVEL\\PYTHON\\BEST.BIN") &&
+            rt.vfs().exists("D:\\INTERACT\\AQUARIUM.BIN") && rt.vfs().exists("D:\\PYTHON\\BIRDGAME.BIN"),
+        "the player's folder with the add-on's scene; the Pythonizer's CD");
+  std::string bytes;
+  CHECK(rt.vfs().read_file("C:\\7THLEVEL\\PYTHON\\FOOT.BIN", &bytes) &&
+            bytes == std::string("7L\x01\x00\x0C" "Python\0Foot\0", 17),
+        "the add-on's scene reads as its file");
+  for (const std::string& f : {aq, birds, herald, exe, foot, other, decoy}) DeleteFileA(f.c_str());
+  for (const std::string& d : {act, player, py, le, aa, zzp, zz, pk, root}) RemoveDirectoryA(d.c_str());
 }
 
 // ---- the Intermission readers (imreader.hh) --------------------------------------------------------------------
@@ -3969,6 +4061,11 @@ int run_all_unit() {
     test_seventh_level();
   } catch (const std::exception& e) {
     CHECK(false, "7th Level: exception %s", e.what());
+  }
+  try {
+    test_seventh_level_python();
+  } catch (const std::exception& e) {
+    CHECK(false, "7th Level (the Pythonizer): exception %s", e.what());
   }
   try {
     test_native_reader();

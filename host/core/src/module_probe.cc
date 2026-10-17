@@ -8,9 +8,11 @@
 // by their extension, as INTRMLIB gave them to its readers: a file named
 // .FLI, .FLC, .MRF or .MSV that is no MZ executable is a Classic module,
 // played by IMFLIPLY.IMQ, IMFLCPLY.IMQ, IMMRFPLY.IMQ or IMMSVPLY.IMQ. A file
-// that starts "7L" 02 00 is a 7th Level resource file, a scene that 7th
-// Level's Runtime Player (PLYMPTON.EXE, a Win16 program) plays: a Classic
-// module too (the ne16 lane's 7thlevel protocol), whatever its name.
+// that starts "7L" 02 00 (Take Your Best Shot's) or "7L" 01 00 (the Desktop
+// Pythonizer's, an older player's) is a 7th Level resource file, a scene
+// that 7th Level's Runtime Player (PLYMPTON.EXE, PYTHON.EXE: Win16 programs)
+// plays: a Classic module too (the ne16 lane's 7thlevel protocol), whatever
+// its name.
 #include <cstdio>
 #include <cstring>
 
@@ -23,7 +25,9 @@ bool asa_header(const void* first4) {
   return memcmp(first4, "AniN", 4) == 0 || memcmp(first4, "AniM", 4) == 0;
 }
 
-bool seventh_level_header(const void* first4) { return memcmp(first4, "7L\x02\x00", 4) == 0; }
+bool seventh_level_header(const void* first4) {
+  return memcmp(first4, "7L\x02\x00", 4) == 0 || memcmp(first4, "7L\x01\x00", 4) == 0;
+}
 
 const char* intermission_data_type(const std::string& path) {
   static const char* const kTypes[] = {"FLI", "FLC", "MRF", "MSV"};

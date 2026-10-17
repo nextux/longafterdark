@@ -86,11 +86,15 @@
 //     entry        "SCREENSAVERPROC"
 //     abi          "scrnsave"
 //   7th Level scenes (lane ne16; a cdcopy package's module folders, which
-//   list *.BIN: Take Your Best Shot's BESTACT\*.BIN): a 7th Level resource
-//   file (the magic "7L" 2 0, the ne16 lane's rule), data its package's
-//   Runtime Player (BESTSHOT\PLYMPTON.EXE, a program) plays. A file named
-//   for the product its header names (BESTSHOT.BIN, "BestShot": the
-//   customizer's own UI) is no scene; left out, logged.
+//   list *.BIN: Take Your Best Shot's BESTACT\*.BIN, the Desktop
+//   Pythonizer's INTERACT\*.BIN and PYTHON\*.BIN, the Limited Edition
+//   Desktop Extras' two in its root): a 7th Level resource file (the magic
+//   "7L" 2 0, or the older player's "7L" 1 0 with the same header, the ne16
+//   lane's rule), data a Runtime Player (BESTSHOT\PLYMPTON.EXE,
+//   PYTHON\PYTHON.EXE, a program) plays: its package's, or for an add-on's
+//   scene the release's it requires. A file named for the product its
+//   header names (BESTSHOT.BIN, "BestShot": the customizer's own UI) is no
+//   scene; left out, logged.
 //     displayName  the title in its header (byte 4 the header's length, then
 //                  the product's name, NUL, the title, NUL or 0xFB and a
 //                  library's name, NUL; read strictly), else the registry's
@@ -103,6 +107,13 @@
 //     game         true, written last, on the registry's games
 //                  (Package::games: Head Shot, Hot Shot, Line Shot); absent
 //                  on every other entry
+//     requires     an add-on's scene (Package::requires_release): the id of
+//                  the release whose player plays it ("pythonizer"), written
+//                  last (after "game"), then requiresTitle, that release's
+//                  title ("Monty Python's Flying Circus Desktop Pythonizer");
+//                  both absent on every other entry. A front-end shows such
+//                  a module, while the catalog's packages lack that release,
+//                  as needing it, and never starts it
 //   Any lane, from the registry: "screen" ("640x480"), the fixed screen every
 //   module of a package is shown at (Package::screen: Star Trek: The Screen
 //   Saver's, several of whose modules compose a fixed scene for it), written
@@ -185,6 +196,10 @@ struct CatalogModule {
   // A 7th Level scene that is a game too (Package::games; the JSON then has
   // "game": true, last).
   bool game = false;
+  // An add-on's scene: the release whose player plays it
+  // (Package::requires_release, "pythonizer") and that release's title ("" =
+  // none; the JSON then has no "requires" and no "requiresTitle").
+  std::string requires_release, requires_title;
 };
 
 // An installed package's box cover as the catalog lists it (COVERS.md §2.7).

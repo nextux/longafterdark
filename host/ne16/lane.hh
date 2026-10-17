@@ -19,7 +19,7 @@
 // application exporting SCREENSAVERPROC a Windows 3.1 saver; an NE file that
 // is none of them is refused (exit 1). A data file goes by its header or
 // extension: an Intermission animation or data file is Intermission's, a 7th
-// Level resource file ("7L" 02 00) the Runtime Player's. All are this lane's
+// Level resource file ("7L" 02 00 or 01 00) the Runtime Player's. All are this lane's
 // (catalog "lane":"ne16"; an Intermission entry adds "abi":"intermission", a
 // Windows 3.1 saver's "abi":"scrnsave", a 7th Level scene's
 // "abi":"7thlevel"), and --capabilities lists the four ABIs (Lane::abis:
@@ -276,6 +276,19 @@
 // current directory, the scene's folder on the CD as D:\BESTACT (read-only),
 // C:\WINDOWS with 7THLEVEL.INI as the installer wrote it (win16/dos16.hh
 // seed_seventh_level).
+// The Desktop Pythonizer's scenes ("7L" 01 00, product "Python": its
+// INTERACT\*.BIN, three in PYTHON, and the Desktop Extras' FOOT.BIN and
+// PENGUINS.BIN) run the same way with its own, older player,
+// PYTHON\PYTHON.EXE (PYTHU001, PYTHA001, PYTHS001, PYTHR001; no DISPDIB), as
+// its desktop program PYTHIZER.EXE started them — the same block, command
+// tail, 0x783 and stop; its windows "Pythonizer" and "Pythonizer " stand in.
+// The header's product picks the player (package.hh SeventhProduct,
+// seventh_find_player: the scene's own package, else, for an add-on whose
+// scenes sit in its package root, the package beside it that holds the
+// player). Its player takes modes 0..5 and PYTHIZER.EXE starts no game, so
+// Caps Lock makes every scene the interactive saver, where its three games
+// are played. Its disk: C:\7THLEVEL\PYTHON, D:\INTERACT and D:\PYTHON, an
+// add-on's scenes in C:\7THLEVEL\PYTHON beside the player.
 //
 // Input and status (INTERACTION.md §5.2): AFTERDAR.SCR forwarded no key or
 // mouse message to a Classic module (ABI.md §3.1); modules poll

@@ -23,6 +23,10 @@ struct Module {
   std::string path;            // relative to the win dir, forward slashes
   std::string package, package_title;
   std::string same_as;         // the id of the first module with the same bytes, or ""
+  // catalog "requires" and "requiresTitle": an add-on's scene, which plays
+  // with another release's player (Monty Python's Limited Edition Desktop
+  // Extras with the Desktop Pythonizer's); "" for every other module.
+  std::string requires_release, requires_title;
   // Its host controls (a control with "host": Intermission 4.0's Speed,
   // {"ADNE16IMXSPEED", "25"}), each variable at its control's default, in
   // index order: every host started for the module gets them. The player has
@@ -34,6 +38,10 @@ struct Module {
 struct Catalog {
   std::vector<Module> modules;
   const Module* find(const std::string& id) const;
+  // Whether `m` needs a release none of the catalog's modules come from
+  // (Module::requires_release): it can't play, and the player skips it, as
+  // the Windows saver does (scr/src/catalog.h: Catalog::lacks_release).
+  bool lacks_release(const Module& m) const;
 };
 
 // A catalog "screen": 1 to 5 decimal digits either side of an 'x' (or

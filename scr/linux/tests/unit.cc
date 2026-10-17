@@ -562,7 +562,12 @@ void test_catalog() {
       {"id": "bestshot.headshot", "displayName": "Head Shot", "lane": "ne16",
        "path": "packages/bestshot/BESTACT/HEADSHOT.BIN", "about": "", "controls": [], "entry": "", "needs": [],
        "system": [], "package": "bestshot", "packageTitle": "Take Your Best Shot", "moduleName": "Head Shot",
-       "abi": "7thlevel", "screen": "640x480", "game": true}]})";
+       "abi": "7thlevel", "screen": "640x480", "game": true},
+      {"id": "addon.made", "displayName": "Made", "lane": "ne16", "path": "packages/addon/MADE.BIN",
+       "package": "addon", "abi": "7thlevel", "screen": "640x480", "requires": "player",
+       "requiresTitle": "A Made-Up Player"},
+      {"id": "addon2.made", "displayName": "Made Too", "lane": "ne16", "path": "packages/addon2/MADE.BIN",
+       "package": "addon2", "abi": "7thlevel", "requires": "bestshot"}]})";
   }
   Catalog cat;
   std::string err;
@@ -571,6 +576,14 @@ void test_catalog() {
   // "game" is its host's business.
   const Module* shot = cat.find("bestshot.headshot");
   CHECK(shot && shot->abi == "7thlevel" && (shot->screen == SizeI{640, 480}) && shot->host_env.empty());
+  // An add-on's scene: it can't play without the release it requires (no
+  // module of the catalog's comes from "player"); with it, it is any module.
+  const Module* addon = cat.find("addon.made");
+  CHECK(addon && addon->requires_release == "player" && addon->requires_title == "A Made-Up Player" &&
+        cat.lacks_release(*addon));
+  const Module* addon2 = cat.find("addon2.made");
+  CHECK(addon2 && addon2->requires_title.empty() && !cat.lacks_release(*addon2));
+  CHECK(shot && shot->requires_release.empty() && !cat.lacks_release(*shot));
   using Env = std::vector<std::pair<std::string, std::string>>;
   // Each module's own starting stop, as the catalog writes it.
   const Module* dragon = cat.find("intermission.dragon");

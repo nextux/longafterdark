@@ -893,10 +893,12 @@ void test_scrnsave(const fs::path& dir) {
 
 // ---- 7th Level scenes ------------------------------------------------------------------------
 
-// A made-up 7th Level resource file: the magic "7L" 2 0, the header's length
-// (`n`, else the header's own), the header and made-up data after it.
-std::string sevenl(std::string_view header, int n = -1) {
+// A made-up 7th Level resource file: the magic "7L" 2 0 (`version` 1: the
+// older player's), the header's length (`n`, else the header's own), the
+// header and made-up data after it.
+std::string sevenl(std::string_view header, int n = -1, char version = 2) {
   std::string s("7L\x02\0", 4);
+  s[2] = version;
   s += char(uint8_t(n < 0 ? header.size() : size_t(n)));
   s += header;
   return s + "made-up scene data";
@@ -948,7 +950,7 @@ void test_sevenl(const fs::path& dir) {
        {std::tuple<std::string, std::string, std::string>{"BESTSHOT.BIN", sevenl("BestShot\0Made Up UI\0"sv),
                                                          "a 7th Level program's own scene (named for its product, "
                                                          "BestShot), not one it plays"},
-        {"NOTSCENE.BIN", std::string("7L\x01\0", 4) + std::string(40, 'x'), ""}}) {
+        {"NOTSCENE.BIN", std::string("7L\x03\0", 4) + std::string(40, 'x'), ""}}) {
     try {
       catalog_module(write(name, data), at + name, bs);
       CHECK(false);
@@ -1001,6 +1003,70 @@ void test_sevenl(const fs::path& dir) {
   other.package = find_package("castaway");
   other.dir = root;
   CHECK(build_catalog({other}).modules.empty());
+
+  // The Desktop Pythonizer's scenes: version-1 files (the older player's),
+  // read as version-2 ones are; module folders INTERACT, then PYTHON, where
+  // the three games' scenes are beside the player (never its programs).
+  const Package* py = find_package("pythonizer");
+  CHECK(py && py->recipe == Recipe::cdcopy && !py->requires_release);
+  CatalogModule v1 = catalog_module(write("SILYWALK.BIN", sevenl("Python\0Made Up Walk\0"sv, -1, 1)),
+                                    "packages/pythonizer/INTERACT/SILYWALK.BIN", py);
+  CHECK(v1.id == "pythonizer.silywalk" && v1.lane == "ne16" && v1.abi == "7thlevel" && v1.entry.empty());
+  CHECK(v1.display_name == "Made Up Walk" && v1.screen == "640x480" && !v1.game && v1.requires_release.empty());
+  // No title (its own scene, HERALD.BIN, has none): the file stem.
+  CHECK_EQ(catalog_module(write("HERALD.BIN", sevenl(std::string_view("\0", 1), -1, 1)),
+                          "packages/pythonizer/PYTHON/HERALD.BIN", py)
+               .display_name,
+           std::string("herald"));
+  const fs::path pyroot = dir / L"pytree";
+  fs::create_directories(pyroot / L"INTERACT");
+  fs::create_directories(pyroot / L"PYTHON");
+  put(pyroot / L"INTERACT" / L"SILYWALK.BIN", sevenl("Python\0Made Up Walk\0"sv, -1, 1));
+  put(pyroot / L"PYTHON" / L"GOPHER.BIN", sevenl("Python\0Made Up Gopher\0"sv, -1, 1));
+  put(pyroot / L"PYTHON" / L"PYTHON.EXE", "MZ made-up player");
+  put(pyroot / L"PYTHON" / L"PYTHA001.DLL", "MZ made-up library");
+  t.package = py;
+  t.dir = pyroot;
+  const CatalogDoc pd = build_catalog({t});
+  CHECK(pd.modules.size() == 2);
+  if (pd.modules.size() == 2) {
+    CHECK(pd.modules[0].id == "pythonizer.silywalk" &&
+          pd.modules[0].path == "packages/pythonizer/INTERACT/SILYWALK.BIN");
+    CHECK(pd.modules[1].id == "pythonizer.gopher" && pd.modules[1].display_name == "Made Up Gopher" &&
+          pd.modules[1].path == "packages/pythonizer/PYTHON/GOPHER.BIN" && !pd.modules[1].game);
+  }
+  // The Desktop Extras' two: in the package root, each "requires" the
+  // Desktop Pythonizer (its player's release) and names it.
+  const Package* le = find_package("pythonle");
+  CHECK(le && le->requires_release && std::string(le->requires_release) == "pythonizer");
+  const fs::path leroot = dir / L"letree";
+  fs::create_directories(leroot / L"SUB");
+  put(leroot / L"FOOT.BIN", sevenl("Python\0Made Up Foot\0"sv, -1, 1));
+  put(leroot / L"PENGUINS.BIN", sevenl("Python\0Made Up Penguins\0"sv, -1, 1));
+  put(leroot / L"SUB" / L"OTHER.BIN", sevenl("Python\0Elsewhere\0"sv, -1, 1));
+  t.package = le;
+  t.dir = leroot;
+  const CatalogDoc ld = build_catalog({t});
+  CHECK(ld.modules.size() == 2);
+  if (ld.modules.size() == 2) {
+    CHECK(ld.modules[0].id == "pythonle.foot" && ld.modules[0].path == "packages/pythonle/FOOT.BIN" &&
+          ld.modules[0].display_name == "Made Up Foot");
+    CHECK(ld.modules[1].id == "pythonle.penguins" && ld.modules[1].path == "packages/pythonle/PENGUINS.BIN");
+    for (const CatalogModule& x : ld.modules)
+      CHECK(x.requires_release == "pythonizer" &&
+            x.requires_title == "Monty Python's Flying Circus Desktop Pythonizer" && x.screen == "640x480");
+    // The JSON: "requires" and "requiresTitle", last of all (after "game").
+    CatalogModule foot = ld.modules[0];
+    foot.md5 = std::string(32, 'e');
+    std::string fj = render_catalog_json({foot});
+    CHECK(fj.find("\"screen\": \"640x480\",\n   \"requires\": \"pythonizer\",\n   \"requiresTitle\": \"Monty Python's "
+                  "Flying Circus Desktop Pythonizer\"\n  }") != std::string::npos);
+    foot.game = true;
+    fj = render_catalog_json({foot});
+    CHECK(fj.find("\"game\": true,\n   \"requires\": \"pythonizer\",\n") != std::string::npos);
+    // Every other entry is as it was: no "requires".
+    CHECK(render_catalog_json({m}).find("requires") == std::string::npos);
+  }
 }
 
 void write_tree(const fs::path& files) {

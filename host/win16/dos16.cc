@@ -1056,17 +1056,27 @@ void seed_seventh_level(Runtime16& rt, const SeventhLevelSeeds& seeds) {
   win32::IniStore& ini = profiles16(rt);
   const std::string ini7 = o.windows_dir + "\\7THLEVEL.INI";
   const std::string zero = seeds.install_dir + "\\", one = seeds.cd + "\\";
-  ini.add_seed(ini7, "BestShot", "Path", zero);
-  ini.add_seed(ini7, "Apps", "BestShot", zero + "plympton.exe");
-  ini.add_seed(ini7, "Icons", o.windows_dir + "\\BESTICON.DLL", "1");
-  ini.add_seed(ini7, "BestShotPaths", "DeadWallpaperPath", one + "wallpapr");
-  ini.add_seed(ini7, "BestShotPaths", "NoisyBitsPath", one + "noisybit");
-  ini.add_seed(ini7, "BestShotPaths", "KeyboardSoundsPath", one + "bestshot");
-  ini.add_seed(ini7, "BestShotPaths", "BestShotPath", one + "bestact");
-  ini.add_seed(ini7, "BestShotPaths", "BestShotBigPath", one + "bestbig");
-  for (const std::string& g : seeds.games) ini.add_seed(ini7, "Games", one + "bestact\\" + g, "1");
+  if (seeds.product == "Python") {
+    ini.add_seed(ini7, "Python", "PATH", zero);
+    ini.add_seed(ini7, "APPS", "Python", zero + "python.exe");
+    ini.add_seed(ini7, "ICONS", o.windows_dir + "\\PYTHICON.DLL", "1");
+    ini.add_seed(ini7, "PythonizerPaths", "DeadWallpaperPath", one + "wallpapr");
+    ini.add_seed(ini7, "PythonizerPaths", "NoisyBitsPath", one + "noisybit");
+    ini.add_seed(ini7, "PythonizerPaths", "TelephoneMessagesPath", one + "telephon");
+    ini.add_seed(ini7, "PythonizerPaths", "KeyboardSoundsPath", one + "python");
+  } else {
+    ini.add_seed(ini7, "BestShot", "Path", zero);
+    ini.add_seed(ini7, "Apps", "BestShot", zero + "plympton.exe");
+    ini.add_seed(ini7, "Icons", o.windows_dir + "\\BESTICON.DLL", "1");
+    ini.add_seed(ini7, "BestShotPaths", "DeadWallpaperPath", one + "wallpapr");
+    ini.add_seed(ini7, "BestShotPaths", "NoisyBitsPath", one + "noisybit");
+    ini.add_seed(ini7, "BestShotPaths", "KeyboardSoundsPath", one + "bestshot");
+    ini.add_seed(ini7, "BestShotPaths", "BestShotPath", one + "bestact");
+    ini.add_seed(ini7, "BestShotPaths", "BestShotBigPath", one + "bestbig");
+  }
+  for (const std::string& g : seeds.games) ini.add_seed(ini7, "Games", g, "1");
   for (const char* section : {"Living Wallpapers", "Screen Savers"}) {
-    for (const std::string& s : seeds.scenes) ini.add_seed(ini7, section, one + "bestact\\" + s, "1");
+    for (const std::string& s : seeds.scenes) ini.add_seed(ini7, section, s, "1");
   }
   const std::string win = o.windows_dir + "\\WIN.INI";
   ini.add_seed(win, "Desktop", "WallPaper", "(None)");

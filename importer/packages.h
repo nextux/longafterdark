@@ -5,7 +5,8 @@
 // Screen Saver, Opus 'n Bill: On the Road Again!, The Flintstones Screen
 // Saver Collection and Intermission 4.0 itself — Sierra's Screen Antics:
 // Johnny Castaway, a Windows 3.1 screen-saver program, and 7th Level's Take
-// Your Best Shot, scenes of 7th Level's Runtime Player.
+// Your Best Shot, Monty Python's Flying Circus Desktop Pythonizer and its
+// Limited Edition Desktop Extras, scenes of 7th Level's Runtime Player.
 // Registry order is the catalog's module order and the precedence order for
 // display-name disambiguation (§6); the catalog's packages list goes by
 // `released` instead.
@@ -34,6 +35,10 @@
 //                                                 intermission  -> <win>\packages\flintstones\{SAVER,ENGINE}
 //   intermission Intermission 4.0                 intermission  -> <win>\packages\intermission\{SAVER,ENGINE}
 //   bestshot  Take Your Best Shot                 cdcopy        -> <win>\packages\bestshot\{BESTACT,BESTSHOT}
+//   pythonizer Monty Python's Flying Circus Desktop Pythonizer
+//                                                 cdcopy        -> <win>\packages\pythonizer\{INTERACT,PYTHON}
+//   pythonle  Monty Python's Limited Edition Desktop Extras
+//                                                 cdcopy        -> <win>\packages\pythonle (its two scenes)
 //
 // Each entry carries what identifies the release (known image md5s — of one
 // image, or of every install disk of a set — and fingerprints), how to
@@ -47,7 +52,9 @@
 // folder; snoopy has none: Snoopy's Screen Savers are modules for an After
 // Dark already installed, and ship no engine; nor has castaway, a program
 // that is its own engine, nor bestshot, whose player is in its BESTSHOT
-// folder beside the scenes' BESTACT). An optional WINDOWS folder
+// folder beside the scenes' BESTACT, nor pythonizer, whose player is in its
+// PYTHON folder with three of its scenes, nor pythonle, whose two scenes are
+// its root's only files and play with pythonizer's player). An optional WINDOWS folder
 // holds the files the original installer put in C:\WINDOWS (swse:
 // SWSE.INI); it is never a module folder either, and the 16-bit lane lays it
 // under the guest's C:\WINDOWS.
@@ -145,9 +152,10 @@ struct SpeedModule {
 // installer's script (no IS-script interpreter). cdcopy: a CD whose
 // installer copies plain files from its folders and leaves the rest on the
 // disc for the program to read there (7th Level's Setup: Take Your Best
-// Shot), every file a loose file named by its path on the disc, the
-// installer's copies and the disc's own files the program reads baked into
-// one table; nothing is read to identify it.
+// Shot, Monty Python's Desktop Pythonizer, and its Limited Edition Desktop
+// Extras' floppy), every file a loose file named by its path on the disc,
+// the installer's copies and the disc's own files the program reads baked
+// into one table; nothing is read to identify it.
 enum class Recipe { tree, ad3zip, intermission, ad2kwaj, islib, is1, cdcopy };
 // "tree", "ad3zip", "intermission", "ad2kwaj", "islib", "is1" or "cdcopy"
 // (import.json's package.recipe).
@@ -332,9 +340,10 @@ struct Package {
   // install disk's; disk 1's first, the fingerprint's), which must all be
   // present. is1: the module folder, and every file the recipe reads (the
   // first, the fingerprint's), which must all be present. cdcopy: the module
-  // folder, and the disc's files whose names together are the fingerprint
-  // (paths from its root: the release's own programs and a scene), side by
-  // side; every loose file must be there too.
+  // folder ("" for the package root itself, as module_dirs then lists it:
+  // pythonle's), and the disc's files whose names together are the
+  // fingerprint (paths from its root: the release's own programs and a
+  // scene), side by side; every loose file must be there too.
   const char* module_dir;
   const char* engine_dll;
   const char* folder_afi;
@@ -404,6 +413,13 @@ struct Package {
   // override is ("BESTACT/HEADSHOT.BIN"): the catalog marks each "game"
   // (catalog.h). Empty for every other release.
   std::span<const char* const> games = {};
+  // An add-on of another release's (its id: "pythonizer"), whose scenes play
+  // with that release's 7th Level Runtime Player and ship none of their own
+  // (Monty Python's Limited Edition Desktop Extras, two scenes its floppy
+  // installed beside the Desktop Pythonizer's PYTHON.EXE). The catalog gives
+  // each of its entries "requires" (catalog.h); nullptr for every other
+  // release.
+  const char* requires_release = nullptr;
 
   bool is_deluxe() const;
   // An Intermission release installed by Delrina's own Intermission

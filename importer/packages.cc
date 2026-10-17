@@ -100,6 +100,14 @@ const KnownFile kBestshotKnown[] = {
 #include "known_files_bestshot.inc"
     {nullptr, 0, nullptr},
 };
+const KnownFile kPythonizerKnown[] = {
+#include "known_files_pythonizer.inc"
+    {nullptr, 0, nullptr},
+};
+const KnownFile kPythonleKnown[] = {
+#include "known_files_pythonle.inc"
+    {nullptr, 0, nullptr},
+};
 
 template <size_t N>
 std::span<const KnownFile> manifest(const KnownFile (&a)[N]) {
@@ -1459,6 +1467,142 @@ const NameOverride kBestshotNames[] = {
 // setup.inf's [Games] (7THLEVEL.INI): the three scenes that are games too.
 const char* const kBestshotGames[] = {"BESTACT/HEADSHOT.BIN", "BESTACT/HOTSHOT.BIN", "BESTACT/LINESHOT.BIN"};
 
+// ---- pythonizer ----------------------------------------------------------------------------
+//
+// Monty Python's Flying Circus Desktop Pythonizer (7th Level, 1995; the disc
+// says 1994): a desktop customizer whose 22 scenes (7th Level resource files
+// of the engine's first version) its Runtime Player, PYTHON.EXE, plays as
+// screen savers and living wallpapers, on one CD installed by 7th Level's
+// Setup. That setup copies the player and its libraries from PYTHON\ to its
+// install folder, the customizer (PYTHIZER.EXE), its saver stub and its OLE
+// server to the Windows folder, and leaves the scenes on the CD
+// (7THLEVEL.INI's [Screen Savers]: 19 in INTERACT\, the three games' in
+// PYTHON\ beside the player). The recipe is that placement baked into one
+// table, every scene where the CD has it (research/monty, gitignored). Never
+// installed: the customizer (PYTHIZER.EXE, its own scene HERALD.BIN, its
+// sounds library PYTHSFX.DLL), the saver stub PYTHSAVR.SCR (it only starts
+// the customizer), the OLE server and its 31 animations, Best Shot's sampler
+// (DEMO\, whose DEMO.EXE is Best Shot's player), the icons, wallpapers,
+// sounds and telephone messages.
+
+const char* const kPythonizerModuleDirs[] = {"INTERACT", "PYTHON"};
+// The CD (ISO-9660, volume PYTHNIZR, mastered by 7th Level on 1995-03-18),
+// as the Internet Archive's item of it holds it (its download), and the raw
+// image of the same disc beside it there (one MODE1/2352 track; the same
+// files).
+const KnownImage kPythonizerImages[] = {
+    {"c0938e04fa566c6fd2770db5f1eef686", 190212096, "ISO-9660 CD", "PYTHNIZR"},
+    {"0f8551cc1d13e54064115da1d59bce90", 218446704, "the same CD as raw 2352-byte sectors (BIN/CUE)", "PYTHNIZR"},
+};
+const Download kPythonizerDownloads[] = {
+    {"https://archive.org/download/monty-python-flying-circus-pythonizer/MontyPythonFlyingCircus_Pythonizer-1995.iso",
+     L"MontyPythonFlyingCircus_Pythonizer-1995.iso", 190212096, "c0938e04fa566c6fd2770db5f1eef686", "image"},
+};
+// The player, its libraries and every scene: a scene is nothing without the
+// player, the player nothing without its libraries.
+const char* const kPythonizerRequired[] = {
+    "PYTHON/PYTHON.EXE",     "PYTHON/PYTHA001.DLL",   "PYTHON/PYTHR001.DLL",   "PYTHON/PYTHS001.DLL",
+    "PYTHON/PYTHU001.DLL",   "PYTHON/BIRDGAME.BIN",   "PYTHON/GOPHER.BIN",     "PYTHON/PIGGAME.BIN",
+    "INTERACT/AQUARIUM.BIN", "INTERACT/BIRDMAN.BIN",  "INTERACT/BOUNCE.BIN",   "INTERACT/CARRIAGE.BIN",
+    "INTERACT/DANCE.BIN",    "INTERACT/ELEPHANT.BIN", "INTERACT/FAIRY.BIN",    "INTERACT/GIRL.BIN",
+    "INTERACT/GNTHEAD.BIN",  "INTERACT/GREENMAN.BIN", "INTERACT/HOPMAN.BIN",   "INTERACT/ICONFESS.BIN",
+    "INTERACT/KILRCARS.BIN", "INTERACT/MOUTH.BIN",    "INTERACT/ROLLMAN.BIN",  "INTERACT/SILYWALK.BIN",
+    "INTERACT/STRYTIME.BIN", "INTERACT/TRAIN.BIN",    "INTERACT/TVISBAD.BIN"};
+// The fingerprint: the release's own programs (its saver stub, the
+// customizer, the player) and a scene, side by side. 7th Level's Setup and
+// its DUNZIP.DLL are on its other CDs too, and this CD's DEMO folder holds
+// Take Your Best Shot's player and libraries; these names together are the
+// Desktop Pythonizer's alone (Best Shot's CD has none of them).
+const char* const kPythonizerFiles[] = {"PYTHON/PYTHSAVR.SCR", "PYTHON/PYTHIZER.EXE", "PYTHON/PYTHON.EXE",
+                                        "INTERACT/SILYWALK.BIN"};
+// setup.inf's [Install] copies of the player and its libraries (to its
+// install folder, here PYTHON, where the CD has them beside the three games'
+// scenes), and the scenes it plays from the CD, all as they are.
+const LooseFile kPythonizerLoose[] = {
+    {"PYTHON/PYTHON.EXE", "PYTHON/PYTHON.EXE", Codec::plain},
+    {"PYTHON/PYTHA001.DLL", "PYTHON/PYTHA001.DLL", Codec::plain},
+    {"PYTHON/PYTHR001.DLL", "PYTHON/PYTHR001.DLL", Codec::plain},
+    {"PYTHON/PYTHS001.DLL", "PYTHON/PYTHS001.DLL", Codec::plain},
+    {"PYTHON/PYTHU001.DLL", "PYTHON/PYTHU001.DLL", Codec::plain},
+    {"PYTHON/BIRDGAME.BIN", "PYTHON/BIRDGAME.BIN", Codec::plain},
+    {"PYTHON/GOPHER.BIN", "PYTHON/GOPHER.BIN", Codec::plain},
+    {"PYTHON/PIGGAME.BIN", "PYTHON/PIGGAME.BIN", Codec::plain},
+    {"INTERACT/AQUARIUM.BIN", "INTERACT/AQUARIUM.BIN", Codec::plain},
+    {"INTERACT/BIRDMAN.BIN", "INTERACT/BIRDMAN.BIN", Codec::plain},
+    {"INTERACT/BOUNCE.BIN", "INTERACT/BOUNCE.BIN", Codec::plain},
+    {"INTERACT/CARRIAGE.BIN", "INTERACT/CARRIAGE.BIN", Codec::plain},
+    {"INTERACT/DANCE.BIN", "INTERACT/DANCE.BIN", Codec::plain},
+    {"INTERACT/ELEPHANT.BIN", "INTERACT/ELEPHANT.BIN", Codec::plain},
+    {"INTERACT/FAIRY.BIN", "INTERACT/FAIRY.BIN", Codec::plain},
+    {"INTERACT/GIRL.BIN", "INTERACT/GIRL.BIN", Codec::plain},
+    {"INTERACT/GNTHEAD.BIN", "INTERACT/GNTHEAD.BIN", Codec::plain},
+    {"INTERACT/GREENMAN.BIN", "INTERACT/GREENMAN.BIN", Codec::plain},
+    {"INTERACT/HOPMAN.BIN", "INTERACT/HOPMAN.BIN", Codec::plain},
+    {"INTERACT/ICONFESS.BIN", "INTERACT/ICONFESS.BIN", Codec::plain},
+    {"INTERACT/KILRCARS.BIN", "INTERACT/KILRCARS.BIN", Codec::plain},
+    {"INTERACT/MOUTH.BIN", "INTERACT/MOUTH.BIN", Codec::plain},
+    {"INTERACT/ROLLMAN.BIN", "INTERACT/ROLLMAN.BIN", Codec::plain},
+    {"INTERACT/SILYWALK.BIN", "INTERACT/SILYWALK.BIN", Codec::plain},
+    {"INTERACT/STRYTIME.BIN", "INTERACT/STRYTIME.BIN", Codec::plain},
+    {"INTERACT/TRAIN.BIN", "INTERACT/TRAIN.BIN", Codec::plain},
+    {"INTERACT/TVISBAD.BIN", "INTERACT/TVISBAD.BIN", Codec::plain},
+};
+// Each scene names itself (its header's title, which the catalog reads); these
+// are the same names, for a scene file whose title cannot be read.
+const NameOverride kPythonizerNames[] = {
+    {"PYTHON/BIRDGAME.BIN", "The Chicken Game"},    {"PYTHON/GOPHER.BIN", "The Gopher Game"},
+    {"PYTHON/PIGGAME.BIN", "The Pig Game"},         {"INTERACT/AQUARIUM.BIN", "Aquarium"},
+    {"INTERACT/BIRDMAN.BIN", "Birdman"},            {"INTERACT/BOUNCE.BIN", "Queen Victoria"},
+    {"INTERACT/CARRIAGE.BIN", "Man with Baby Carriage"}, {"INTERACT/DANCE.BIN", "No Time to Lose Woman"},
+    {"INTERACT/ELEPHANT.BIN", "Hopping Elephants"}, {"INTERACT/FAIRY.BIN", "BBC Fairy"},
+    {"INTERACT/GIRL.BIN", "Walking Girl"},          {"INTERACT/GNTHEAD.BIN", "Giant Head"},
+    {"INTERACT/GREENMAN.BIN", "Hopping Green Man"}, {"INTERACT/HOPMAN.BIN", "Hopping Man"},
+    {"INTERACT/ICONFESS.BIN", "I Confess"},         {"INTERACT/KILRCARS.BIN", "Killer Cars"},
+    {"INTERACT/MOUTH.BIN", "Many Mouths"},          {"INTERACT/ROLLMAN.BIN", "Rolling Man"},
+    {"INTERACT/SILYWALK.BIN", "Silly Walk"},        {"INTERACT/STRYTIME.BIN", "Story Time"},
+    {"INTERACT/TRAIN.BIN", "Train"},                {"INTERACT/TVISBAD.BIN", "TV is bad for your eyes"},
+};
+
+// ---- pythonle -----------------------------------------------------------------------------
+//
+// Monty Python's Limited Edition Desktop Extras (7th Level, 1995; the label
+// says 1994): two more scenes for the Desktop Pythonizer on one floppy, which
+// its setup copied into the Pythonizer's install folder beside PYTHON.EXE and
+// added to 7THLEVEL.INI's lists. It has no player of its own: its scenes play
+// with the Pythonizer's (Package::requires_release), wherever that release is
+// imported, before or after this one. Never installed: the setup, its
+// DUNZIP.DLL, the icon library PYTHONLE.DLL and the four wallpapers.
+
+// Its two scenes, in the package root (as setup put them in the player's
+// folder).
+const char* const kPythonleModuleDirs[] = {""};
+// The floppy (FAT12, label PYTHONLE, written 1995-01-09), as the Internet
+// Archive's item of it holds it; its download.
+const KnownImage kPythonleImages[] = {
+    {"5088f268077e88dacfd3aef0bb4e823b", 1474560, "FAT12 1.44 MB floppy image", "PYTHONLE"},
+};
+const Download kPythonleDownloads[] = {
+    {"https://archive.org/download/monty-pythons-flying-circus/Monty_Pythons_Flying_Circus.img",
+     L"Monty_Pythons_Flying_Circus.img", 1474560, "5088f268077e88dacfd3aef0bb4e823b", "image"},
+};
+const char* const kPythonleRequired[] = {"FOOT.BIN", "PENGUINS.BIN"};
+// The fingerprint: its icon library, its two scenes and the setup, side by
+// side at the floppy's root (or a copy of its files): the icons' name is
+// the release's own. Nothing is opened to identify it.
+const char* const kPythonleFiles[] = {"PYTHONLE.DLL", "FOOT.BIN", "PENGUINS.BIN", "SETUP.EXE"};
+// setup.inf's copies of the two scenes (to the Pythonizer's folder, 0:), as
+// they are.
+const LooseFile kPythonleLoose[] = {
+    {"FOOT.BIN", "FOOT.BIN", Codec::plain},
+    {"PENGUINS.BIN", "PENGUINS.BIN", Codec::plain},
+};
+// Each scene names itself; these are the same names, for a scene file whose
+// title cannot be read.
+const NameOverride kPythonleNames[] = {
+    {"FOOT.BIN", "Foot"},
+    {"PENGUINS.BIN", "Penguins"},
+};
+
 // ---- box covers (COVERS.md §2.3) ------------------------------------------------------------
 //
 // Only URLs, md5s, sizes, paths and crops: the pictures are fetched (md5- and
@@ -1740,6 +1884,25 @@ const CoverSource kBestshotCovers[] = {
     cover_download("box", "Box front", "Internet Archive", "https://archive.org/download/takeyourbestshot/bestshot.jpg",
                    "a225962a4e242347a056f0b356ab920b", 58082, L"takeyourbestshot_bestshot.jpg"),
 };
+// The Desktop Pythonizer: the Internet Archive's scan of the disc (the CD
+// image's own item; 3060x3109, cropped to the disc, normalized to 2048x2048).
+// No box front is known. 7th Level's and Python (Monty) Pictures' art:
+// fetched onto the user's machine only, never bundled.
+const CoverSource kPythonizerCovers[] = {
+    cover_download("disc", "Disc label", "Internet Archive",
+                   "https://archive.org/download/monty-python-flying-circus-pythonizer/"
+                   "MontyPythonFlyingCircus_Pythonizer-1995.jpg",
+                   "e39961fc73b617bab4c59837b81ad761", 1526928, L"MontyPythonFlyingCircus_Pythonizer-1995.jpg",
+                   Crop{85, 97, 2880, 2880}),
+};
+// The Limited Edition Desktop Extras: the Internet Archive's photo of the
+// floppy (the image's own item; 2115x2172), cropped to its label.
+const CoverSource kPythonleCovers[] = {
+    cover_download("panel", "Disk label", "Internet Archive",
+                   "https://archive.org/download/monty-pythons-flying-circus/img20250111_20571690.jpg",
+                   "2fc7df5ce1e34602127c2fec31c5bcdd", 2047677, L"monty-pythons-flying-circus_img20250111_20571690.jpg",
+                   Crop{216, 40, 1654, 1202}),
+};
 
 const Package kPackages[] = {
     {"deluxe", "After Dark 4.0 Deluxe", "Deluxe", Recipe::tree, "FILES", kDeluxeModuleDirs, kDeluxeImages,
@@ -1880,6 +2043,21 @@ const Package kPackages[] = {
      kBestshotImages, kBestshotRequired, {}, nullptr, {}, "BESTACT", nullptr, nullptr, kBestshotFiles, {},
      kBestshotNames, manifest(kBestshotKnown), kBestshotDownloads, kBestshotCovers, "1995-02", nullptr, kBestshotLoose,
      nullptr, "640x480", Package::About::as_is, {}, nullptr, nullptr, {}, nullptr, {}, {}, kBestshotGames},
+    // After the first twenty-one, the same way, the twenty-third after it.
+    // The CD's files are dated 1995-03-18 (the disc says 1994); its scenes
+    // are drawn for 640x480, as Best Shot's are. No [Games] in its setup.
+    {"pythonizer", "Monty Python's Flying Circus Desktop Pythonizer", "Desktop Pythonizer", Recipe::cdcopy,
+     "packages/pythonizer", kPythonizerModuleDirs, kPythonizerImages, kPythonizerRequired, {}, nullptr, {}, "INTERACT",
+     nullptr, nullptr, kPythonizerFiles, {}, kPythonizerNames, manifest(kPythonizerKnown), kPythonizerDownloads,
+     kPythonizerCovers, "1995-03", nullptr, kPythonizerLoose, nullptr, "640x480"},
+    // Its floppy's files are dated 1994-12-22 to 1995-01-09 (the label says
+    // 1994); its scenes play with the Desktop Pythonizer's player, at the
+    // same screen.
+    {"pythonle", "Monty Python's Limited Edition Desktop Extras", "Desktop Extras", Recipe::cdcopy, "packages/pythonle",
+     kPythonleModuleDirs, kPythonleImages, kPythonleRequired, {}, nullptr, {}, "", nullptr, nullptr, kPythonleFiles,
+     {}, kPythonleNames, manifest(kPythonleKnown), kPythonleDownloads, kPythonleCovers, "1995-01", nullptr,
+     kPythonleLoose, nullptr, "640x480", Package::About::as_is, {}, nullptr, nullptr, {}, nullptr, {}, {}, {},
+     "pythonizer"},
 };
 
 }  // namespace

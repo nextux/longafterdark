@@ -62,7 +62,8 @@ void fake_install(const fs::path& assets, const std::vector<std::string>& ids,
                                                       {"looney", 12},   {"screams", 15},  {"disney", 16},
                                                       {"farside", 14},  {"dilbert", 16},  {"tng", 13},
                                                       {"castaway", 1},  {"opus", 16},     {"opusroad", 16},
-                                                      {"flintstones", 15}, {"intermission", 54}, {"bestshot", 17}};
+                                                      {"flintstones", 15}, {"intermission", 54}, {"bestshot", 17},
+                                                      {"pythonizer", 22}, {"pythonle", 2}};
   for (const std::string& id : ids) {
     auto md5 = image_md5.find(id);
     const std::string source = md5 == image_md5.end() ? "" : ", \"source\": {\"imageMd5\": \"" + md5->second + "\"}";
@@ -183,7 +184,8 @@ void test_model(const fs::path& dir) {
     CHECK(first.find(L", The Disney Collection Screen Saver, The Far Side Screen Saver Collection, Scott Adams' "
                      L"Dilbert Screen Saver Collection, Star Trek: The Next Generation Screen Saver, Screen Antics: "
                      L"Johnny Castaway, Opus 'n Bill Screen Saver, Opus 'n Bill: On the Road Again!, The Flintstones "
-                     L"Screen Saver Collection, Intermission 4.0 and Take Your Best Shot. Choose where to copy them "
+                     L"Screen Saver Collection, Intermission 4.0, Take Your Best Shot, Monty Python's Flying Circus Desktop "
+                     L"Pythonizer and Monty Python's Limited Edition Desktop Extras. Choose where to copy them "
                      L"from.") !=
           std::wstring::npos);
     const std::wstring later = gui::sources_intro(true);
@@ -204,7 +206,8 @@ void test_model(const fs::path& dir) {
     if (reg.size() == 16) CHECK(later.find(L" of sixteen releases. ") != std::wstring::npos);
     if (reg.size() == 20) CHECK(later.find(L" of twenty releases. ") != std::wstring::npos);
     if (reg.size() == 21) CHECK(later.find(L" of twenty-one releases. ") != std::wstring::npos);
-    CHECK_EQ(reg.size(), size_t(21));
+    if (reg.size() == 23) CHECK(later.find(L" of twenty-three releases. ") != std::wstring::npos);
+    CHECK_EQ(reg.size(), size_t(23));
   }
 
   // Nothing installed, and an assets folder that doesn't exist stays that way.
@@ -326,7 +329,7 @@ void test_model(const fs::path& dir) {
     fs::resize_file(downloads / d.file_name, d.size);
   }
   auto dl = gui::download_rows(assets, "", downloads);
-  CHECK_EQ(dl.size(), size_t(21));
+  CHECK_EQ(dl.size(), size_t(23));
   for (const auto& r : dl) {
     CHECK(r.text.find(r.title + L"\n") == 0);
     if (r.id == "deluxe" || r.id == "tt")
@@ -369,6 +372,13 @@ void test_model(const fs::path& dir) {
       CHECK(r.text == L"Intermission 4.0\n3 floppy disk images (ZIP) \u00b7 3.3 MB\nNot imported yet");
     // One CD's image.
     if (r.id == "bestshot") CHECK(r.text == L"Take Your Best Shot\nCD image \u00b7 89.1 MB\nNot imported yet");
+    // The Desktop Pythonizer's CD image, its Desktop Extras' floppy image.
+    if (r.id == "pythonizer")
+      CHECK(r.text == L"Monty Python's Flying Circus Desktop Pythonizer\nCD image \u00b7 181.4 MB\n"
+                      L"Not imported yet");
+    if (r.id == "pythonle")
+      CHECK(r.text == L"Monty Python's Limited Edition Desktop Extras\nFloppy disk image \u00b7 1.4 MB\n"
+                      L"Not imported yet");
   }
   // With disk 2's image too, the pair is downloaded.
   if (startrek && !startrek->downloads.empty() && !startrek->downloads.front().more_images.empty()) {
@@ -385,8 +395,8 @@ void test_model(const fs::path& dir) {
     CHECK((all->ids == std::vector<std::string>{"ad10", "ad32", "simpsons", "swse", "startrek", "marvel", "snoopy",
                                                 "looney", "screams", "disney", "farside", "dilbert", "tng",
                                                 "castaway", "opus", "opusroad", "flintstones", "intermission",
-                                                "bestshot"}));
-    CHECK(all->text.find(L"Every release not imported yet\n19 releases") == 0);
+                                                "bestshot", "pythonizer", "pythonle"}));
+    CHECK(all->text.find(L"Every release not imported yet\n21 releases") == 0);
   }
   auto one = gui::download_rows(assets, "tt", downloads);
   CHECK_EQ(one.size(), size_t(1));
@@ -629,7 +639,7 @@ void test_shots(const std::wstring& exe, const fs::path& dir) {
     }
   }
   // The Sources page on common screens, every release installed: their
-  // covers are a grid, seven to a row in the 816-DIP window (twenty-one on
+  // covers are a grid, eight to a row in the 924-DIP window (twenty-three on
   // three rows), which shows whole at 150% on a 2560x1440 monitor (a 2560x1392 DIP
   // work area) and on a 1080-line screen at 100%. A work area too narrow and
   // short for it (640x900 at 100%: five to a row, five rows) shows as many
@@ -643,8 +653,8 @@ void test_shots(const std::wstring& exe, const fs::path& dir) {
     int at_least;   // whole rows that must show (-1: every one; 0: the fallback)
     int cols;       // covers to a row
   };
-  const std::vector<Rows> rows = {{L"workarea=2560x1392;dpi=144", -1, 7},
-                                  {L"workarea=1920x1032;dpi=96", -1, 7},
+  const std::vector<Rows> rows = {{L"workarea=2560x1392;dpi=144", -1, 8},
+                                  {L"workarea=1920x1032;dpi=96", -1, 8},
                                   {L"workarea=640x900;dpi=96", 2, 5},
                                   {L"workarea=640x520;dpi=144", 0, 5}};
   std::map<std::wstring, int> sources_h;   // the page's client height at each of them
@@ -981,7 +991,7 @@ int test_flow(const std::wstring& exe, const fs::path& dir) {
       if (list) {
         CHECK(GuiProcess::control(list, 200) != nullptr);
         CHECK(GuiProcess::control(list, 299) != nullptr);   // nothing imported: "every release"
-        // Twenty-two cards: nine show at the most, and the list scrolls. A
+        // Twenty-four cards: nine show at the most, and the list scrolls. A
         // wheel notch over a card scrolls it, and each card the Down arrow
         // focuses (from the first, focused as the page opens, to "every
         // release", the last) is scrolled into view, as Tab's are.

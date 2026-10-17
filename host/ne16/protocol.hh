@@ -33,9 +33,10 @@
 //        the input that woke the saver. It takes no key or mouse messages;
 //        its button runs the program with "/c".
 //   7thlevel  a 7th Level Runtime Player scene (a 7th Level resource file: Take
-//        Your Best Shot's BESTACT\*.BIN), run as Take Your Best Shot's
-//        desktop program BESTSHOT.EXE ran it: the real player, PLYMPTON.EXE,
-//        with its own DLLs, as the runtime's task, its command line the scene
+//        Your Best Shot's BESTACT\*.BIN; the Desktop Pythonizer's), run as
+//        the product's desktop program (BESTSHOT.EXE, PYTHIZER.EXE) ran it:
+//        the real player (PLYMPTON.EXE, PYTHON.EXE: the header's product
+//        picks it), with its own DLLs, as the runtime's task, its command line the scene
 //        and "/p" with the handle of the 0x6C-byte block that says the mode
 //        (seventh_protocol.cc, make_seventh_protocol; lane.hh "7th Level
 //        scenes"). A task as scr's is; it takes no key or mouse messages in
@@ -302,11 +303,14 @@ void mount_scr_disk(win16::Runtime16& rt, const Env& env, const Ne16Layout& layo
 // ---- the 7thlevel protocol (seventh_protocol.cc) -----------------------------------------------------------
 
 // The 7th Level Runtime Player protocol for the scene at layout.module_path
-// (its player: package.hh seventh_player_dir).
+// (its player: package.hh seventh_find_player).
 std::unique_ptr<Protocol16> make_seventh_protocol(const Ne16Layout& layout);
 
 // The player's modes, the block's +2 (BESTSHOT.EXE's callers of 6:00E6; the
-// player's 1:6EB0 takes 0..6; its 1:70A2 starts each).
+// player's 1:6EB0 takes 0..6; its 1:70A2 starts each). The Desktop
+// Pythonizer's PYTHIZER.EXE filled the same block at 8:00E6 for modes 1..4
+// (its screen saver 8:042C, its living wallpaper 9:048B) and at 6:0C3A for
+// mode 5, and its PYTHON.EXE takes 0..5 (1:6457).
 enum class SeventhMode : uint16_t {
   program = 0,           // another 7th Level program (BESTSHOT's samplers)
   wallpaper = 1,         // the living wallpaper (7:04E9: its flag 0): the scene in a window at the
@@ -314,8 +318,8 @@ enum class SeventhMode : uint16_t {
   wallpaper_preview = 2, // the living wallpaper's preview in BESTSHOT's dialog (10:2BBC: flag 1): topmost
   saver = 3,             // the screen saver (6:068A, BESTSHOT's /s)
   saver_preview = 4,     // the screen saver's preview in BESTSHOT's dialog (10:30B8)
-  five = 5,              // (the player sets a flag of its own; no BESTSHOT caller)
-  game = 6,              // a game (2:06CA)
+  five = 5,              // (the player sets a flag of its own; no BESTSHOT caller; PYTHIZER's OLE animations)
+  game = 6,              // a game (2:06CA; Best Shot only)
 };
 // What BESTSHOT.EXE's 6:00E6 put in the block (GlobalAlloc(GMEM_SHARE |
 // GMEM_MOVEABLE | GMEM_ZEROINIT, 0x6C)) before it WinExec'd the player.
@@ -350,25 +354,34 @@ SeventhBlock seventh_run_block(const Env& env, const std::string& title, bool ca
 // HOTSHOT.BIN, LINESHOT.BIN (any case) — a rule by file name.
 bool seventh_is_game(const std::string& file);
 // A 7th Level resource file's product key and title, from its header ("7L"
-// 02 00, a length byte, the product NUL-terminated — "BestShot", BESTSHOT.EXE's
-// [Apps] key for the player —, the title ending at a NUL or 0xFB). False when
-// the file is not one.
+// 02 00 — Take Your Best Shot's — or "7L" 01 00 — the Desktop Pythonizer's —,
+// a length byte, the product NUL-terminated — "BestShot", "Python": the
+// desktop program's [Apps] key for the player —, the title ending at a NUL or
+// 0xFB). False when the file is not one.
 bool seventh_header(const std::string& host_path, std::string* product, std::string* title);
-// The player's command tail (the PSP's): BESTSHOT's wsprintf(" %s /p%lX",
-// scene, MAKELONG(hBlock, 0)) after its own name.
+// The player's command tail (the PSP's): BESTSHOT's (and PYTHIZER's)
+// wsprintf(" %s /p%lX", scene, MAKELONG(hBlock, 0)) after its own name.
 std::string seventh_command_tail(const std::string& guest_scene, uint16_t hblock);
 
-// Where the player's installer put things on the guest's disk: the player's
-// folder at C:\7THLEVEL\BESTSHOT (SETUP.EXE's default, c:\7thLevel\BestShot),
-// the scenes on the CD at D:\BESTACT.
-constexpr const char* kSeventhInstallDir = "C:\\7THLEVEL\\BESTSHOT";
+// Where the installers put things on the guest's disk: the player's folder
+// at the product's install_dir (SETUP.EXE's default: c:\7thLevel\BestShot,
+// c:\7thLevel\Python), an add-on's scenes in it beside the player, the CD's
+// scenes at D:\<folder>.
 constexpr const char* kSeventhCdDrive = "D:";
-// The guest's disk for a 7th Level scene (seventh_protocol.cc): the player's
-// folder at kSeventhInstallDir (the current directory) and C:\WINDOWS (over
-// the package's windows dir when it has one) as copy-on-write overlays whose
-// upper layers are ADSTATE's package dir or memory, the scene's folder on the
-// CD (D:\<folder>, read-only), C:\WINDOWS\SYSTEM (the engine dir), H:, with
-// the profile seeds the installer left (win16/dos16.hh seed_seventh_level).
-void mount_seventh_disk(win16::Runtime16& rt, const Env& env, const Ne16Layout& layout);
+// The guest's disk for a 7th Level scene (seventh_protocol.cc) whose player
+// is `player` (package.hh seventh_find_player): the player's folder at the
+// product's install_dir (the current directory) and C:\WINDOWS (over the
+// package's windows dir when it has one) as copy-on-write overlays whose
+// upper layers are ADSTATE's package dir or memory, the CD's folders —
+// the scene's own (none for an add-on) and the product's cd_folders, from the
+// player's package — at D:\<folder>, read-only; an add-on's scenes as files
+// of the player's folder; C:\WINDOWS\SYSTEM (the engine dir), H:, with the
+// profile seeds the installers left (win16/dos16.hh seed_seventh_level).
+void mount_seventh_disk(win16::Runtime16& rt, const Env& env, const Ne16Layout& layout, const SeventhProduct& product,
+                        const SeventhPlayer& player);
+// The scene's path on the guest's disk, as its desktop program's
+// 7THLEVEL.INI named it: D:\<FOLDER>\<FILE> on the CD, an add-on's
+// <install_dir>\<FILE>.
+std::string seventh_guest_scene(const Ne16Layout& layout, const SeventhProduct& product, const SeventhPlayer& player);
 
 }  // namespace adw::ne16

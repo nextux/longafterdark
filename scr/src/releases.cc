@@ -63,7 +63,9 @@ const std::string& same_as_key(const Module& m) { return m.same_as.empty() ? m.i
 RotationPlan effective_rotation(const Settings& s, const Catalog& c,
                                 const std::function<bool(const std::string&)>& available) {
   RotationPlan plan;
-  auto ok = [&](const Module& m) { return !available || available(m.id); };
+  // A module that lacks the release it needs (Catalog::lacks_release) is as
+  // good as missing: it can't play.
+  auto ok = [&](const Module& m) { return !c.lacks_release(m) && (!available || available(m.id)); };
   // 1. Randomize (in catalog order), or everything when it names nothing we have.
   std::set<std::string> wanted(s.randomize.begin(), s.randomize.end());
   std::vector<const Module*> base;

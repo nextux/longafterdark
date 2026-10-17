@@ -32,15 +32,24 @@
 // asa), and a file named *.FLI, *.FLC, *.MRF or *.MSV that is no MZ
 // executable an Intermission data file of that type (imx, forms fli, flc,
 // mrf, msv: core's intermission_data_type), whatever ADNE16KIND says. A file
-// that starts "7L" 02 00 is a 7th Level resource file, a scene of 7th Level's
-// Runtime Player (7thlevel, whatever its name; ADNE16KIND can only say so).
+// that starts "7L" 02 00 or "7L" 01 00 is a 7th Level resource file, a scene
+// of 7th Level's Runtime Player (7thlevel, whatever its name; ADNE16KIND can
+// only say so).
 //
-// The 7th Level Runtime Player (7thlevel): the scene's player is
-// <package root>\BESTSHOT\PLYMPTON.EXE — the folder Take Your Best Shot's
-// installer put it in (c:\7thLevel\BestShot), beside the scenes' BESTACT
-// folder from its CD; package root = the scene folder's parent, packaged or
-// not. A rule by folder and file name, never a package id. The player's own
-// DLLs (PLYMU001, PLYMA001, PLYMS001, PLYMR001 and DISPDIB) are in its folder.
+// The 7th Level Runtime Player (7thlevel): the scene's header names its
+// product, the product its player (seventh_product) — "BestShot" Take Your
+// Best Shot's BESTSHOT\PLYMPTON.EXE, "Python" the Desktop Pythonizer's
+// PYTHON\PYTHON.EXE: the folder each installer put it in (c:\7thLevel\BestShot,
+// c:\7thLevel\Python), named as on its CD. Where (P = the scene folder's
+// parent, packaged or not): P\<folder>\<player>, the scene's own package —
+// Best Shot's BESTACT beside BESTSHOT, the Pythonizer's INTERACT beside PYTHON
+// and its three scenes in PYTHON itself —; else P\*\<folder>\<player>, the
+// first in name order (any case): an add-on whose scenes sit in its package's
+// root, played by another package's player (the Desktop Extras' FOOT.BIN and
+// PENGUINS.BIN, which its floppy put beside the Pythonizer's PYTHON.EXE). A
+// rule by folder and file name, never a package id. The player's own DLLs
+// (PLYMU001, PLYMA001, PLYMS001, PLYMR001 and DISPDIB; PYTHU001, PYTHA001,
+// PYTHS001, PYTHR001) are in its folder.
 //
 // Form (imx): what the Intermission module's file is, which picks its
 // reader. INTRMLIB's FINDALLMODULES (1:1e06) made every *.IMQ of the saver
@@ -183,11 +192,34 @@ bool parse_kind_choice(const std::string& value, bool* is_auto, ModuleKind* forc
 
 // ---- the 7th Level Runtime Player ------------------------------------------------------------------------------
 
-// The player's folder, file, and the scenes' folder on its CD (the rule above).
-constexpr const char* kSeventhPlayerDir = "BESTSHOT";
-constexpr const char* kSeventhPlayer = "PLYMPTON.EXE";
-// <package root>\BESTSHOT, the package root being the scene folder's parent.
-std::string seventh_player_dir(const Ne16Layout& layout);
+// What a 7th Level product's installer and desktop program did, by the
+// product a scene's header names (its 7THLEVEL.INI [Apps] key).
+struct SeventhProduct {
+  const char* product;      // "BestShot", "Python"
+  const char* player_dir;   // the player's folder on the CD and in the package: "BESTSHOT", "PYTHON"
+  const char* player;       // "PLYMPTON.EXE", "PYTHON.EXE"
+  const char* install_dir;  // the guest's: SETUP.EXE's default, upper case ("C:\\7THLEVEL\\BESTSHOT")
+  // The scenes' folders on the CD besides the scene's own (D:\<folder>; the
+  // Pythonizer's INTERACT and PYTHON, which its 7THLEVEL.INI names), nullptr-ended.
+  const char* const* cd_folders;
+  const char* own_scene;    // the desktop program's own 7th Level file, never a scene ("bestshot.bin")
+  // The desktop program's main window (class and title) and its UI window,
+  // the block's +0x6A (class, title): BESTSHOT.EXE's 4:07A1/4:07EE,
+  // PYTHIZER.EXE's 5:0CDD/5:0D2A.
+  const char* main_class;
+  const char* ui_class;
+  const char* ui_title;
+  uint16_t max_mode;        // the highest mode its player takes: PLYMPTON 1:6EB0 6, PYTHON.EXE 1:6457 5
+};
+// The product `product` names (any case), else nullptr.
+const SeventhProduct* seventh_product(const std::string& product);
+// A scene's player (the rule above): its folder on the host, "" when none
+// is found; `addon` says whether it is another package's (rule 2).
+struct SeventhPlayer {
+  std::string dir;
+  bool addon = false;
+};
+SeventhPlayer seventh_find_player(const Ne16Layout& layout, const SeventhProduct& product);
 
 // ---- the IMX reader -------------------------------------------------------------------------------------------
 

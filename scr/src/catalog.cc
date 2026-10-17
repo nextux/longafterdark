@@ -235,6 +235,14 @@ int Catalog::release_index(const std::string& id) const {
   return -1;
 }
 
+bool Catalog::lacks_release(const Module& m) const {
+  return !m.requires_release.empty() && release_index(m.requires_release) < 0;
+}
+
+std::string needs_text(const Module& m) {
+  return "Needs " + (m.requires_title.empty() ? m.requires_release : m.requires_title);
+}
+
 size_t Catalog::modules_in(int index) const {
   return (size_t)std::count_if(modules.begin(), modules.end(), [&](const Module& m) { return m.release == index; });
 }
@@ -376,6 +384,10 @@ bool parse_catalog(const std::string& json_text, Catalog& out, std::string* erro
       mod.package_title = str_or(m, "packageTitle");
       mod.same_as = str_or(m, "sameAs");
       if (mod.same_as == mod.id) mod.same_as.clear();
+      // An add-on's scene: the release whose player plays it (written last,
+      // only there); absent, empty or not a string, it needs none.
+      mod.requires_release = str_or(m, "requires");
+      mod.requires_title = str_or(m, "requiresTitle");
       mod.about = str_or(m, "about");
       mod.credits = str_or(m, "credits");
       if (m.contains("controls") && m.at("controls").is_list()) {

@@ -1,5 +1,5 @@
 # adw_import + adimport.exe — the Windows asset importer (DESIGN.md §6,
-# PACKAGES.md) and the catalog generator (§6a), for the twenty-one releases of its
+# PACKAGES.md) and the catalog generator (§6a), for the twenty-three releases of its
 # registry (packages.h). The library depends on Win32 (WinHTTP, CNG, shell),
 # on adw_loader, whose PE/NE readers the catalog uses, and on zlib (raw
 # inflate for the AD 3.x installers' PKZIP archives, CRC-32 for them and for

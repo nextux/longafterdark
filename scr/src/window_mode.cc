@@ -74,6 +74,12 @@ WindowModule window_module(const Catalog& c, const std::wstring& name,
               L") or by its name as the settings window lists it (such as \"" + widen(e->name) + L"\").";
     return r;
   }
+  if (c.lacks_release(*m)) {
+    // An add-on's scene, without the release whose player plays it.
+    r.error = L"\"" + widen(m->name) + L"\" (" + widen(m->id) + L") " + widen(needs_text(*m)).replace(0, 1, L"n") +
+              L" to play: import that release too.";
+    return r;
+  }
   if (available && !available(m->id)) {
     r.error = L"\"" + widen(m->name) + L"\" (" + widen(m->id) +
               L") is in the catalog, but its file is missing: import its release again.";

@@ -345,8 +345,8 @@ int SourcesPage::layout(int w, int max_h) {
     }
     return y + px(16);
   };
-  // Too tall for the work area (on a short screen; three rows of seven covers
-  // hold twenty-one releases): the grid scrolls in its card, showing as many whole
+  // Too tall for the work area (on a short screen; three rows of eight covers
+  // hold twenty-three releases): the grid scrolls in its card, showing as many whole
   // rows as fit (two at the least) when that makes the page fit, else as
   // many as fit down to one (the part of a row that shows says there are
   // more); when even one row does not fit, the whole body scrolls instead,

@@ -816,16 +816,22 @@ TEST(probe_module_kinds) {
         std::string(intermission_data_type("m.msv")) == "MSV");
   CHECK(!intermission_data_type("x.asa") && !intermission_data_type("x.imx") && !intermission_data_type("x.fli2") &&
         !intermission_data_type("dir.fli\\file") && !intermission_data_type("noext") && !intermission_data_type(""));
-  // A 7th Level resource file (a Runtime Player scene): "7L" 02 00, whatever its name; 02 01 is not one.
+  // A 7th Level resource file (a Runtime Player scene): "7L" 02 00 or 01 00 (the older player's), whatever
+  // its name; 02 01, 03 00 and 00 00 are not one.
   std::string sev = write_temp("scene.bin", {'7', 'L', 2, 0, 1, 'P', 'r', 'o', 'd', 0});
   std::string sev_named = write_temp("scene.fli", {'7', 'L', 2, 0});
+  std::string sev_v1 = write_temp("old.bin", {'7', 'L', 1, 0, 1, 'P', 'r', 'o', 'd', 0});
   std::string sev_x = write_temp("other.bin", {'7', 'L', 2, 1, 0, 0});
+  std::string sev_v3 = write_temp("v3.bin", {'7', 'L', 3, 0, 0, 0});
+  std::string sev_v0 = write_temp("v0.bin", {'7', 'L', 0, 0, 0, 0});
   std::string sev_short = write_temp("short.bin", {'7', 'L', 2});
   CHECK(probe_module(sev).kind == LaneKind::ne16 && probe_module(sev).detail == "7th Level scene");
   CHECK(probe_module(sev_named).kind == LaneKind::ne16 && probe_module(sev_named).detail == "7th Level scene");
+  CHECK(probe_module(sev_v1).kind == LaneKind::ne16 && probe_module(sev_v1).detail == "7th Level scene");
   CHECK(probe_module(sev_x).kind == LaneKind::unsupported && probe_module(sev_short).kind == LaneKind::unsupported);
+  CHECK(probe_module(sev_v3).kind == LaneKind::unsupported && probe_module(sev_v0).kind == LaneKind::unsupported);
   for (auto& p : {pe, pe64, ne, dos, txt, asa, asa_m, asa_x, ani, fli, flc, mrf, msv, empty, mz_fli, fli_txt, sev, sev_named,
-                  sev_x, sev_short}) {
+                  sev_v1, sev_x, sev_v3, sev_v0, sev_short}) {
     DeleteFileW(widen(p).c_str());
   }
 }

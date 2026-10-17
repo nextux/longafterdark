@@ -108,17 +108,21 @@ int main(int argc, char** argv) {
   std::string out;
   CHECK_EQ(run(exe, {L"--help"}, "help", &out), 0);
   CHECK(out.find("usage: adimport") != std::string::npos);
-  // Every release by title, and every id for --package, the twenty-first last.
+  // Every release by title, and every id for --package, the twenty-third last.
   const size_t tng_at = out.find("\n  Star Trek: The Next Generation Screen Saver"),
                castaway_at = out.find("\n  Screen Antics: Johnny Castaway"),
                intermission_at = out.find("\n  Intermission 4.0\r\n") != std::string::npos
                                      ? out.find("\n  Intermission 4.0\r\n")
                                      : out.find("\n  Intermission 4.0\n"),
-               bestshot_at = out.find("\n  Take Your Best Shot");
+               bestshot_at = out.find("\n  Take Your Best Shot"),
+               pythonizer_at = out.find("\n  Monty Python's Flying Circus Desktop Pythonizer"),
+               pythonle_at = out.find("\n  Monty Python's Limited Edition Desktop Extras");
   CHECK(tng_at != std::string::npos && castaway_at != std::string::npos && tng_at < castaway_at &&
         intermission_at != std::string::npos && castaway_at < intermission_at && bestshot_at != std::string::npos &&
-        intermission_at < bestshot_at);
-  CHECK(out.find(", farside, dilbert, tng, castaway, opus, opusroad, flintstones, intermission, bestshot)") !=
+        intermission_at < bestshot_at && pythonizer_at != std::string::npos && bestshot_at < pythonizer_at &&
+        pythonle_at != std::string::npos && pythonizer_at < pythonle_at);
+  CHECK(out.find(", farside, dilbert, tng, castaway, opus, opusroad, flintstones, intermission, bestshot, pythonizer, "
+                 "pythonle)") !=
         std::string::npos);
   CHECK_EQ(run(exe, {}, "no arguments, no console"), 1);
   CHECK_EQ(run(exe, {L"--bogus"}, "unknown flag"), 1);
@@ -228,43 +232,49 @@ int main(int argc, char** argv) {
   // Deluxe with a generated cover (the synthetic disc has no setup art).
   CHECK_EQ(run(exe, {L"--list-packages", L"--dest", dest.wstring()}, "--list-packages", &out), 0);
   CHECK(out.find("; cover: generated") != std::string::npos);
-  // Every release; the title column fits the longest title (Scott Adams'
-  // Dilbert Screen Saver Collection's), so every state starts in the same
+  // Every release; the title column fits the longest title (Monty Python's
+  // Flying Circus Desktop Pythonizer's), so every state starts in the same
   // column.
-  CHECK(out.find("\n  swse         Star Wars Screen Entertainment               "
+  CHECK(out.find("\n  swse         Star Wars Screen Entertainment                  "
                  "not installed; download 6.9 MB (disc image)") != std::string::npos);
-  CHECK(out.find("\n  startrek     Star Trek: The Screen Saver                  "
+  CHECK(out.find("\n  startrek     Star Trek: The Screen Saver                     "
                  "not installed; download 2.8 MB (2 floppy images)") != std::string::npos);
-  CHECK(out.find("\n  tt           Totally Twisted After Dark                   not installed;") != std::string::npos);
-  CHECK(out.find("\n  marvel       Marvel Comics Screen Posters                 "
+  CHECK(out.find("\n  tt           Totally Twisted After Dark                      not installed;") !=
+        std::string::npos);
+  CHECK(out.find("\n  marvel       Marvel Comics Screen Posters                    "
                  "not installed; download 1.9 MB (ZIP of the install files)") != std::string::npos);
-  CHECK(out.find("\n  snoopy       Snoopy's Screen Savers                       "
+  CHECK(out.find("\n  snoopy       Snoopy's Screen Savers                          "
                  "not installed; download 1.9 MB (ZIP of the install files)") != std::string::npos);
-  CHECK(out.find("\n  disney       The Disney Collection Screen Saver           "
+  CHECK(out.find("\n  disney       The Disney Collection Screen Saver              "
                  "not installed; download 3.4 MB (ZIP of the install files)") != std::string::npos);
-  CHECK(out.find("\n  farside      The Far Side Screen Saver Collection         "
+  CHECK(out.find("\n  farside      The Far Side Screen Saver Collection            "
                  "not installed; download 5.5 MB (5 ZIPs of the install disks' files)") != std::string::npos);
-  CHECK(out.find("\n  dilbert      Scott Adams' Dilbert Screen Saver Collection "
+  CHECK(out.find("\n  dilbert      Scott Adams' Dilbert Screen Saver Collection    "
                  "not installed; download 4.3 MB (ZIP of the install files)") != std::string::npos);
-  CHECK(out.find("\n  tng          Star Trek: The Next Generation Screen Saver  "
+  CHECK(out.find("\n  tng          Star Trek: The Next Generation Screen Saver     "
                  "not installed; download 5.8 MB (disc image)") != std::string::npos);
-  CHECK(out.find("\n  castaway     Screen Antics: Johnny Castaway               "
+  CHECK(out.find("\n  castaway     Screen Antics: Johnny Castaway                  "
                  "not installed; download 1.3 MB (floppy image)") != std::string::npos);
   // The four Delrina Intermission releases of the twentieth: three BBS ZIPs
   // of the floppies, the ZIP of a release's files, a tar holding three ZIPs,
   // and the ZIP of three floppy images.
-  CHECK(out.find("\n  opus         Opus 'n Bill Screen Saver                    "
+  CHECK(out.find("\n  opus         Opus 'n Bill Screen Saver                       "
                  "not installed; download 2.8 MB (3 ZIPs of the install disks' files)") != std::string::npos);
-  CHECK(out.find("\n  opusroad     Opus 'n Bill: On the Road Again!             "
+  CHECK(out.find("\n  opusroad     Opus 'n Bill: On the Road Again!                "
                  "not installed; download 4.4 MB (ZIP of the install files)") != std::string::npos);
-  CHECK(out.find("\n  flintstones  The Flintstones Screen Saver Collection      "
+  CHECK(out.find("\n  flintstones  The Flintstones Screen Saver Collection         "
                  "not installed; download 129.3 MB (a tar holding 3 ZIPs of the install disks' files)") !=
         std::string::npos);
-  CHECK(out.find("\n  intermission Intermission 4.0                             "
+  CHECK(out.find("\n  intermission Intermission 4.0                                "
                  "not installed; download 3.3 MB (ZIP of 3 floppy images)") != std::string::npos);
   // Take Your Best Shot's CD image.
-  CHECK(out.find("\n  bestshot     Take Your Best Shot                          "
+  CHECK(out.find("\n  bestshot     Take Your Best Shot                             "
                  "not installed; download 89.1 MB (disc image)") != std::string::npos);
+  // The Desktop Pythonizer's CD image, its Desktop Extras' floppy image.
+  CHECK(out.find("\n  pythonizer   Monty Python's Flying Circus Desktop Pythonizer "
+                 "not installed; download 181.4 MB (disc image)") != std::string::npos);
+  CHECK(out.find("\n  pythonle     Monty Python's Limited Edition Desktop Extras   "
+                 "not installed; download 1.4 MB (floppy image)") != std::string::npos);
   CHECK_EQ(run(exe, {L"--set-cover", L"tt", pic, L"--dest", dest.wstring()}, "--set-cover, not imported", &out), 1);
   CHECK(out.find("Totally Twisted After Dark isn't imported") != std::string::npos);
   CHECK_EQ(run(exe, {L"--set-cover", L"deluxe", pic, L"--dest", dest.wstring()}, "--set-cover, no picture"), 2);

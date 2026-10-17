@@ -1,10 +1,12 @@
 #include "ne16/package.hh"
 
+#include <algorithm>
 #include <cctype>
 #include <cstring>
 #include <utility>
 
 #include "adw/core/log.h"
+#include "adw/core/text.h"
 #include "loader/ne.hh"
 #include "loader/pe.hh"
 
@@ -116,9 +118,64 @@ const char* kind_name(ModuleKind k) {
   return "?";
 }
 
-std::string seventh_player_dir(const Ne16Layout& l) {
+namespace {
+
+// Take Your Best Shot's and the Desktop Pythonizer's (ABI.md §3.16).
+constexpr const char* kPythonCdFolders[] = {"INTERACT", "PYTHON", nullptr};
+constexpr const char* kNoCdFolders[] = {nullptr};
+constexpr SeventhProduct kSeventhProducts[] = {
+    {"BestShot", "BESTSHOT", "PLYMPTON.EXE", "C:\\7THLEVEL\\BESTSHOT", kNoCdFolders, "bestshot.bin",
+     "Take Your Best Shot", "Take Your Best Shot ", "Take Your Best Shot", 6},
+    {"Python", "PYTHON", "PYTHON.EXE", "C:\\7THLEVEL\\PYTHON", kPythonCdFolders, "herald.bin", "Pythonizer",
+     "Pythonizer ", "Pythonizer ", 5},
+};
+
+bool host_file_exists(const std::string& p) {
+  DWORD a = GetFileAttributesW(widen(p).c_str());
+  return a != INVALID_FILE_ATTRIBUTES && !(a & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+}  // namespace
+
+const SeventhProduct* seventh_product(const std::string& product) {
+  for (const SeventhProduct& p : kSeventhProducts) {
+    if (ieq(product, p.product)) return &p;
+  }
+  return nullptr;
+}
+
+SeventhPlayer seventh_find_player(const Ne16Layout& l, const SeventhProduct& product) {
+  SeventhPlayer out;
   std::string root = dir_of(l.module_dir);
-  return (root.empty() ? std::string(".") : root) + "\\" + kSeventhPlayerDir;
+  if (root.empty()) root = ".";
+  const std::string own = root + "\\" + product.player_dir;
+  if (host_file_exists(own + "\\" + product.player)) {
+    out.dir = own;
+    return out;
+  }
+  // An add-on: the packages beside it, in name order.
+  std::vector<std::string> names;
+  WIN32_FIND_DATAW fd;
+  HANDLE f = FindFirstFileW(widen(root + "\\*").c_str(), &fd);
+  if (f != INVALID_HANDLE_VALUE) {
+    do {
+      const std::string n = narrow(fd.cFileName);
+      if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && n != "." && n != "..") names.push_back(n);
+    } while (FindNextFileW(f, &fd));
+    FindClose(f);
+  }
+  std::sort(names.begin(), names.end(), [](const std::string& a, const std::string& b) {
+    return _stricmp(a.c_str(), b.c_str()) < 0;
+  });
+  for (const std::string& n : names) {
+    const std::string dir = root + "\\" + n + "\\" + product.player_dir;
+    if (host_file_exists(dir + "\\" + product.player)) {
+      out.dir = dir;
+      out.addon = true;
+      return out;
+    }
+  }
+  return out;
 }
 
 const char* form_name(ImxForm f) {

@@ -561,8 +561,12 @@ const char* data_module_form(const std::string& file_name, std::string_view data
 }
 
 // A 7th Level resource file (its Runtime Player's scenes), by its magic, "7L"
-// 2 0, as the ne16 lane tells one, whatever the file's name.
-bool sevenl_magic(std::string_view data) { return data.size() >= 4 && data.substr(0, 4) == std::string_view("7L\x02\0", 4); }
+// and its version, 2 0 (Take Your Best Shot's) or 1 0 (the Desktop
+// Pythonizer's, an older player's), as the ne16 lane tells one, whatever the
+// file's name. Both versions' headers are alike.
+bool sevenl_magic(std::string_view data) {
+  return data.size() >= 4 && data.substr(0, 2) == "7L" && (data[2] == 1 || data[2] == 2) && data[3] == 0;
+}
 
 // A 7th Level resource file's names, read strictly: byte 4 is the length n
 // of the header that follows, n bytes ending in a NUL: the product's name
@@ -660,6 +664,10 @@ CatalogModule catalog_module(const fs::path& file, const std::string& rel_path, 
     m.package = package->id;
     m.package_title = package->title;
     if (package->screen) m.screen = package->screen;
+    if (package->requires_release) {
+      m.requires_release = package->requires_release;
+      if (const Package* r = find_package(package->requires_release)) m.requires_title = r->title;
+    }
   }
   if (sevenl_magic(data)) {
     // A 7th Level scene: data, which the Runtime Player (a program of its
@@ -828,15 +836,18 @@ std::vector<ModuleFile> module_files(const Package& pkg, const fs::path& dir) {
   // Delrina release's module folders ASA animations and IMQ modules (never
   // its ENGINE, where the ASA reader is), an InstallShield 1 package's a
   // screen-saver program (*.SCR: only there, never After Dark's
-  // ENGINE\AFTERDAR.SCR), and a 7th Level package's its scenes (*.BIN; never
-  // its player's folder, which is no module folder).
+  // ENGINE\AFTERDAR.SCR), and a 7th Level package's its scenes (*.BIN; its
+  // player's folder only where scenes are beside it, as the Desktop
+  // Pythonizer's games' are). A module folder "" is the package root itself
+  // (pythonle's two scenes).
   const bool imx = !pkg.is_deluxe();
   auto add_dir = [&](const std::string& d) {
     const bool asa_imq = pkg.delrina_installer() && d != "ENGINE";
     const bool scr = pkg.recipe == Recipe::is1 && d != "ENGINE";
     const bool bin = pkg.recipe == Recipe::cdcopy && d != "ENGINE";
-    for (const auto& n : modules_in(dir / to_wide(d), imx, asa_imq, scr, bin))
-      order.push_back({dir / to_wide(d) / n, root + "/" + d + "/" + to_utf8(n), d + "/" + to_utf8(n)});
+    const std::string in = d.empty() ? std::string() : d + "/";
+    for (const auto& n : modules_in(d.empty() ? dir : dir / to_wide(d), imx, asa_imq, scr, bin))
+      order.push_back({(d.empty() ? dir : dir / to_wide(d)) / n, root + "/" + in + to_utf8(n), in + to_utf8(n)});
   };
   bool engine_listed = false;
   for (const char* d : pkg.module_dirs) {
@@ -1101,6 +1112,13 @@ Json module_json(const CatalogModule& m) {
   // Last again, and only on a 7th Level scene that is a game too: every
   // other entry is laid out as before it existed.
   if (m.game) j.add("game", Json::boolean(true));
+  // Last of all, and only on an add-on's scene (Package::requires_release):
+  // the release whose player plays it, and that release's title, for a
+  // front-end that shows it as needing that release while it isn't there.
+  if (!m.requires_release.empty()) {
+    j.add("requires", Json::str(m.requires_release));
+    if (!m.requires_title.empty()) j.add("requiresTitle", Json::str(m.requires_title));
+  }
   return j;
 }
 

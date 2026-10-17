@@ -1706,13 +1706,15 @@ inline PkgFixture castaway_fixture(bool placeholder_only = false) {
 // ---- 7th Level's Setup: Take Your Best Shot's CD ---------------------------------------------
 
 // A 7th Level resource file as its Runtime Player reads one: the magic "7L"
-// 2 0, the header's length, the product's name, NUL, the title, then NUL
-// (or, with `library`, 0xFB, the library's name and NUL), and made-up data.
+// 2 0 (`version` 1: the older player's, the Desktop Pythonizer's), the
+// header's length, the product's name, NUL, the title, then NUL (or, with
+// `library`, 0xFB, the library's name and NUL), and made-up data.
 inline std::vector<uint8_t> sevenl_scene(const std::string& title, const std::string& library = "",
-                                         const std::string& product = "BestShot", size_t n = 900) {
+                                         const std::string& product = "BestShot", size_t n = 900,
+                                         uint8_t version = 2) {
   std::string h = product + '\0' + title;
   h += library.empty() ? std::string(1, '\0') : "\xFB" + library + '\0';
-  std::vector<uint8_t> v = {'7', 'L', 2, 0, uint8_t(h.size())};
+  std::vector<uint8_t> v = {'7', 'L', version, 0, uint8_t(h.size())};
   v.insert(v.end(), h.begin(), h.end());
   const auto d = blob("made-up scene " + title, n);
   v.insert(v.end(), d.begin(), d.end());
@@ -1776,6 +1778,105 @@ inline PkgFixture bestshot_fixture() {
     f.ids.push_back(id);
   }
   return f;
+}
+
+// ---- 7th Level's Setup: the Desktop Pythonizer's CD and its Desktop Extras' floppy ----------
+
+// The nineteen scenes' file stems in INTERACT, and the three games' beside
+// the player in PYTHON, in name order.
+inline const std::vector<std::string>& pythonizer_scenes() {
+  static const std::vector<std::string> v = {"AQUARIUM", "BIRDMAN",  "BOUNCE",   "CARRIAGE", "DANCE",
+                                             "ELEPHANT", "FAIRY",    "GIRL",     "GNTHEAD",  "GREENMAN",
+                                             "HOPMAN",   "ICONFESS", "KILRCARS", "MOUTH",    "ROLLMAN",
+                                             "SILYWALK", "STRYTIME", "TRAIN",    "TVISBAD"};
+  return v;
+}
+inline const std::vector<std::string>& pythonizer_games() {
+  static const std::vector<std::string> v = {"BIRDGAME", "GOPHER", "PIGGAME"};
+  return v;
+}
+
+// The files a Desktop Pythonizer import must never open (I5): the
+// installer, the customizer, its saver stub, its own scene and sounds, the
+// OLE server and animations, Best Shot's sampler, the icons, wallpapers,
+// sounds and telephone messages.
+inline const std::vector<std::string>& pythonizer_decoys() {
+  static const std::vector<std::string> v = {
+      "SETUP.EXE",           "SETUP.HLP",           "SETUP.ICO",           "DUNZIP.DLL",
+      "README.TXT",          "PYTHON/PYTHSAVR.SCR", "PYTHON/PYTHIZER.EXE", "PYTHON/PYTHIZER.HLP",
+      "PYTHON/PYTH_OLE.DLL", "PYTHON/PYTHSFX.DLL",  "PYTHON/HERALD.BIN",   "OLE/SPAM.BIN",
+      "DEMO/DEMO.EXE",       "DEMO/SAMPLER.BIN",    "WALLPAPR/DEAD.BMP",   "NOISYBIT/NOISE.WAV",
+      "TELEPHON/RING.WAV",   "ICON/PYTHICON.DLL"};
+  return v;
+}
+
+// Its CD's files: the player (a made-up NE program), its libraries and the
+// three games' scenes in PYTHON, the other scenes in INTERACT (version-1 7L
+// files, made-up titles), and the decoys (the customizer's own scene a
+// version-1 7L file with no title). The import installs the player, its
+// libraries and the scenes, each where it was.
+inline PkgFixture pythonizer_fixture() {
+  PkgFixture f;
+  const std::string root = "packages/pythonizer/";
+  auto both = [&](const std::string& rel, std::vector<uint8_t> d) {
+    f.source[rel] = d;
+    f.expect[root + rel] = std::move(d);
+  };
+  NeSpec player;
+  player.module_name = "PYTHMADE";
+  player.program = true;
+  player.description = "A made-up older runtime player";
+  player.module_refs = {"PYTHU001", "PYTHA001", "PYTHS001", "PYTHR001", "MMSYSTEM", "KERNEL", "GDI", "USER"};
+  player.exports = {"VIEW_PROC", "MESSAGE_PROC"};
+  both("PYTHON/PYTHON.EXE", vec(build_ne(player)));
+  for (const char* lib : {"PYTHA001.DLL", "PYTHR001.DLL", "PYTHS001.DLL", "PYTHU001.DLL"})
+    both(std::string("PYTHON/") + lib, blob(std::string("made-up library ") + lib, 400));
+  for (const std::string& s : pythonizer_scenes())
+    both("INTERACT/" + s + ".BIN", sevenl_scene("Made Up " + s, "", "Python", 900, 1));
+  for (const std::string& s : pythonizer_games())
+    both("PYTHON/" + s + ".BIN", sevenl_scene("Made Up " + s, "", "Python", 900, 1));
+  for (const std::string& d : pythonizer_decoys()) f.source[d] = blob("decoy " + d, 200);
+  // Best Shot's sampler as the CD has it: its player under another name,
+  // and its libraries.
+  for (const char* lib : {"PLYMA001.DLL", "PLYMR001.DLL", "PLYMS001.DLL", "PLYMU001.DLL", "DISPDIB.DLL"})
+    f.source[std::string("DEMO/") + lib] = blob(std::string("sampler's ") + lib, 300);
+  f.source["PYTHON/HERALD.BIN"] = {'7', 'L', 1, 0, 2, 0, 0};
+  for (const std::string& s : pythonizer_scenes()) {
+    std::string id = "pythonizer." + s;
+    for (char& c : id) c = char(tolower((unsigned char)c));
+    f.ids.push_back(id);
+  }
+  for (const std::string& s : pythonizer_games()) {
+    std::string id = "pythonizer." + s;
+    for (char& c : id) c = char(tolower((unsigned char)c));
+    f.ids.push_back(id);
+  }
+  return f;
+}
+
+// The Desktop Extras' floppy: its two scenes (version-1 7L files, made-up
+// titles) beside its setup, its icon library and wallpapers. The import
+// installs the two scenes in the package root.
+inline PkgFixture pythonle_fixture() {
+  PkgFixture f;
+  const std::string root = "packages/pythonle/";
+  for (const char* s : {"FOOT", "PENGUINS"}) {
+    auto d = sevenl_scene(std::string("Made Up ") + s, "", "Python", 700, 1);
+    f.source[std::string(s) + ".BIN"] = d;
+    f.expect[root + s + ".BIN"] = std::move(d);
+  }
+  for (const char* d : {"SETUP.EXE", "SETUP.HLP", "DUNZIP.DLL", "PYTHONLE.DLL", "README.TXT", "BALLONS.BMP",
+                        "FINGERS.BMP", "FROGS.BMP", "ROYALNVY.BMP"})
+    f.source[d] = blob(std::string("decoy ") + d, 200);
+  f.ids = {"pythonle.foot", "pythonle.penguins"};
+  return f;
+}
+
+// The Desktop Extras' decoys (I5): every file of the floppy but its scenes.
+inline const std::vector<std::string>& pythonle_decoys() {
+  static const std::vector<std::string> v = {"SETUP.EXE",   "SETUP.HLP",   "DUNZIP.DLL", "PYTHONLE.DLL", "README.TXT",
+                                             "BALLONS.BMP", "FINGERS.BMP", "FROGS.BMP",  "ROYALNVY.BMP"};
+  return v;
 }
 
 // An install disk's files as a 1.44 MB floppy image (8.3 names, upper case:

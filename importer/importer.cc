@@ -1191,7 +1191,11 @@ class Importer {
       }
       found.emplace_back(&lf, std::move(*n));
     }
-    if (!missing.empty()) invalid("the source is missing " + missing + ", which the CD of " + title_ + " holds");
+    const bool floppy =
+        !pkg_->images.empty() && std::string_view(pkg_->images[0].medium).find("floppy") != std::string_view::npos;
+    if (!missing.empty())
+      invalid("the source is missing " + missing + ", which the " + (floppy ? "floppy" : "CD") + " of " + title_ +
+              " holds");
     for (auto& [lf, n] : found) {
       Planned pl;
       pl.rel = root_ + "/" + lf->to;
@@ -1511,7 +1515,7 @@ class Importer {
     // The files directly in a module folder `d`, by name.
     auto names_in = [&](const std::string& d) {
       std::vector<std::string> out;
-      const std::string prefix = d + "/";
+      const std::string prefix = d.empty() ? d : d + "/";  // "": the package root (pythonle)
       for (const std::string& f : have)
         if (f.size() > prefix.size() && f.compare(0, prefix.size(), prefix) == 0 &&
             f.find('/', prefix.size()) == std::string::npos)
@@ -1535,7 +1539,8 @@ class Importer {
     std::set<std::string> data_readers;  // the readers the module folders' data modules need (kDataModuleReaders)
     for (const std::string& d : folders) {
       for (const char* n : kNeverBesideModules)
-        if (have.count(d + "/" + n)) fail("I1", d + "\\" + n + " would shadow the engine's");
+        if (have.count((d.empty() ? d : d + "/") + n))
+          fail("I1", (d.empty() ? d : d + "\\") + n + " would shadow the engine's");
       // Intermission and its readers live in ENGINE: the module folder holds
       // only the modules (a Delrina release's IMQ modules among them) and
       // what they load.
@@ -1602,11 +1607,23 @@ class Importer {
         if (f.rfind("ENGINE/", 0) == 0 || f.rfind("WINDOWS/", 0) == 0)
           fail("I3", f + ": an InstallShield 1 package has only its module folder");
     } else if (cdc) {
-      // 7th Level scenes and the Runtime Player that plays them, in its
-      // folder beside theirs, where the 16-bit lane finds it
-      // (<root>\BESTSHOT\PLYMPTON.EXE); no ENGINE (nothing of After Dark's)
-      // and no WINDOWS folder (the player's 7THLEVEL.INI is the lane's).
-      if (!have.count("BESTSHOT/PLYMPTON.EXE")) fail("I3", "no BESTSHOT\\PLYMPTON.EXE");
+      // 7th Level scenes and the Runtime Player that plays them (the table's
+      // one program), in its folder beside theirs or among them, where the
+      // 16-bit lane finds it (<root>\BESTSHOT\PLYMPTON.EXE,
+      // <root>\PYTHON\PYTHON.EXE); an add-on's scenes alone, without a
+      // program (the release it requires has the player); no ENGINE (nothing
+      // of After Dark's) and no WINDOWS folder (the player's 7THLEVEL.INI is
+      // the lane's).
+      std::string player;
+      for (const LooseFile& lf : loose_files())
+        if (player.empty() && ends_with_i(lf.to, ".EXE")) player = ascii_upper(lf.to);
+      if (p.requires_release) {
+        for (const std::string& f : have)
+          if (ends_with_i(f, ".EXE"))
+            fail("I3", f + ": an add-on's scenes play with " + std::string(p.requires_release) + "'s player");
+      } else if (player.empty() || !have.count(player)) {
+        fail("I3", "no " + (player.empty() ? std::string("player") : player));
+      }
       for (const std::string& f : have)
         if (f.rfind("ENGINE/", 0) == 0 || f.rfind("WINDOWS/", 0) == 0)
           fail("I3", f + ": a 7th Level package has only its scenes and their player");

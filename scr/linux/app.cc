@@ -452,6 +452,11 @@ int App::run(int argc, char** argv) {
         }
         return kExitUsage;
       }
+      if (catalog_.lacks_release(*named_)) {
+        err_line("\"%s\" (%s) needs %s to play: import that release too", named_->name.c_str(), named_->id.c_str(),
+                 (named_->requires_title.empty() ? named_->requires_release : named_->requires_title).c_str());
+        return kExitUsage;
+      }
     }
   }
   if (!test_pattern_ && !use_file_module_ && !named_ && (!have_catalog_ || catalog_.modules.empty())) {
@@ -974,6 +979,7 @@ void App::start_rotation() {
   if (rotating_) {
     for (const Module& m : catalog_.modules) {
       if (!m.same_as.empty()) continue;   // a byte-identical copy plays once per pass, as its first
+      if (catalog_.lacks_release(m)) continue;   // an add-on's scene without its player's release
       if (!caps_.runs(m.lane, m.abi)) {
         ++left_out;
         continue;

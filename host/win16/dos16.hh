@@ -176,26 +176,37 @@ struct ScrnsaveSeeds {
 void seed_scrnsave(Runtime16& rt, const ScrnsaveSeeds& seeds);
 // The profile seeds a 7th Level Runtime Player scene (the ne16 lane's
 // 7thlevel protocol) runs over, read as seed ⊕ file and never written out —
-// what Take Your Best Shot's SETUP.EXE wrote into C:\WINDOWS\7THLEVEL.INI
-// (its script's <7thLevel.ini> part), its prefixes resolved: 0: the install
-// dir with a backslash (install_dir), 1: the CD's root (cd, "D:\"), 2: the
-// Windows dir:
+// what the product's SETUP.EXE wrote into C:\WINDOWS\7THLEVEL.INI (its
+// script's <7thLevel.ini> part), its prefixes resolved: 0: the install dir
+// with a backslash (install_dir), 1: the CD's root (cd, "D:\"), 2: the
+// Windows dir. Take Your Best Shot's (product "BestShot"):
 //   [BestShot] Path = 0:;  [Apps] BestShot = 0:plympton.exe;
 //   [Icons] 2:BESTICON.DLL = 1;
 //   [BestShotPaths] DeadWallpaperPath = 1:wallpapr, NoisyBitsPath =
 //        1:noisybit, KeyboardSoundsPath = 1:bestshot, BestShotPath =
 //        1:bestact, BestShotBigPath = 1:bestbig;
-//   [Games] 1:bestact\<scene> = 1 for each of `games`; [Living Wallpapers]
-//        and [Screen Savers] the same for each of `scenes`.
-// (Its [App Commentary Relations], the desktop program's list of other
-// programs, is BESTSHOT.EXE's alone and not seeded.) WIN.INI [Desktop]
-// WallPaper = (None) and TileWallPaper = 0, Windows 3.1's own, which the
-// player reads. What the player and its libraries write there lands in
-// C:\WINDOWS's upper layer, ADSTATE's when set.
+// The Desktop Pythonizer's ("Python"):
+//   [Python] PATH = 0:;  [APPS] Python = 0:python.exe;
+//   [ICONS] 2:PYTHICON.DLL = 1;
+//   [PythonizerPaths] DeadWallpaperPath = 1:wallpapr, NoisyBitsPath =
+//        1:noisybit, TelephoneMessagesPath = 1:telephon, KeyboardSoundsPath =
+//        1:python;
+// Then [Games] <scene> = 1 for each of `games` (Best Shot's 1:bestact\…),
+// and [Living Wallpapers] and [Screen Savers] the same for each of `scenes`
+// (the Pythonizer's 1:interact\… and 1:python\…, and its Desktop Extras',
+// whose floppy added 0:foot.bin and 0:penguins.bin). (The [App Commentary
+// Relations], the desktop program's list of other programs, and the
+// Pythonizer's [OLE Animations] are the desktop program's alone and not
+// seeded.) WIN.INI [Desktop] WallPaper = (None) and TileWallPaper = 0,
+// Windows 3.1's own, which the player reads. What the player and its
+// libraries write there lands in C:\WINDOWS's upper layer, ADSTATE's when set.
 struct SeventhLevelSeeds {
-  std::string install_dir;  // "C:\\7THLEVEL\\BESTSHOT"
-  std::string cd;           // "D:"
-  std::vector<std::string> scenes, games;  // file names in the CD's BESTACT, lower case as the script had them
+  std::string product = "BestShot";  // the scenes' product: "BestShot" or "Python"
+  std::string install_dir;           // "C:\\7THLEVEL\\BESTSHOT"
+  std::string cd;                    // "D:"
+  // The scenes' INI keys, their prefixes resolved, lower case as the scripts
+  // had them ("D:\\bestact\\headshot.bin", "C:\\7THLEVEL\\PYTHON\\foot.bin").
+  std::vector<std::string> scenes, games;
 };
 void seed_seventh_level(Runtime16& rt, const SeventhLevelSeeds& seeds);
 struct IntermissionSeeds {
