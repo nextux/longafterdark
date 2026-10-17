@@ -4,8 +4,8 @@
 modules of After Dark, of LucasArts' Star Wars Screen Entertainment, of
 Delrina's Intermission and its Opus 'n Bill, Flintstones, Far Side and
 Dilbert collections, of Sierra's Johnny Castaway and of 7th Level's Take
-Your Best Shot, unchanged, under x86 emulation. It knows twenty-one
-releases, 446 modules:
+Your Best Shot and Monty Python's Desktop Pythonizer, unchanged, under x86
+emulation. It knows twenty-three releases, 470 modules:
 
 | id | Release | Internet Archive download |
 |---|---|---|
@@ -30,6 +30,8 @@ releases, 446 modules:
 | `flintstones` | The Flintstones Screen Saver Collection (1994) | install files (3 ZIPs, one per disk, in a tar), 129.3 MB |
 | `intermission` | Intermission 4.0 (1993) | three floppy images (ZIP), 3.3 MB |
 | `bestshot` | Take Your Best Shot (1995) | CD image, 89.1 MB |
+| `pythonizer` | Monty Python's Flying Circus Desktop Pythonizer (1995) | CD image, 181.4 MB |
+| `pythonle` | Monty Python's Limited Edition Desktop Extras (1995) | floppy image, 1.4 MB |
 
 Star Trek: The Screen Saver is After Dark 2.0 (version 2.0b) with 16 Star
 Trek modules, on two floppies. Marvel Comics Screen Posters (After Dark
@@ -64,6 +66,21 @@ and Line Shot. They are neither After Dark nor Intermission modules but
 scenes of 7th Level's own Runtime Player, `PLYMPTON.EXE`, a Windows 3.1
 program which Long After Dark runs unchanged, starting each scene as the
 Best Shot program did.
+
+Monty Python's Flying Circus Desktop Pythonizer is 7th Level's desktop
+program of the Flying Circus, first sold in 1994 (this CD is a build of
+March 1995; it later came with Monty Python's Complete Waste of Time too),
+on one CD: 22 scenes of animation in Terry Gilliam's style that were at
+once its screen savers and its living wallpapers, among them Silly Walk,
+BBC Fairy, Queen Victoria, Giant Head, Killer Cars and TV is bad for your
+eyes, and three games, The Chicken Game, The Gopher Game and The Pig Game.
+Monty Python's Limited Edition Desktop Extras, a floppy that came with the
+Limited Edition of Monty Python's Complete Waste of Time, has two more
+scenes for it, Foot and Penguins, and no player: they play with the
+Desktop Pythonizer's. Both are scenes of 7th Level's Runtime Player too,
+the Pythonizer's own `PYTHON.EXE`, an earlier version than Best Shot's,
+which Long After Dark runs unchanged, starting each scene as the Desktop
+Pythonizer program did.
 
 Star Wars Screen Entertainment is not an After Dark release, though it is
 sometimes listed as "After Dark Star Wars": its 14 modules were made for
@@ -129,7 +146,7 @@ Double-click `adimport.exe`, or open the screen saver's settings and click
 - **A drive or folder:** the CD itself, or a folder copied from it (for
   floppies, one folder holding the files of every disk, or one holding
   nothing but a `DISK1`, `DISK2`, … folder per disk).
-- **A download from the Internet Archive:** a list of the twenty-one releases
+- **A download from the Internet Archive:** a list of the twenty-three releases
   with their sizes, plus one entry that fetches every release not imported
   yet. An interrupted download resumes, and each file is checked against its
   published MD5 before it is used.
@@ -200,6 +217,29 @@ setup or the Best Shot program, and leaves out what only the program used (the
 wallpapers, sounds and icons it put on your desktop, and 7th Level's
 samplers of its other products).
 
+Monty Python's Desktop Pythonizer came on one CD too. Import the CD itself,
+its ISO image (`MontyPythonFlyingCircus_Pythonizer-1995.iso`, which
+`adimport --download pythonizer` fetches), the raw BIN image of the same
+disc beside it on the Internet Archive (select the `.bin`; the `.cue`
+alone is no image), or a folder copied from the CD. The importer takes
+from the CD the player and its four libraries, which the CD's setup
+installed, and the 22 scenes, which it left on the CD: 19 in its
+`INTERACT` folder and the three games' beside the player in `PYTHON`. It
+never runs the setup or the Desktop Pythonizer program, and leaves out
+what only the program used (its own scene, the OLE animations, the
+wallpapers, sounds, telephone messages and icons, and the CD's samplers of
+7th Level's other products).
+
+The Limited Edition Desktop Extras came on one floppy. Import its image
+(`Monty_Pythons_Flying_Circus.img`, which `adimport --download pythonle`
+fetches), the floppy itself, or a folder or ZIP of its files. The importer
+takes its two scenes, which its setup put beside the Desktop Pythonizer's
+player, and leaves out the setup, its icons and its wallpapers. Import the
+two releases in either order: until the Desktop Pythonizer is imported
+too, the settings window shows Foot and Penguins as needing it ("Needs
+Monty Python's Flying Circus Desktop Pythonizer") and never plays them,
+and Random leaves them out.
+
 Delrina's four other releases came on floppies too. The Opus 'n Bill
 Screen Saver is online only as bulletin-board copies of its three
 floppies, a ZIP of each disk's files: `OPUS1NTA.ZIP` to `OPUS3NTA.ZIP`
@@ -234,6 +274,8 @@ adimport --image 000580_jonny_castaway.7z
 adimport --image OPUS1NTA.ZIP --image OPUS2NTA.ZIP --image OPUS3NTA.ZIP
 adimport --image "Intermission 4.0.zip"
 adimport --image BESTSHOT.iso
+adimport --image MontyPythonFlyingCircus_Pythonizer-1995.bin
+adimport --image Monty_Pythons_Flying_Circus.img
 adimport --from E:\
 adimport --from C:\Copies\Snoopy
 adimport --download ad10
@@ -409,6 +451,21 @@ one. With Caps Lock on, the other scenes become Take Your Best Shot's
 interactive screen saver: clicks and keys reach the scene instead of
 ending it (see [Ending it, and playing](#ending-it-and-playing)).
 
+The Desktop Pythonizer's and the Desktop Extras' scenes always get 640×480
+as well, scaled to fit, and have no buttons; each runs as the Desktop
+Pythonizer ran it as its screen saver. Its player has no separate game
+mode: with Caps Lock on, every one of the 24 scenes becomes the
+Pythonizer's interactive screen saver, where clicks and keys reach the
+scene, and that is where its three games are played. The Gopher Game is
+played with the mouse (click to whack the heads that pop up), The Chicken
+Game with clicks and drags, and The Pig Game with the keys: Enter or Space
+puts in a coin, the arrow keys move the cowboy, and Space fires. In many
+of the other scenes the figures answer a click (a BBC fairy you hit drops
+to the ground, the Hopping Green Men count your hits, a car comes in
+Killer Cars); in some, such as Silly Walk, Train or Penguins, clicks
+scattered over the screen showed no change. Caps Lock again goes back to
+the screen saver.
+
 Several ScreamSavers modules and Marvel's poster module compose their
 pictures for 640×480 too, so all the ScreamSavers modules and Marvel's
 always get 640×480, scaled to fit. Marvel's
@@ -437,7 +494,11 @@ volume. The modules of Delrina's own releases play wave effects (a few
 have none) and no music, but for Intermission 4.0's Rapping Pig, whose song
 is MIDI. Take Your Best Shot's scenes play wave sound through 7th Level's
 own sound library: every scene makes sound within its first minute, most
-from the first seconds. **Preview** plays sound with the values you have not saved yet; the
+from the first seconds. The Monty Python scenes play wave sound through
+the Pythonizer's own, older one: most from their first seconds, Foot after
+about half a minute; No Time to Lose Woman, Hopping Green Man, Many Mouths
+and Story Time only when you click them (with Caps Lock on), and Hopping
+Man and Rolling Man none that was heard. **Preview** plays sound with the values you have not saved yet; the
 small live preview never does.
 
 The **Look** menu changes how the screen saver draws the modules' pictures.
@@ -478,8 +539,8 @@ other choices draw with your graphics card, through Direct3D 11. **Look**:
 that doesn't fill the screen: **Black** (the default), or **Ambient glow**,
 a blurred, dimmed copy of the picture. It is for the modules that always
 get 640×480 (Intermission's, Star Wars' among them, both Star Trek
-releases', ScreamSavers', Marvel's, Johnny Castaway and Best Shot's) on a
-widescreen
+releases', ScreamSavers', Marvel's, Johnny Castaway, Best Shot's and the
+Monty Python scenes) on a widescreen
 monitor, and for After Dark's own on an ultrawide or portrait one; with
 **Stretch to fit the screen** checked, the 640×480 modules have no bars.
 
@@ -500,7 +561,10 @@ Looney Tunes, Disney and Next Generation modules moves on to the next
 scene) or starts a game, as in Rodger Dodger, You Bet Your Head, Simpsons
 Trivia, Officer's Review, Mime Hunt, Frankenscreen, Marbles, Pinocchio
 (the Wishing Star: Pinocchio follows the mouse) and Take Your Best Shot's
-Head Shot, Hot Shot and Line Shot.
+Head Shot, Hot Shot and Line Shot. In Best Shot's other scenes and in all
+of the Monty Python scenes it lets clicks and keys reach the scene, as
+their programs' interactive screen savers did; the Desktop Pythonizer's
+games (The Chicken Game, The Gopher Game, The Pig Game) are played so.
 
 While a game is playing, keys, clicks and the mouse belong to it, and the
 pointer stays on the primary monitor. Press Caps Lock again to stop playing
@@ -568,8 +632,10 @@ Resizing the window scales the picture to the new size. Once the size
 settles, a module whose screen follows the display's shape (After Dark's)
 starts again in the new shape; a module with a 640x480 screen of its own
 (Intermission's, both Star Trek releases', ScreamSavers', Marvel's, Johnny
-Castaway, Best Shot's) keeps its shape, with bars, unless **Stretch to fit
-the screen** is checked.
+Castaway, Best Shot's, the Monty Python scenes) keeps its shape, with bars,
+unless **Stretch to fit the screen** is checked. `/module` with a Desktop
+Extras scene while the Desktop Pythonizer is not imported opens a message
+saying that it needs that release, and nothing runs.
 
 In OBS, add a **Window Capture** source:
 
@@ -620,7 +686,10 @@ modules start on a picture of the desktop: the modules that do something
 to the desktop's picture do it to your wallpaper, and Take Your Best
 Shot's scenes play the living-wallpaper form Take Your Best Shot gave them,
 on their own black (or dark brown) backdrop over the whole desktop, as the
-original did; its three games show their menu.
+original did; its three games show their menu. The Monty Python scenes
+play as the Desktop Pythonizer's living wallpapers, the same pictures as
+its screen savers, and paint their own backdrop over the whole desktop
+before their first picture, so your wallpaper doesn't show behind them.
 When you change your wallpaper, the modules started after that start on the
 new one.
 
@@ -737,4 +806,9 @@ program's Properties → Details in Explorer.
   Again and the Flintstones, like three of The Far Side's and Dilbert's,
   took the mouse and keyboard under Intermission instead of ending; here
   they run as ordinary screen savers, and input ends them.
+- **The Desktop Pythonizer's own options** (how many figures a scene
+  shows, and how big) aren't offered: each scene runs as its setup left
+  it. Its Wallpaper Zapper (Shift+Ctrl+click, a picture of the screen made
+  your wallpaper) has not been tried, and could only change the emulated
+  PC's wallpaper, never yours.
 - No installer or code signing yet.

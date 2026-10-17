@@ -7,7 +7,7 @@ x86 code under emulation: it loads the *real*
 engine and the module into one emulated address space, traps every call
 they make into the operating system, and supplies that OS surface from the
 host. A Windows screen saver (`LongAfterDark.scr`) presents the frames.
-Twenty-one releases are supported (§7): After Dark 4.0 Deluxe, After Dark 10th
+Twenty-three releases are supported (§7): After Dark 4.0 Deluxe, After Dark 10th
 Anniversary, After Dark 3.2, Totally Twisted After Dark, The Simpsons
 Screen Saver, Star Trek: The Screen Saver (After Dark 2.0b), Star Trek: The
 Next Generation Screen Saver, Marvel Comics Screen Posters, The Looney Tunes
@@ -17,8 +17,9 @@ Snoopy's Screen Savers), Star Wars Screen Entertainment, Intermission 4.0,
 the Opus 'n Bill Screen Saver, Opus 'n Bill: On the Road Again!, The
 Flintstones Screen Saver Collection, The Far Side Screen Saver Collection,
 Scott Adams' Dilbert Screen Saver Collection, Sierra On-Line's Screen
-Antics: Johnny Castaway and 7th Level's Take Your Best Shot, 446 modules
-in all. The seven from Star Wars
+Antics: Johnny Castaway, and 7th Level's Take Your Best Shot, Monty
+Python's Flying Circus Desktop Pythonizer and its Limited Edition Desktop
+Extras, 470 modules in all. The seven from Star Wars
 Screen Entertainment to Dilbert are not After Dark releases: their modules
 were written for Delrina's Intermission screen saver engine (Intermission
 4.0 is the engine's own release), and speak its own protocol (ABI.md
@@ -30,7 +31,10 @@ host runs whole, as Windows 3.1 ran it, through a third protocol
 7th Level's own Runtime Player, a Windows 3.1 program, which the host runs
 whole with a scene on its command line, standing in for the desktop
 program that started it, through a fourth (`PACKAGES.md` §7.7, ABI.md
-§3.16).
+§3.16); so are the Desktop Pythonizer's 22 and its Desktop Extras' two,
+played by the Pythonizer's own, older player, which the scene's header
+names (the Extras have none of their own, so their entries say they
+require the Pythonizer).
 
 Nothing here is a reimplementation of After Dark. The engine DLLs
 (`ADXPL510.DLL`, `ADXPL300.DLL`) and Berkeley's own classic-module bridge
@@ -49,7 +53,7 @@ engine application, `INTERMIS.EXE`, as it stands in for After Dark's
 
 ## The corpus
 
-The work started from one release; the other twenty came later (§7,
+The work started from one release; the other twenty-two came later (§7,
 `PACKAGES.md`), and the same host runs them all. The first corpus, the PC
 side of a hybrid Mac/PC CD,
 `After Dark 4.0 Deluxe (1996)(Berkeley Systems)[Mac-PC].iso`
@@ -88,6 +92,7 @@ LongAfterDark.scr (x64)     ── spawns ──►  adhostwin.exe (x64)   one p
                                     module.IMX + SWSE.DLL + INTRMLIB.DLL + IMIMXPLY.IMQ + helpers (16-bit lane, Intermission)
                                     SCRANTIC.SCR, a whole program (16-bit lane, a Windows 3.1 screen saver)
                                     PLYMPTON.EXE + PLYM*001.DLL + DISPDIB.DLL, playing a scene .BIN (16-bit lane, 7th Level)
+                                    PYTHON.EXE + PYTH*001.DLL, playing a version-1 scene .BIN (16-bit lane, 7th Level)
 ```
 
 * **One CPU core for both lanes.** `adw::cpu` is resource_dasm's `X86Emulator`
@@ -119,7 +124,7 @@ LongAfterDark.scr (x64)     ── spawns ──►  adhostwin.exe (x64)   one p
   docs/DESIGN.md          this file
   docs/ABI.md             module/engine ABI as we verify it (our own findings)
   docs/API_SURFACE.md     every function the Deluxe disc's binaries import, counted and classified
-  docs/PACKAGES.md        the twenty-one releases: registry, import, catalog merge, lane rules (§7)
+  docs/PACKAGES.md        the twenty-three releases: registry, import, catalog merge, lane rules (§7)
   docs/INTERACTION.md     input, module buttons, per-user state, desktop seed (§8)
   docs/COVERS.md          the box-cover strip, the cover pipeline, the shared UI library (§9)
   docs/AUDIO.md           sound: census, engine, lane mappings, saver settings (§10)
@@ -499,7 +504,12 @@ Shot's `BESTACT\*.BIN`), lane `ne16`, `entry` `""` (data: the package's
 player plays it), `screen` `"640x480"`, no buttons, and on the three that
 are games too a last field, `"game": true` (PACKAGES.md §6). A front-end
 leaves out, as "Coming soon", an entry whose `abi` the host's
-`--capabilities` doesn't name.
+`--capabilities` doesn't name. Since the tenth round an entry may end with
+`"requires"`, the id of a release whose player plays it, and
+`"requiresTitle"`, that release's title (the Desktop Extras' two scenes:
+`"pythonizer"`): while the catalog lists no such package, a front-end
+shows the module as "Needs <requiresTitle>" where "Coming soon" would
+show, never starts it, and leaves it out of Random (INTERACTION.md §4.8).
 
 `screen` (optional, since the seventh release, under the same `adimport
 1.3`) is a fixed screen, `"WxH"`, that the module gets whatever the display:
@@ -551,7 +561,7 @@ Each `packages[]` entry also carries `cover` (COVERS.md §2.7):
 chosen, `-` = nothing checked; the saver ignores it), `DurationMin=<n>|0` (0 = forever),
 `Scale=1.0|1.5` (the Resolution setting, 480 or 720 lines, for the other
 modules; an Intermission module, and one whose catalog entry gives a
-`screen` — Star Trek, ScreamSavers, Marvel, Johnny Castaway, Best Shot —, always gets 640×480, scaled
+`screen` — Star Trek, ScreamSavers, Marvel, Johnny Castaway, the 7th Level scenes —, always gets 640×480, scaled
 to fit the monitor in its 4:3 shape: `scr/README.md`), `Monitors=all|primary`,
 `DifferentPerMonitor=1|0` (default 0: a rotation plays the same module on
 every monitor and switches them together; 1: each monitor has a rotation of
@@ -671,7 +681,7 @@ is, and for every user the three programs are copied together to
 
 ### 7. Packages
 
-The host runs modules from twenty-one releases: ten of Berkeley Systems'
+The host runs modules from twenty-three releases: ten of Berkeley Systems'
 After Dark, two of other companies' modules for After Dark (ScreamSavers,
 Snoopy's Screen Savers), seven for Delrina's Intermission (Intermission
 4.0 itself, LucasArts' Star Wars Screen Entertainment, and Delrina's own
@@ -679,7 +689,9 @@ Opus 'n Bill Screen Saver, Opus 'n Bill: On the Road Again!, The
 Flintstones Screen Saver Collection, The Far Side Screen Saver Collection
 and Scott Adams' Dilbert Screen Saver Collection), Sierra On-Line's
 Screen Antics: Johnny Castaway, a Windows 3.1 screen-saver program, and
-7th Level's Take Your Best Shot, scenes of 7th Level's Runtime Player.
+three of 7th Level's, scenes of its Runtime Player: Take Your Best Shot,
+Monty Python's Flying Circus Desktop Pythonizer and its Limited Edition
+Desktop Extras.
 The full specification is `docs/PACKAGES.md`: registry,
 identification, extraction formats, per-package layouts, the catalog merge,
 the lane contract, and the three work packages that implement it. The
@@ -837,14 +849,27 @@ contract in brief:
   for that program. The mode is the screen saver's; after Caps Lock a
   game's in one of the three games, and the interactive screen saver's in
   the others; or the living wallpaper's with `ADWALLPAPER=1` (§8). (`PACKAGES.md` §3, §4.3, §6, §7.7; ABI.md §3.16.)
-* **Status: implemented.** All twenty-one releases import (from a disc, an
-  image, a ZIP or a 7z, a folder or the Internet Archive) into
-  self-contained package roots (446 catalog modules, 73 of them `sameAs` an
+* **7th Level scenes (the Desktop Pythonizer and its Desktop Extras).**
+  The same recipe and protocol, since the tenth round. The Pythonizer's
+  CD gives its player, `PYTHON\PYTHON.EXE`, an older one than Best Shot's,
+  and 22 scenes of the format's first version; the Extras' floppy gives
+  two more scenes and no player. The lane picks the player by the product
+  the scene's header names (`Python`), in the scene's own package first,
+  then in the packages beside it, so the Extras' scenes play with the
+  Pythonizer's player once both are imported; their catalog entries carry
+  `requires`, and the front-ends show them as needing the Pythonizer
+  until then. The Pythonizer's program had no game mode: under Caps Lock
+  every scene runs its interactive screen saver, where its three games
+  are played. (`PACKAGES.md` §2, §3, §4.3, §6, §7.7; ABI.md §3.16.)
+* **Status: implemented.** All twenty-three releases import (from a disc,
+  an image, a ZIP or a 7z, a folder or the Internet Archive) into
+  self-contained package roots (470 catalog modules, 73 of them `sameAs` an
   earlier one). The 283 modules of the twelve After Dark releases run
   headless and deterministically, each release on its own; the 145 of the
   seven Intermission releases run through the Intermission protocol above,
-  Johnny Castaway through the screen-saver protocol, and Take Your Best
-  Shot's 17 scenes through the 7th Level protocol. The
+  Johnny Castaway through the screen-saver protocol, and the 41 scenes of
+  Take Your Best Shot, the Desktop Pythonizer and its Desktop Extras
+  through the 7th Level protocol (the Extras' with the Pythonizer). The
   survey-time numbers (before this work, with every AD 3.x module leaning on
   Deluxe's `ENGINE` files, and before each later release) are in
   `PACKAGES.md` §1.
@@ -913,7 +938,7 @@ modules in our host. In brief:
   module whose screen got none starts on black): the whole monitor for an After Dark module,
   the part its 640×480 frame covers for one with a screen of its own, an
   Intermission module or one whose catalog entry gives a screen (Star
-  Trek, ScreamSavers, Marvel, Johnny Castaway, Best Shot) (INTERACTION.md §8). Respawns,
+  Trek, ScreamSavers, Marvel, Johnny Castaway, the 7th Level scenes) (INTERACTION.md §8). Respawns,
   rotations, `/p` and headless runs start black.
 * **Living wallpaper** (since the ninth round, opt-in).
   `LongAfterDark.exe /wallpaper [/module …] [/random]` plays the modules on

@@ -20,7 +20,8 @@ Entertainment's music (§10.6), Star Trek: The Screen Saver's AD_SND 1.0
 Looney Tunes' and the Disney Collection's music paths (§2.9), the host's
 own AD_SND for Snoopy's Screen Savers (§2.10) and their results (§10.8),
 Johnny Castaway's (§10.9), the Opus 'n Bill, Flintstones and
-Intermission 4.0 releases' (§10.10), and Take Your Best Shot's (§10.11).
+Intermission 4.0 releases' (§10.10), Take Your Best Shot's (§10.11), and
+the Desktop Pythonizer's and its Desktop Extras' (§10.12).
 Evidence is marked as in the
 other documents: **VERIFIED** (our disassembly, with addresses), **EMPIRICAL**
 (observed in runs or measured on the files) and **UNVERIFIED** (leads still
@@ -2231,6 +2232,35 @@ any `waveOut` caller's (the 7th Level protocol sets the Win16 runtime's
   saver again, the player started anew each time): sound in every second.
 * Not exercised: live output, the other games' and the living wallpaper's
   sound, and the volume keys (+ and −) the CD's readme names.
+
+### 10.12 The Desktop Pythonizer's and the Desktop Extras' sound (2026-10-17)
+
+The Monty Python scenes sound through the Pythonizer's own Audio Library,
+`PYTHA001.DLL` ("Audio Library 1.1"; `waveOut*`, `aux*` and
+`mciSendCommand` among its imports), an older one than Best Shot's, which
+the Pythonizer's player loads. It streams wave sound through `waveOut` as
+`PLYMA001` does, and the 7th Level protocol plays it through the engine
+the same way (§10.11): with sound off the guest has no wave device, as
+there. The Extras' two scenes sound through the same library, the
+Pythonizer's player being theirs.
+
+* All 24 scenes captured in the screen saver's mode with `ADSOUND=1`
+  (`ADAUDIOLIVE=0`) for 3,600 frames (60 s), once
+  (`research/monty/lane/runs/audio`, gitignored): no MIDI event in any.
+  18 make sound in that minute, most from their first seconds: BBC Fairy,
+  Penguins, Birdman and Killer Cars at 0.1 s, Train, Walking Girl and
+  Giant Head at 0.2 s, The Pig Game and Silly Walk at 0.4 s, The Gopher
+  Game at 0.8 s, The Chicken Game and Queen Victoria at 1.2 s, Aquarium at
+  3.1 s, Man with Baby Carriage at 3.2 s, I Confess at 3.4 s, Hopping
+  Elephants at 5.1 s, TV is bad for your eyes at 10.6 s, and Foot only at
+  36 s. Peaks are within 1 dB of 0 dBFS in twelve; BBC Fairy's −10.5 dBFS
+  is the quietest (measured on the captures).
+* No Time to Lose Woman, Hopping Green Man, Many Mouths and Story Time are
+  silent in the screen saver's mode and sound when clicked, under Caps
+  Lock (from the first click that reaches them, 3 to 4.5 s in). Hopping Man and Rolling Man
+  made none, in 60 s of the saver's mode or 12 s with clicks.
+* Not exercised: live output, the living wallpaper's and the games' sound
+  as they are played, and the Pythonizer's own mute and volume settings.
 
 ---
 

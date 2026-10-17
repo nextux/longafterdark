@@ -11,7 +11,7 @@ for ending it and for the modules' games, and the picture keeps its shape.
 
 The same as on Windows:
 
-* all twenty-one releases and their 446 modules, imported by the same importer
+* all twenty-three releases and their 470 modules, imported by the same importer
   and checked file by file against the originals;
 * the modules' sound effects, their MIDI music and the Simpsons' voices,
   from one player only (the primary monitor's);
@@ -21,8 +21,9 @@ The same as on Windows:
   shape, 480 lines high, or 720 with `--lines 720` (the Windows setting
   **Sharp — 720 lines**); Intermission modules (Star Wars, Opus 'n Bill,
   Flintstones, Far Side, Dilbert and Intermission's own), Star Trek (both
-  releases), ScreamSavers and Marvel modules, Johnny Castaway and Best
-  Shot's scenes always get 640×480, with black bars at the
+  releases), ScreamSavers and Marvel modules, Johnny Castaway, and Best
+  Shot's and the Monty Python scenes always get 640×480, with black bars
+  at the
   sides on a widescreen display, or stretched to fill it with `--stretch`
   (the Windows setting **Stretch to fit the screen**);
 * what the modules save themselves (message texts, high scores, the Star
@@ -149,7 +150,7 @@ follow it; with none, it opens the importer's window:
 cd LongAfterDark
 ./longafterdark --import                                # the importer's window
 ./longafterdark --import --download simpsons            # from the Internet Archive (2.6 MB)
-./longafterdark --import --download all                 # all twenty-one releases (893 MB), those imported already too
+./longafterdark --import --download all                 # all twenty-three releases (1076 MB), those imported already too
 ./longafterdark --import --image ~/Downloads/afterdark-20b_startrek.zip
 ./longafterdark --import --image ~/Downloads/"After Dark - Scream Savers.zip"   # its disks in DISK1, DISK2, ... folders
 ./longafterdark --import --image disk1.img --image disk2.img
@@ -165,7 +166,7 @@ works too, given Windows paths such as `Z:\home\you\disc.iso`). The
 release ids are `deluxe`, `ad10`, `ad32`, `tt`, `simpsons`, `swse`,
 `startrek`, `marvel`, `snoopy`, `looney`, `screams`, `disney`, `farside`,
 `dilbert`, `tng`, `castaway`, `opus`, `opusroad`, `flintstones`,
-`intermission` and `bestshot`. The
+`intermission`, `bestshot`, `pythonizer` and `pythonle`. The
 sources the importer takes (a disc or floppy image; a ZIP or 7z of the
 install files, of the floppy images, or of the install disks in `DISK1`,
 `DISK2`, … folders; a folder; or a download), and how it checks them, are in
@@ -205,7 +206,11 @@ A module is named by its id (`ad40.toasters`), its name
 (`"Flying Toasters!"`), its path in the catalog, or its id without the
 release (`toasters`); `--list` shows the ids and names. A name that fits
 several modules is refused with a list of them: use one's id. With nothing
-imported, it shows the emulator's test pattern.
+imported, it shows the emulator's test pattern. The Desktop Extras' two
+scenes play with the Desktop Pythonizer's player: until that release is
+imported too, the rotation leaves them out, and naming one is refused
+(`"Foot" (pythonle.foot) needs Monty Python's Flying Circus Desktop
+Pythonizer to play: import that release too`).
 
 ### Options
 
@@ -214,8 +219,8 @@ imported, it shows the emulator's test pattern.
 | `-f`, `--fullscreen` | Full screen on the primary monitor, as a screen saver (the default); the other monitors go black. |
 | `-w`, `--window` | In a window of 640×480. |
 | `-s`, `--scale <n>` | The window `n` times as large (1 to 8). |
-| `--lines 480` or `720` | The screen After Dark modules get: 480 lines (the default) or 720, as wide as the display's shape. Intermission modules (Star Wars, Opus 'n Bill, Flintstones, Far Side, Dilbert, Intermission's own), Star Trek, ScreamSavers and Marvel modules, Johnny Castaway and Best Shot's scenes always get 640×480. |
-| `--stretch` | Intermission, Star Trek, ScreamSavers and Marvel modules, Johnny Castaway and Best Shot's scenes fill the window, stretched, instead of keeping their 4:3 shape with black bars. XScreenSaver's settings call it **Stretch to fit the screen (no black bars)**; its small preview always keeps the shape. |
+| `--lines 480` or `720` | The screen After Dark modules get: 480 lines (the default) or 720, as wide as the display's shape. Intermission modules (Star Wars, Opus 'n Bill, Flintstones, Far Side, Dilbert, Intermission's own), Star Trek, ScreamSavers and Marvel modules, Johnny Castaway, and Best Shot's and the Monty Python scenes always get 640×480. |
+| `--stretch` | Intermission, Star Trek, ScreamSavers and Marvel modules, Johnny Castaway, and Best Shot's and the Monty Python scenes fill the window, stretched, instead of keeping their 4:3 shape with black bars. XScreenSaver's settings call it **Stretch to fit the screen (no black bars)**; its small preview always keeps the shape. |
 | `--module <module>` | The module to run, named as above: the same as naming it at the end of the line. XScreenSaver's settings write it this way. |
 | `-r`, `--random` | Every module in turn even when one is named (it plays first). |
 | `--cycle <seconds>` | How long each module plays in the rotation (default 300; 0 never changes it). |
@@ -504,8 +509,9 @@ monitors), Openbox, i3 and Xfce's session, and XScreenSaver 5.45, 6.06 and
 * keyboard layouts other than US English: keys the US layout doesn't have
   (such as ü or ß) reach no module, though they still end the screen
   saver;
-* Take Your Best Shot's scenes under Wine: the player accepts their ABI,
-  but they have been run only on Windows.
+* Take Your Best Shot's, the Desktop Pythonizer's and the Desktop Extras'
+  scenes under Wine: the player accepts their ABI, but they have been run
+  only on Windows.
 
 Full screen, it finds the monitors when it starts: one plugged in while it
 runs isn't blacked out. Under Wine the importer's window may not take files

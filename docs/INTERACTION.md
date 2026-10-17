@@ -38,6 +38,7 @@ into `research/win/dis`.
 | Module state | A per-user, per-package **writable overlay** over the guest's `C:\WINDOWS` and `C:\AFTERDRK` (`C:\SAVER` for the Intermission modules: Star Wars Screen Entertainment's and those of Delrina's own six releases) in `ADSTATE`, which the `.scr` always passes (`state\` next to `settings.ini`); without it a host keeps the overlay in memory, so headless runs stay deterministic and write nothing (§7). |
 | Desktop seed | The `.scr` captures each monitor before its windows appear, writes a delete-on-close P6 at the emulated size and passes `ADSEEDIMG` to that window's first host only (§8). |
 | Living wallpaper | Since the ninth round, opt-in: `LongAfterDark.exe /wallpaper` puts the modules on the desktop behind its icons. No input reaches them and none ends it, no game, no power request; the hosts pause while a screen saver runs, the session is locked or the display is off; every host gets `ADWALLPAPER=1` and the user's wallpaper as its seed (§4.7, §8). |
+| A module that needs another release | Since the tenth round a catalog entry may carry `requires` (the Desktop Extras' two scenes, which play with the Desktop Pythonizer's player): while that release is not imported, the settings window shows the module as needing it where "Coming soon" would show, nothing starts it, and Random leaves it out (§4.8). |
 | DOS Shell | Not reproducible on the current build (§9.1); ships with exit-reason logging and a 5-minute regression. |
 
 ---
@@ -247,7 +248,9 @@ build), it has 196 on 190 modules, from 172 binaries: each of the 101
 modules of the Opus 'n Bill Screen Saver, On the Road Again, the
 Flintstones and Intermission 4.0 has one, **Configure...**. With Take Your
 Best Shot, twenty-one releases (446 modules), it still has 196: its 17
-scenes have none. Marvel's
+scenes have none. With the Desktop Pythonizer and its Desktop Extras,
+twenty-three releases (470 modules), it still has 196: their 24 scenes
+have none. Marvel's
 thumbnails (ids 1007–1015) are children of
 the Images window (1006), so a configure script's `CLICK`, which goes to
 the dialog, can't reach them, but `PRESS 1006 <x> <y>` clicks the thumbnail
@@ -550,7 +553,11 @@ while a hold is pending. The decision logic is a pure function
   starts in place of the screen saver's scene, PACKAGES.md §7.7): keys,
   clicks and the mouse belong to the game. Press Caps
   Lock again to stop playing (the next key or move then ends the saver), or
-  press **Alt** to end it at once.
+  press **Alt** to end it at once. The same holds for a 7th Level scene's
+  interactive screen saver, Caps Lock's role in Best Shot's other scenes
+  and, since the tenth round, in every scene of the Desktop Pythonizer and
+  its Desktop Extras, whose three games (The Chicken Game, The Gopher
+  Game, The Pig Game) are played there (§5.2).
 * **Final Exam** (Star Trek: The Screen Saver, since the seventh release)
   is a Num Lock game: Num Lock starts the Starfleet Academy exam, whose
   answers are the number keys (the exam is interactive through the status
@@ -748,6 +755,41 @@ them. None of the saver's rules above apply:
   monitors or mixed DPI, and the pause during a real screen saver or lock
   have not been tried here.
 
+### 4.8 A module that needs another release (`requires`)
+
+Since the tenth round a catalog entry may name a release it can't play
+without: `"requires"`, that release's id, and `"requiresTitle"`, its title
+(PACKAGES.md §6). Only the Limited Edition Desktop Extras' two scenes,
+Foot and Penguins, have it (`"requires": "pythonizer"`): they play with
+the Desktop Pythonizer's player, which their floppy never had. While the
+catalog lists no such release (`Catalog::lacks_release`), the module is
+treated as one whose ABI the host doesn't name:
+
+* **The settings window** dims it and never starts it (Preview greyed, its
+  buttons read-only, not counted among the modules that can run now), but
+  where "Coming soon" would show it says what it needs: "Needs Monty
+  Python's Flying Circus Desktop Pythonizer" in the details' badge and as
+  the preview's title, with "Import that release too, and this module
+  plays with it." under it, and in the release's group pill when the text
+  fits half the header, else "Needs another release" (`needs_text` in
+  `scr/src/catalog.h`).
+* **Random**, `/random` and a rotation always leave it out, where a
+  Coming-soon module may still be tried (`scr/README.md`, **What Random
+  leaves out**); a single module that lacks its release is not started, and
+  the saver picks at random instead. With only the Desktop Extras
+  imported, the saver says that no modules are imported.
+* **`/window` and `/wallpaper` with `/module`** naming it fail with a
+  message, `"Foot" (pythonle.foot) needs Monty Python's Flying Circus
+  Desktop Pythonizer to play: import that release too.`, and exit 1. The
+  Linux player skips it in its rotation and refuses `--module` with the
+  same words.
+
+Once that release is imported, in either order, the module plays like any
+other: the host finds the player in the required release's package
+(PACKAGES.md §7.7). A host run of the scene without it ends with exit 1.
+UNVERIFIED on screen: the badge, the preview's text and the pill are
+covered by unit tests of their logic only.
+
 ---
 
 ## 5. Lane obligations (input and status)
@@ -871,7 +913,7 @@ them. None of the saver's rules above apply:
   The Butt Boys and Skating, and the Flintstones' DictaBird, Drive-In,
   Fred & The Pterodactyls, Bowling, Bronto Crane, The Flintmobile and
   Paper Boy (their May build's four of those too); none of the other
-  modules of the twenty-one releases does.
+  modules of the twenty-three releases does.
 * **A Windows 3.1 screen-saver program** (Johnny Castaway, `PACKAGES.md`
   §7.6) is never interactive, and keys and the mouse never reach it: the
   lane posts no key or mouse message to its window (a `MOUSE` line moves
@@ -900,6 +942,26 @@ them. None of the saver's rules above apply:
   not a wake; Caps Lock off and on starts a new one. With `ADWALLPAPER=1`
   (§4.7) a scene runs its living-wallpaper form (mode 1) whatever Caps
   Lock says, and no input reaches it.
+* **A scene of the Desktop Pythonizer or its Desktop Extras** (since the
+  tenth round; `PACKAGES.md` §7.7, ABI.md §3.16) runs the same way in the
+  Pythonizer's own, older player, `PYTHON.EXE`, started as the
+  Pythonizer's desktop program started it. That player takes modes 0 to 5
+  only, and the program never starts mode 6, so no scene is a game for
+  the catalog: with Caps Lock on, every one of the 24 runs the
+  interactive screen saver (mode 3, the Interactive flag clear), the role
+  in which the Pythonizer's help puts its games. There the player takes
+  the keys and the mouse: The Gopher Game is played with clicks (its score
+  counts, "Game Over"), The Chicken Game with clicks and drags, The Pig
+  Game with the keys (Enter or Space puts in a coin, the arrow keys move
+  the cowboy, Space fires); in 13 of the other 21 a grid of 25 clicks over
+  the screen changed the picture or made a sound (BBC Fairy's hit fairies
+  drop, Hopping Green Man counts the hits, a pink car comes in Killer
+  Cars, No Time to Lose Woman sounds), and in Man
+  with Baby Carriage, Giant Head, Hopping Man, I Confess, Rolling Man,
+  Silly Walk, Train and Penguins it did not (they may answer only clicks
+  on their moving figures). The Pythonizer's Wallpaper Zapper
+  (Shift+Ctrl+click) has not been tried. With `ADWALLPAPER=1` a scene runs
+  as a living wallpaper (mode 1), the same frames as the screen saver.
 
 ---
 
@@ -1378,6 +1440,8 @@ at a scratch folder gets scratch state with it.
   <package>\                             deluxe (the FILES\… tree), ad10, ad32, tt, simpsons, swse, startrek,
                                          marvel, snoopy, looney, screams, disney, farside, dilbert, tng,
                                          castaway, opus, opusroad, flintstones, intermission, bestshot,
+                                         pythonizer (the Desktop Extras' scenes, in their package's root, have
+                                         no module dir under it, so they come under a legacy- name),
                                          or legacy-<fnv32 of the module dir, 8 hex> for anything else
     WINDOWS\                             upper layer of the guest's C:\WINDOWS (both lanes of a package share it)
     <MODDIR>\                            upper layer of the guest's C:\AFTERDRK = the module dir
@@ -1576,7 +1640,9 @@ What remains:
   wallpaper changes (`WM_SETTINGCHANGE` with `SPI_SETDESKWALLPAPER`) or
   the windows are made again. `StartFromDesktop` does not apply. A 7th
   Level scene's living wallpaper plays over it, as the original played over
-  the desktop's own wallpaper.
+  the desktop's own wallpaper. The Desktop Pythonizer's player fills its
+  window black before its first frame (frame 0 of a seeded run hashes as
+  an unseeded one's), so the seed never shows behind its scenes.
 
 ---
 

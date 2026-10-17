@@ -2027,7 +2027,7 @@ that is not open. `AddFontResource("WILLY.FON")` — a font its floppy never
 had — returns 0, as Windows did, and its `CreateFont("Willy Beamish
 Dialog")` gets the font mapper's choice.
 
-### 3.16 7th Level's Runtime Player (Take Your Best Shot) — VERIFIED
+### 3.16 7th Level's Runtime Player (Take Your Best Shot, the Desktop Pythonizer) — VERIFIED
 
 Take Your Best Shot (7th Level, 1995; Bill Plympton's animation) has no
 modules either. Its scenes are **7th Level resource files**
@@ -2269,6 +2269,119 @@ characters run on the scene's black (Bug-eyed's and Face Off's dark brown)
 — the wallpaper the user saw under Windows 3.1 too. No input ever reaches
 it. All 17 scenes: 900 frames twice identical, exit 0, no unimplemented
 call, no fault.
+
+#### The Desktop Pythonizer and its Desktop Extras
+
+Monty Python's Flying Circus Desktop Pythonizer (7th Level, 1995; its CD's
+files 1995-03) is built on the same engine a release earlier. Its 22 scenes
+are 7th Level resource files of **version 1**: `"7L"` 01 00, a length byte,
+the product `Python` NUL-terminated, the title (`INTERACT\*.BIN`, and three
+in `PYTHON` beside the player: `BIRDGAME` "The Chicken Game", `GOPHER`,
+`PIGGAME`; `PYTHON\HERALD.BIN`, whose product is empty, is the desktop
+program's own). Core's probe and the ne16 lane take 01 00 as they take
+02 00. Its player is older: `PYTHON.EXE` (65,248 bytes, "(C) Copyright
+1994 7th Level, Inc."; window class `VIEW_CLASS`) with `PYTHU001`,
+`PYTHA001` ("Audio Library 1.1": `waveOut*`, `aux*`), `PYTHS001` (no
+`DISPDIB`) and `PYTHR001`. Its installer put them in `c:\7thLevel\Python`
+(`SETUP.EXE`'s default) and left the scenes on the CD (`1:interact`,
+`1:python`). Monty Python's Limited Edition Desktop Extras, a floppy, adds
+two scenes of the same kind, `FOOT.BIN` and `PENGUINS.BIN` (product
+`Python`), which its setup copied into the Pythonizer's folder (`0:`,
+beside `PYTHON.EXE`) and added to `[Screen Savers]` and `[Living
+Wallpapers]`; it has no player of its own.
+
+**The player by the product.** The header's product picks the player
+(`host/ne16/package.hh` `SeventhProduct`): `BestShot` →
+`BESTSHOT\PLYMPTON.EXE`, `Python` → `PYTHON\PYTHON.EXE`. It is looked for
+first in the scene's own package (the scene folder's parent:
+`packages\pythonizer\PYTHON` for `INTERACT\*.BIN` and for the three scenes
+in `PYTHON` itself), then — an add-on whose scenes sit in its package's
+root, `packages\pythonle\FOOT.BIN` — in the packages beside it, the first
+by name that holds that product's player. A scene with no player is
+refused (exit 1, "no 7th Level Runtime Player (PYTHON\PYTHON.EXE, for the
+product Python …)"); a product the host does not know is refused the same
+way.
+
+**How `PYTHIZER.EXE` started a scene** (8:00E6), read against `BESTSHOT.EXE`'s
+6:00E6: the same. `GlobalAlloc(0x2042, 0x6C)`; +0 0x6C, +2 the mode, +0x12
+mute, +0x14 its caller's flag is 0, +0x16 the password word (mode 3), the
+title at +0x1A, its UI window at +0x6A; `[Apps] Python` from `7thlevel.ini`
+(else its own folder's `%s.exe`) + `" %s /p%lX"`, `WinExec(…,
+SW_SHOWMAXIMIZED)`, `EnumWindows` for the player's window and
+`SendMessage(player, 0x783, its main window, 0)`; to stop one (8:005E)
+0x783 with 0 and `WM_CLOSE`. Its callers: the screen saver (8:042C: mode 3,
+4 for its dialog's preview; mute `ScreenSaverMute`, the flag
+`ScreenSaverInteractive`, both `[PythonizerControls]`), the living
+wallpaper (9:048B: mode 1, 2 for the preview; the flag 1, so +0x14 0) and
+its OLE animations (6:0C3A: mode 5 with a rectangle at +4). **No caller
+starts mode 6**: the Pythonizer has no game mode. (+0x18 is set to 1 only
+for mode 1 when `PYTHIZER.EXE` was itself started for a preview window.)
+Its windows: the main one class and title `Pythonizer`,
+`WS_OVERLAPPEDWINDOW` (5:0CDD), the UI class and title `Pythonizer ` (the
+trailing blank its own), `WS_POPUP | WS_CLIPCHILDREN` (5:0D2A).
+`PYTHON.EXE` (1:640E) `GlobalLock`s the `/p` handle, checks `GlobalSize` ≥
+0x1A, +0 ≥ 0x1A and the mode ≤ 5, and copies only the first 0x1A bytes —
+the title and +0x6A are not read; its switches (1:68B8) are `/p<hex>`,
+`/s`, `/s1` and `/w`, its command line copied with `lstrcpyn` and
+lower-cased as `PLYMPTON.EXE`'s.
+
+**The stand-in** does for a `Python` scene what it does for Best Shot's
+with `PYTHIZER.EXE`'s windows: the same block (mode 3 not interactive for
+the saver; mode 3 with +0x14 0 under Caps Lock — the interactive saver,
+for **every** scene, the games among them; mode 1 with `ADWALLPAPER=1`),
+the command tail ` D:\INTERACT\AQUARIUM.BIN /p26` (` D:\PYTHON\BIRDGAME.BIN
+…`; an Extras scene ` C:\7THLEVEL\PYTHON\FOOT.BIN …`), the 0x783 send at
+the player's first message call (it returns 0) and the stop at shutdown
+(one resumption, exit code 0). Measured: under Caps Lock the player plays
+on with keys and the mouse, and mode 1 calls functions mode 3 does not
+(Aquarium: 82 against 80) while it draws the same frames.
+
+**The disk.** `C:\7THLEVEL\PYTHON` is the player's folder (the current
+directory, copy-on-write), `D:\INTERACT` and `D:\PYTHON` the package's two
+folders, read-only as the CD; for an Extras scene the Pythonizer's package
+gives the player and the CD, and the Extras' scenes are files of
+`C:\7THLEVEL\PYTHON` read from their own package. `7THLEVEL.INI` as the
+Pythonizer's `SETUP.EXE` wrote it (its script, resource type 258 id 257):
+`[Python] PATH`, `[APPS] Python=C:\7THLEVEL\PYTHON\python.exe`, `[ICONS]`,
+`[PythonizerPaths]` (`DeadWallpaperPath`, `NoisyBitsPath`,
+`TelephoneMessagesPath`, `KeyboardSoundsPath`), the 22 scenes under
+`[Living Wallpapers]` and `[Screen Savers]` (`D:\interact\…`,
+`D:\python\…`), and for an Extras run its two (`C:\7THLEVEL\PYTHON\foot.bin`,
+`…\penguins.bin`). Not seeded: the desktop program's `[App Commentary
+Relations]` and `[OLE Animations]`, and the Extras' `[Icons]` line (its
+`PYTHONLE.DLL` is not installed).
+
+**Calls.** None was added: the five binaries' system imports are Best
+Shot's player's but `GDI.91 GetTextExtent` and `USER.50 FindWindow`, which
+the runtime has. All 24 scenes: 78 to 106 functions called, none
+unimplemented, in every role. The screen is 640×480 (its `SETUP.EXE`
+refuses a smaller display: "Your video card must be at least 640 x 480").
+
+**What they do.** In the saver's mode (900 frames twice identical, 7,200
+frames, exit 0, no fault): characters cross a black screen (Birdman,
+Queen Victoria, No Time to Lose Woman, Hopping Elephants, BBC Fairy,
+Walking Girl, Hopping Green Man, Hopping Man, Killer Cars, Rolling Man,
+Silly Walk, Train, Penguins) or play over a backdrop (Aquarium, Man with
+Baby Carriage on white, Giant Head, I Confess, Many Mouths' wall of faces,
+Story Time, TV is bad for your eyes, Foot's blue sky); the three games show
+their attract screens (The Chicken Game's commissionaire and launcher, The
+Gopher Game's field of holes, The Pig Game's desert and "Insert Coin").
+Sound (60 s captured, `PYTHA001` through the engine): 18 scenes sound in
+the saver's mode, Foot only after 36 s; No Time to Lose Woman, Hopping Green
+Man, Many Mouths and Story Time sound only when clicked; Hopping Man and
+Rolling Man made none. Under Caps Lock (the interactive saver; the
+Pythonizer's help: "Select Interactive if you would like to be able to
+play games with your screen saver") 13 of the 21 scenes that are no games
+answered a grid of 25 clicks (No Time to Lose Woman for a frame and with
+its sound); The Gopher Game is played with the mouse (the score counts,
+"Game Over"); The Chicken Game with clicks and drags over its field (the score
+counts); The Pig Game with the keyboard (Enter or Space inserts the coin,
+the arrow keys move the cowboy, Space fires). The living wallpaper (mode 1):
+900 frames twice identical, the same frames as the saver's mode; the
+player fills its window black before its first frame, so the desktop seed
+is not seen (frame 0 is the same with and without `ADSEEDIMG`). No input
+reaches it. Take Your Best Shot's 17 scenes in all three roles: frame for
+frame as before.
 
 ## 4. Surprises (all VERIFIED unless marked)
 

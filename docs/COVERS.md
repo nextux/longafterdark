@@ -51,8 +51,10 @@ the sixteenth Sierra On-Line's `castaway` (Screen Antics: Johnny
 Castaway), and as the seventeenth to the twentieth Delrina's `opus`,
 `opusroad`, `flintstones` and `intermission` (Opus 'n Bill Screen Saver,
 Opus 'n Bill: On the Road Again!, The Flintstones Screen Saver Collection,
-Intermission 4.0), and as the twenty-first 7th Level's `bestshot` (Take
-Your Best Shot). The UI calls a release by
+Intermission 4.0), as the twenty-first 7th Level's `bestshot` (Take
+Your Best Shot), and as the twenty-second and twenty-third 7th Level's
+`pythonizer` and `pythonle` (Monty Python's Flying Circus Desktop
+Pythonizer, Monty Python's Limited Edition Desktop Extras). The UI calls a release by
 its `title`, or by its `shortTitle` where space is tight. A **cover** is the
 art that stands for a release. A **tile** is the cover rendered as a 4:5
 portrait PNG for display. The **filter** is the set of releases whose tiles
@@ -129,7 +131,10 @@ control and the details card) moves down by the band's height.
   third and Intermission (1993-11) fourth, before Marvel, the Flintstones
   (1994-05) sixth, before Far Side, and On the Road Again (1994-09) tenth,
   after Star Wars. With all twenty-one, Best Shot (1995-02) comes
-  fourteenth, after the Next Generation. A release without a date comes
+  fourteenth, after the Next Generation. With all twenty-three, the
+  Desktop Extras (1995-01) come fourteenth, after the Next Generation,
+  Best Shot fifteenth and the Desktop Pythonizer (1995-03) sixteenth,
+  before the Looney Tunes. A release without a date comes
   last. (As built for twelve: a row that
   scrolls starts after the left chevron's place, §1.3.)
 * **Status box.** A status box 200 DIP wide sits at the column's right
@@ -221,10 +226,12 @@ so every cover now shows, on as many rows as they need
 * **Rows.** As few as hold every cover. Regular covers fill each row left
   to right, up to what a row holds and at most eight (`kStripMaxCols`): ten
   are 8 and 2 even where a row holds nine, fifteen 8 and 7, sixteen 8 and
-  8, twenty 8, 8 and 4, twenty-one 8, 8 and 5. Compact covers,
+  8, twenty 8, 8 and 4, twenty-one 8, 8 and 5, twenty-three 8, 8 and 7.
+  Compact covers,
   which only a short window gets, are as even as can be, so a cap never
   costs it a row: fourteen where a row holds ten are 7 and 7, sixteen 8
-  and 8, twenty 10 and 10, twenty-one two rows too. The rows are left-aligned on the
+  and 8, twenty 10 and 10, twenty-one two rows too, twenty-three three
+  (8, 8 and 7). The rows are left-aligned on the
   column and `kStripRowGap` (8 DIP) apart, the gap between two covers of a
   row; only the last row may be shorter. The band is the rows of cells and
   the 12-DIP gap under them: 236 DIP for two regular rows, 352 for three,
@@ -694,6 +701,8 @@ photos are those two releases' covers of choice, through `--set-cover`).
 | `flintstones` (the same) | — (no source: the generated cover) | — | — | — |
 | `intermission` (the same) | disc `INSTALL.BMP` (the picture beside the installer's pages on disk 1: Intermission's logo, 100×150), md5 `cf21a2a530d09444445c4735d8dd59ca`, art `panel` ("Setup art", your disks) | — | — | — |
 | `bestshot` (added as the twenty-first release) | download `https://archive.org/download/takeyourbestshot/bestshot.jpg` (the box front, 432×547, in the Internet Archive's item of the CD), md5 `a225962a4e242347a056f0b356ab920b`, 58082 B, saved as `takeyourbestshot_bestshot.jpg`, art `box` ("Box front", Internet Archive) | — | — | — |
+| `pythonizer` (added as the twenty-second release) | download `https://archive.org/download/monty-python-flying-circus-pythonizer/MontyPythonFlyingCircus_Pythonizer-1995.jpg` (the Internet Archive's scan of the disc, 3060×3109, in the item of the CD image; a JPEG the Internet Archive derived from the item's `.tif`), md5 `e39961fc73b617bab4c59837b81ad761`, 1526928 B, **crop 85,97,2880,2880** (the disc), stored at 2048×2048, art `disc` ("Disc label", Internet Archive) | — | — | — |
+| `pythonle` (added as the twenty-third release) | download `https://archive.org/download/monty-pythons-flying-circus/img20250111_20571690.jpg` (the Internet Archive's photo of the floppy, 2115×2172, in the item of its image), md5 `2fc7df5ce1e34602127c2fec31c5bcdd`, 2047677 B, saved as `monty-pythons-flying-circus_img20250111_20571690.jpg`, **crop 216,40,1654,1202** (the label), art `panel` ("Disk label", Internet Archive) | — | — | — |
 
 Notes:
 * **ad32** starts with its disc art because the user chose it: no box scan
@@ -797,6 +806,23 @@ Notes:
   its own to offer (its pictures are the desktop program's wallpapers and
   icons), so an import made offline shows the generated cover until
   `--refresh-covers` fetches the box.
+* **pythonizer, pythonle.** The Desktop Pythonizer's and the Desktop
+  Extras' art belongs to 7th Level and Python (Monty) Pictures, and is
+  handled like the others': fetched onto the user's machine at import time
+  and never bundled, committed or redistributed. No box front of either
+  was found online, so each cover is the art of its own medium, labelled
+  as what it is: for the Pythonizer the Internet Archive's scan of the
+  disc ("Monty Python's Flying Circus / Desktop Pythonizer"), cropped to
+  the disc and drawn as disc art; for the Extras the Internet Archive's
+  photo of the floppy, cropped to its label ("Monty Python's Limited
+  Edition Desktop Extras") and drawn as a panel. The disc scan is a JPEG
+  the Internet Archive derived from the item's 28.6 MB `.tif`: if it is
+  ever derived again, its md5 changes, and the release shows the
+  generated cover until the registry is updated (the `.tif` would be the
+  stable source). Neither the CD nor the floppy has a cover of its own to
+  offer (their pictures are the desktop program's wallpapers and icons),
+  so an import made offline shows the generated cover until
+  `--refresh-covers` fetches the picture.
 * **Delrina's four more releases.** The Opus 'n Bill releases' art belongs
   to Berkeley Breathed and Delrina, the Flintstones' to Hanna-Barbera and
   Delrina, Intermission's to Delrina; all of it is handled like the
@@ -1444,7 +1470,8 @@ the importer), but may **not** change anything listed above.
 5. **Cover**: §2.11.
 
 The layout uses the §3.3 spacing, a client width of 640 DIP (minimum 560;
-720 since the sixteen releases, 816 since the twenty, §9.3),
+720 since the sixteen releases, 816 since the twenty, 924 since the
+twenty-three, §9.3),
 and a height fitted to the page, clamped to the work area. Lists longer
 than the window scroll inside a card, using `attach_overlay_scrollbar` on a
 child container.
@@ -1788,6 +1815,15 @@ sections above stay the contract; this records the differences.
   Take Your Best Shot the twenty-one fill the three rows of seven, and the
   settings dialog's strip takes them on three rows too (8, 8 and 5), at
   the same first-open height.
+* **As built for twenty-three releases: eight covers to a row.** Seven to
+  a row would have put the twenty-three on four rows. The window is now
+  924 DIP wide, where the grid fits eight cells, so the twenty-three take
+  three rows (8, 8 and 7; `import.gui_shots` at a 1920×1032 work area and
+  100%: three rows of eight, the whole grid shown); the narrower work
+  areas keep their fewer columns (five to a row in the 640-DIP ones, five
+  rows). The settings dialog's strip takes them on three rows too (8, 8
+  and 7) at the first-open size, and on three compact rows in a window too
+  short for three regular ones.
 * **As built for twenty releases: the Downloads list held to Sources'
   height.** Its twenty cards (and Every release not imported yet) took the
   whole height of the work area, a screen-tall column at 150% on a 4K

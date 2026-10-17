@@ -214,8 +214,8 @@ Long After Dark is a screen saver that runs the original modules of After
 Dark, of LucasArts' Star Wars Screen Entertainment, of Delrina's
 Intermission and its Opus 'n Bill, Flintstones, Far Side and Dilbert
 collections, of Sierra's Johnny Castaway and of 7th Level's Take Your
-Best Shot, unchanged, under x86 emulation. It knows twenty-one releases,
-446 modules:
+Best Shot and Monty Python's Desktop Pythonizer, unchanged, under x86
+emulation. It knows twenty-three releases, 470 modules:
 
 id        Release                                      Internet Archive download
 deluxe    After Dark 4.0 Deluxe (1996)                 CD image, 381.7 MB
@@ -244,6 +244,11 @@ flintstones
 intermission
           Intermission 4.0 (1993)                      three floppy images (ZIP), 3.3 MB
 bestshot  Take Your Best Shot (1995)                   CD image, 89.1 MB
+pythonizer
+          Monty Python's Flying Circus Desktop         CD image, 181.4 MB
+            Pythonizer (1995)
+pythonle  Monty Python's Limited Edition Desktop       floppy image, 1.4 MB
+            Extras (1995)
 
 Star Trek: The Screen Saver is After Dark 2.0 (version 2.0b) with 16 Star
 Trek modules, and Star Trek: The Next Generation Screen Saver After Dark
@@ -265,7 +270,14 @@ it. Take Your Best Shot (7th Level, with Bill Plympton's animation) is 17
 scenes that were its screen savers and living wallpapers, three of them
 (Head Shot, Hot Shot, Line Shot) arcade games too: they are scenes of 7th
 Level's own Runtime Player, which runs unchanged, standing in for the Best
-Shot program that started them.
+Shot program that started them. Monty Python's Flying Circus Desktop
+Pythonizer (7th Level) is 22 scenes of Flying Circus animation in Terry
+Gilliam's style, its screen savers and living wallpapers, three of them
+(The Chicken Game, The Gopher Game, The Pig Game) games too, played with
+Caps Lock on; they are scenes of the Pythonizer's own, older Runtime
+Player. Monty Python's Limited Edition Desktop Extras adds two more scenes,
+Foot and Penguins, which play with the Desktop Pythonizer's player: import
+that release too.
 
 No file of any of these releases is included: you import them from your
 own copies (and are responsible for sourcing them legally).
@@ -329,7 +341,7 @@ What you need
        floppies, one folder of every disk's files, or one holding nothing
        but DISK1, DISK2, ... folders).
      - --download: a release's Internet Archive copy, by its id; "all"
-       imports all twenty-one, one after another (893 MB, those imported
+       imports all twenty-three, one after another (1076 MB, those imported
        already too). Downloads resume if interrupted, and each one is
        checked against its published MD5 before it is used.
    The importer works out which release it was given, checks every file
@@ -426,9 +438,10 @@ Updating
 
 Status
 
-   The 446 modules of the twenty-one releases, with their sound, their
-   Caps Lock games and Final Exam's Num Lock exam (Take Your Best Shot's
-   scenes have been run only on Windows so far). The living wallpaper
+   The 470 modules of the twenty-three releases, with their sound, their
+   Caps Lock games and Final Exam's Num Lock exam (the scenes of Take Your
+   Best Shot, the Desktop Pythonizer and its Desktop Extras have been run
+   only on Windows so far). The living wallpaper
    (LongAfterDark.exe /wallpaper) is for Windows only. Still being
    finished, as on Windows:
      - Speed: each module's pace follows a model of a mid-1990s PC; not
@@ -463,8 +476,8 @@ Long After Dark is a screen saver for Windows that runs the original modules
 of After Dark, of LucasArts' Star Wars Screen Entertainment, of Delrina's
 Intermission and its Opus 'n Bill, Flintstones, Far Side and Dilbert
 collections, of Sierra's Johnny Castaway and of 7th Level's Take Your
-Best Shot, unchanged, under x86 emulation. It knows twenty-one releases,
-446 modules:
+Best Shot and Monty Python's Desktop Pythonizer, unchanged, under x86
+emulation. It knows twenty-three releases, 470 modules:
 
 id        Release                                      Internet Archive download
 deluxe    After Dark 4.0 Deluxe (1996)                 CD image, 381.7 MB
@@ -493,6 +506,11 @@ flintstones
 intermission
           Intermission 4.0 (1993)                      three floppy images (ZIP), 3.3 MB
 bestshot  Take Your Best Shot (1995)                   CD image, 89.1 MB
+pythonizer
+          Monty Python's Flying Circus Desktop         CD image, 181.4 MB
+            Pythonizer (1995)
+pythonle  Monty Python's Limited Edition Desktop       floppy image, 1.4 MB
+            Extras (1995)
 
 Star Trek: The Screen Saver is After Dark 2.0 (version 2.0b) with 16 Star
 Trek modules, and Star Trek: The Next Generation Screen Saver After Dark
@@ -514,7 +532,14 @@ it. Take Your Best Shot (7th Level, with Bill Plympton's animation) is 17
 scenes that were its screen savers and living wallpapers, three of them
 (Head Shot, Hot Shot, Line Shot) arcade games too: they are scenes of 7th
 Level's own Runtime Player, which runs unchanged, standing in for the Best
-Shot program that started them.
+Shot program that started them. Monty Python's Flying Circus Desktop
+Pythonizer (7th Level) is 22 scenes of Flying Circus animation in Terry
+Gilliam's style, its screen savers and living wallpapers, three of them
+(The Chicken Game, The Gopher Game, The Pig Game) games too, played with
+Caps Lock on; they are scenes of the Pythonizer's own, older Runtime
+Player. Monty Python's Limited Edition Desktop Extras adds two more scenes,
+Foot and Penguins, which play with the Desktop Pythonizer's player: import
+that release too.
 
 No file of any of these releases is included: you import them from your
 own copies (and are responsible for sourcing them legally). Requires 64-bit
@@ -545,7 +570,7 @@ adhostwin.exe and adimport.exe next to itself.
      - A drive or folder: the CD itself, or a folder copied from it (for
        floppies, one folder of every disk's files, or one holding nothing
        but DISK1, DISK2, ... folders).
-     - A download from the Internet Archive: the twenty-one releases with their
+     - A download from the Internet Archive: the twenty-three releases with their
        sizes, plus one entry that fetches every release not imported yet.
        Downloads resume if interrupted, and each one is checked against its
        published MD5 before it is used.
@@ -601,6 +626,16 @@ adhostwin.exe and adimport.exe next to itself.
    setup left on the CD, and never runs the setup or the Best Shot
    program.
 
+   The Desktop Pythonizer verifies the same way, as its CD, its ISO image
+   (MontyPythonFlyingCircus_Pythonizer-1995.iso, which the download
+   fetches), the raw BIN image of it (choose the .bin, not the .cue) or a
+   folder copied from the CD: the importer copies its player and its 22
+   scenes. The Desktop Extras verify as the floppy, its image
+   (Monty_Pythons_Flying_Circus.img, the download), or a folder or ZIP of
+   its files: its two scenes. Import the two in either order; until both
+   are there, the settings window shows Foot and Penguins as needing the
+   Desktop Pythonizer and never plays them.
+
    From a command prompt, with the ids above:
      adimport --image "C:\Images\After Dark 3.2.iso"
      adimport --image disk1.img --image disk2.img
@@ -613,7 +648,7 @@ adhostwin.exe and adimport.exe next to itself.
      adimport --download all
      adimport --list-packages
      adimport --remove tt
-   "adimport --download all" imports all twenty-one, one after another (those
+   "adimport --download all" imports all twenty-three, one after another (those
    imported already too). adimport --help lists every option.
 
 2. Covers
@@ -657,8 +692,9 @@ adhostwin.exe and adimport.exe next to itself.
    choose its posters and "Posters..." to make one a wallpaper, which stays
    inside the emulated PC: your own desktop never changes. The resolution
    applies to the other modules: the Intermission modules, both Star Trek
-   releases', ScreamSavers and Marvel modules, Johnny Castaway and Best
-   Shot's scenes always get 640x480, scaled up to fit the screen, with bars
+   releases', ScreamSavers and Marvel modules, Johnny Castaway, and Best
+   Shot's and the Monty Python scenes always get 640x480, scaled up to fit
+   the screen, with bars
    at the sides on a
    widescreen monitor unless "Stretch to fit the screen" is checked.
 
@@ -689,7 +725,10 @@ adhostwin.exe and adimport.exe next to itself.
    in some modules it changes something or starts a game. While a game is
    playing, press Caps Lock again to stop playing, or Alt to end the screen
    saver at once. In Take Your Best Shot's Head Shot, Hot Shot and Line
-   Shot, Caps Lock starts the arcade game. Num Lock starts Star Trek's
+   Shot, Caps Lock starts the arcade game; in the Desktop Pythonizer's
+   scenes it lets clicks and keys reach the scene, which is how its three
+   games are played (The Pig Game with the keys: Enter or Space puts in a
+   coin, the arrows move, Space fires). Num Lock starts Star Trek's
    Final Exam: type the number of your answer; moving the mouse ends the
    exam and the screen saver. Locking the computer (Win+L) always ends it.
 
@@ -737,7 +776,8 @@ adhostwin.exe and adimport.exe next to itself.
    shows what the screen saver would, on each monitor the Monitors setting
    gives it. /wallpaper /stop ends it, and your wallpaper shows again.
    Every module starts on a picture of your own wallpaper; Best Shot's
-   scenes play their living-wallpaper form.
+   and the Monty Python scenes play their living-wallpaper form, over a
+   backdrop of their own.
 
    Keys and the mouse never reach the modules, and Caps Lock starts no
    game. It doesn't keep the display on: the screen saver, the lock and
@@ -766,7 +806,7 @@ Updating
 
 Status
 
-   446 modules from the twenty-one releases, with their sound, their Caps Lock
+   470 modules from the twenty-three releases, with their sound, their Caps Lock
    games, Final Exam's Num Lock exam and their own option buttons. Still
    being finished:
      - Speed: each module's pace follows a model of a mid-1990s PC; not

@@ -587,7 +587,7 @@ Measured on `SCRANTIC.SCR`: 900 and 6,000 frames twice identical, exit 0,
 baselines (202 After Dark modules × A/C/S, Star Wars 28/28, Star Trek
 32/32) at 0 differences with these changes.
 
-## Tasks with libraries of their own: 7th Level's Runtime Player (Take Your Best Shot)
+## Tasks with libraries of their own: 7th Level's Runtime Player (Take Your Best Shot, the Desktop Pythonizer)
 
 Take Your Best Shot's scenes are data that 7th Level's Runtime Player plays:
 `PLYMPTON.EXE`, a Microsoft C application, with four libraries of its own
@@ -658,6 +658,19 @@ it took beyond Johnny Castaway:
   since the player started (`GlobalHeap16::guest_handles`), and start it
   again; `user16_cursor_shown` (`ShowCursor`'s count) gives the status's
   cursor.
+
+The Desktop Pythonizer's older player (`PYTHON.EXE`, 1994, with `PYTHU001`,
+`PYTHA001`, `PYTHS001`, `PYTHR001`; no `DISPDIB`) and its Desktop Extras'
+scenes run on the same task with **nothing added**: their system imports are
+Best Shot's player's but for `GDI.91 GetTextExtent` and `USER.50
+FindWindow`, both there already, and all 24 scenes run in the three roles
+with no unimplemented call. `seed_seventh_level` takes the product
+(`SeventhLevelSeeds::product`): for `"Python"` the Pythonizer's script —
+`[Python] PATH`, `[APPS] Python=…\python.exe`, `[ICONS]`,
+`[PythonizerPaths]` (`DeadWallpaperPath`, `NoisyBitsPath`,
+`TelephoneMessagesPath`, `KeyboardSoundsPath`) — and the scenes as full
+INI keys (`D:\interact\aquarium.bin`, an add-on's
+`C:\7THLEVEL\PYTHON\foot.bin`).
 
 Measured on the 17 scenes: 900 frames twice identical and 7,200 frames,
 exit 0, 0 unimplemented calls, 0 faults; the census 78–106 functions (sound

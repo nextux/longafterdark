@@ -21,7 +21,7 @@ files together in either of these places:
 Screen Saver Settings lists it as "Long After Dark": the `.scr`'s string
 resource 1 (`IDS_DESCRIPTION`), which Windows shows instead of the file name.
 
-The modules come from your own discs: any of the twenty-one releases (twelve of
+The modules come from your own discs: any of the twenty-three releases (twelve of
 After Dark modules: After Dark 4.0 Deluxe, After Dark 3.2, Totally Twisted
 After Dark, After Dark 10th Anniversary, The Simpsons Screen Saver, Star Trek:
 The Screen Saver, which is After Dark 2.0b on two floppies, Marvel Comics
@@ -33,8 +33,10 @@ LucasArts' Star Wars Screen Entertainment, and Delrina's Opus 'n Bill
 Screen Saver, Opus 'n Bill: On the Road Again!, The Flintstones Screen
 Saver Collection, The Far Side Screen Saver Collection and Scott Adams'
 Dilbert Screen Saver Collection; Sierra On-Line's Screen Antics:
-Johnny Castaway, a Windows 3.1 screen saver program of its own; and 7th
-Level's Take Your Best Shot, 17 scenes of 7th Level's Runtime Player), from
+Johnny Castaway, a Windows 3.1 screen saver program of its own; and three
+of 7th Level's, scenes of its Runtime Player: Take Your Best Shot's 17,
+Monty Python's Flying Circus Desktop Pythonizer's 22 and its Limited
+Edition Desktop Extras' two, which play with the Pythonizer's player), from
 the disc (or the floppies), an image of it, a copy of its files, or the
 Internet Archive download. Click **Import…** in the settings dialog (or run `adimport.exe`) to
 copy them to `%LOCALAPPDATA%\LongAfterDark\assets\win`. Until then the saver
@@ -69,7 +71,7 @@ mode**; one per session: the mutex `Local\LongAfterDarkWallpaper`),
 with a module that follows the display (an After Dark module) and
 `…-<window>-640x480.ppm` for one that may start with a module that has a
 640×480 screen of its own (an Intermission, Star Trek, ScreamSavers or
-Marvel module, Johnny Castaway or a Best Shot scene; the first
+Marvel module, Johnny Castaway or a 7th Level scene; the first
 file serves both where the two pictures are the same: **Starting from the
 desktop**), and `/wallpaper`'s pictures of the wallpaper,
 `…-<window>-<W>x<H>-w<n>.ppm`.
@@ -316,9 +318,10 @@ picture of the wallpaper) are in `src/wallpaper_mode.h`, the rest in
   reaches them and none ends the mode (`ADCAPS=0`, `ADNUMLOCK=0`, no `KEY`,
   `CAPS`, `NUMLOCK` or `MOUSE` line, the status record unread, so no wake
   and no game); the cursor is never hidden, changed or clipped. Every host
-  also gets `ADWALLPAPER=1` (the other modes remove an inherited one): Take
-  Your Best Shot's scenes run their living-wallpaper form with it, and
-  every other module ignores it. They run at below-normal priority. Sound:
+  also gets `ADWALLPAPER=1` (the other modes remove an inherited one): the
+  7th Level scenes (Take Your Best Shot's, the Desktop Pythonizer's and
+  its Desktop Extras') run their living-wallpaper form with it, and every
+  other module ignores it. They run at below-normal priority. Sound:
   the primary monitor's window's host, as `Sound` and `Volume` say.
 * **Starting on the wallpaper:** every host, the first, each rotation's and
   each respawn's, starts on the user's wallpaper (`ADSEEDIMG`, **Starting
@@ -377,7 +380,8 @@ column at most 1240 DIP wide, centred.
   releases (packages) are imported: one 4:5 box cover per release across the
   top, oldest release first (Star Trek, Johnny Castaway, Opus 'n Bill,
   Intermission, Marvel, Flintstones, Far Side, Simpsons, Star Wars, On the
-  Road Again, Snoopy, Dilbert, Star Trek TNG, Best Shot, Looney Tunes, ScreamSavers,
+  Road Again, Snoopy, Dilbert, Star Trek TNG, Desktop Extras, Best Shot,
+  Desktop Pythonizer, Looney Tunes, ScreamSavers,
   3.2, Totally Twisted, Disney, Deluxe, 10th Anniversary), each with its short title under it (64×80 DIP covers; 48×60
   without captions when the window is under 760 DIP tall). Seven fit the
   first-open window side by side, and eight compact ones the smallest. The
@@ -420,9 +424,11 @@ column at most 1240 DIP wide, centred.
   nothing and the preview carries on). Every cover shows: covers that don't
   fit on one row wrap onto more, as few rows as hold them: regular covers
   fill each row, at most eight (ten: 8 and 2; fifteen: 8 and 7; sixteen: 8
-  and 8; twenty: 8, 8 and 4; twenty-one: 8, 8 and 5), compact
+  and 8; twenty: 8, 8 and 4; twenty-one: 8, 8 and 5; twenty-three: 8, 8
+  and 7), compact
   ones as even as can be (fourteen: 7 and 7; twenty, where a row holds
-  ten, 10 and 10; twenty-one on two rows too), regular
+  ten, 10 and 10; twenty-one on two rows too; twenty-three on three, 8, 8
+  and 7), regular
   while the window has the height for their rows, else compact (`ui_model.h`: `strip_grid`, `strip_band`). Only a
   window too short even for the compact rows (the smallest, with eight
   releases and more) gets one compact row that scrolls by whole
@@ -513,7 +519,7 @@ column at most 1240 DIP wide, centred.
   480 lines at the preview box's own 16:9 aspect — 856x480, or 848x480
   where the box's whole pixels come out a little taller — whatever the
   Resolution setting; a module with a screen of its own, an Intermission,
-  Star Trek, ScreamSavers or Marvel module, Johnny Castaway or a Best Shot
+  Star Trek, ScreamSavers or Marvel module, Johnny Castaway or a 7th Level
   scene, at its
   640x480, pillarboxed in
   the wide preview as on
@@ -544,7 +550,7 @@ column at most 1240 DIP wide, centred.
 * **Resolution** and **Monitors**, each at the start of its half of the card
   (dropdowns at most 280 DIP wide; Resolution, 480 or 720 lines, is for the
   modules that follow the display alone: an Intermission, Star Trek,
-  ScreamSavers or Marvel module, Johnny Castaway or a Best Shot scene, always runs at its own 640×480, see
+  ScreamSavers or Marvel module, Johnny Castaway or a 7th Level scene, always runs at its own 640×480, see
   **Emulated screen**), then across the card **Stretch to fit the screen
   (no black bars)** (`StretchToFit`: those 640×480 modules fill each monitor,
   stretched, in `/s` and the settings window's live preview, never in `/p`;
@@ -587,8 +593,8 @@ column at most 1240 DIP wide, centred.
   `IDM_BARS_*` in `res/resource.h`) are taken as the dialog's `WM_COMMAND`
   too, so a test can post them. The link adds nothing else: the window's
   sizes and every other control's place are 1.5.1's.
-* The footer: **Import…** with a line saying what is imported ("446
-  modules from 21 releases", or "84 modules from After Dark 4.0 Deluxe"),
+* The footer: **Import…** with a line saying what is imported ("470
+  modules from 23 releases", or "84 modules from After Dark 4.0 Deluxe"),
   then the credit, then **Preview** (full screen, of the module the details show; greyed for
   a module this host can't run yet, or whose file is missing, and while the
   details show none), **OK** and **Cancel**. The credit, "Made With Love by
@@ -601,7 +607,7 @@ column at most 1240 DIP wide, centred.
   hover cue high contrast keeps, whose hover fill is the window colour). It
   sits in the free space between the assets line's text and Preview, centred
   there and on the buttons, and shows only when its whole box fits with
-  24 DIP clear of both: beside "446 modules from 21 releases" (as long as
+  24 DIP clear of both: beside "470 modules from 23 releases" (as long as
   the twelve releases' "284 modules from 12 releases") it fits the
   first-open window at every scale, and the narrowest one at 100% only (at
   the other scales it gives way there: the line is a digit longer than the
@@ -624,17 +630,17 @@ column at most 1240 DIP wide, centred.
 Until the modules are imported the details card is one welcome: a picture
 across its top (the night sky, the moon and two flying toasters), "Welcome to
 Long After Dark", what importing does (the original modules of After Dark and
-Star Wars Screen Entertainment, from any of the twenty-one releases' discs, an image,
+Star Wars Screen Entertainment, from any of the twenty-three releases' discs, an image,
 or the Internet Archive; `welcome_text` in `ui_model.h`) and an **Import a
 release…** button (the importer's window is "Import a release"). The
 footer's Import is hidden meanwhile (it is the same command), its line reads
 "Nothing imported yet" (the credit beside it as ever), Single/Random are greyed, and the list shows a few
 faint placeholder rows and "Your modules appear here after import". "Long
-After Dark" stays the product's name; the words for the releases fit all twenty-one
+After Dark" stays the product's name; the words for the releases fit all twenty-three
 (not every one is After Dark's, and Star Trek, the Simpsons, Marvel, Snoopy's
 Screen Savers, the Looney Tunes (also on a CD), ScreamSavers, the Disney
-Collection, Johnny Castaway and Delrina's six releases came on floppies,
-which "discs" covers).
+Collection, Johnny Castaway, Delrina's six releases and the Desktop
+Extras came on floppies, which "discs" covers).
 
 **Thumbnails.** A module with no icon of its own is shown by a square of one
 of its own frames: a third of the screen's height around the busiest part of
@@ -701,6 +707,25 @@ catalog; its lane's and ABI's other modules are left as they are): that is
 how a host too old to answer shows a lane it lacks, one module at a time. A
 host that lacks a module's ABI fails the module with exit 1, as it does a
 damaged module ("… couldn’t start"); only its `abis=` answer says why.
+
+A module whose catalog entry `requires` a release the catalog doesn't list
+(the Desktop Extras' Foot and Penguins, `"requires": "pythonizer"`, while
+the Desktop Pythonizer is not imported: `Catalog::lacks_release` in
+`src/catalog.h`) is handled as a Coming-soon one (dimmed, never started,
+no thumbnail, its buttons read-only, Preview greyed, not counted among
+those that can run now), but it says what it needs instead (`needs_text`):
+"Needs Monty Python's Flying Circus Desktop Pythonizer" in its details'
+chip and as its preview's title, with "Import that release too, and this
+module plays with it." under it, and in its release's pill when every
+module of the release lacks it, that text when it fits half the header,
+else "Needs another release". Unlike a Coming-soon module, the saver's
+Random, `/random` and a rotation always leave it out, and a single module
+that lacks its release is not started (the saver picks at random, as for a
+missing file); with only such modules imported, the saver says nothing is
+imported. `/window` or `/wallpaper` with `/module` naming it gets a message
+box, `"Foot" (pythonle.foot) needs Monty Python's Flying Circus Desktop
+Pythonizer to play: import that release too.`, and exits 1. It plays as
+soon as that release is imported (`docs/INTERACTION.md` §4.8).
 
 **Module buttons** (`docs/INTERACTION.md` §6.3). A module's own
 buttons ("Select Fish…", "Custom", "Edit / Select", "Pictures", the Star Wars
@@ -1005,7 +1030,7 @@ running. Only files named that way are ever deleted.
   monitor changed mode or position but kept its aspect ratio (so the host's
   emulated screen size is the same) is moved, and its host carries on; so is
   one whose host runs a module with a screen of its own (an Intermission,
-  Star Trek, ScreamSavers or Marvel module, Johnny Castaway or a Best Shot scene), whose 640×480 is the same on
+  Star Trek, ScreamSavers or Marvel module, Johnny Castaway or a 7th Level scene), whose 640×480 is the same on
   every monitor (such
   windows go last, after the ones whose size matches a monitor, so neither
   kind restarts for the other). A
@@ -1179,7 +1204,7 @@ running. Only files named that way are ever deleted.
   Dark module (one that follows the display) it is the whole monitor at its
   After Dark size, in `LongAfterDark-seed-<pid>-<window>.ppm`, as ever; for a
   module with a screen of its own (an Intermission, Star Trek, ScreamSavers
-  or Marvel module, Johnny Castaway or a Best Shot scene), the part of the monitor its 640×480 frame will cover, shrunk to 640×480,
+  or Marvel module, Johnny Castaway or a 7th Level scene), the part of the monitor its 640×480 frame will cover, shrunk to 640×480,
   in `…-<window>-640x480.ppm`, one picture for both (a screen of another size
   would have its own, `…-<window>-<W>x<H>.ppm`). A window that can only
   start with such a module (it chosen alone, or the only releases imported
