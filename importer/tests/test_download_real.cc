@@ -23,7 +23,7 @@
 //      "files" (the Simpsons ZIP), nothing missing, every file a manifest
 //      match; the catalog lists the package's 84 / 46 / 44 / 13 / 15 / 14 /
 //      16 / 1 / 8 / 12 / 15 / 16 / 14 / 16 / 13 / 1 / 16 / 16 / 15 / 54 / 17
-//      / 22 / 2 modules.
+//      / 22 / 2 / 9 modules.
 //   2. Every package's other copies with other bytes (another file name: the
 //      Simpsons' second ZIP; Star Wars Screen Entertainment's Redump BIN and
 //      flat ZIP; Marvel Comics Screen Posters' ZIP of both disks' folders)
@@ -89,6 +89,8 @@ const std::map<std::string, Expect> kExpect = {
     // The CD (the Desktop Pythonizer), the floppy's image (its Desktop Extras).
     {"pythonizer", {22, "image"}},
     {"pythonle", {2, "image"}},
+    // The CD (Screen Wreckers).
+    {"wreckers", {9, "image"}},
 };
 
 // Every file of a copy: its own, then the images of further install disks.

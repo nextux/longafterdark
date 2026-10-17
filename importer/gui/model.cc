@@ -150,7 +150,7 @@ std::wstring sources_intro(bool any_installed, std::span<const Package> registry
                                             L"six",    L"seven",   L"eight",    L"nine",     L"ten",     L"eleven",
                                             L"twelve", L"thirteen", L"fourteen", L"fifteen", L"sixteen", L"seventeen",
                                             L"eighteen", L"nineteen", L"twenty",  L"twenty-one", L"twenty-two",
-                                            L"twenty-three"};
+                                            L"twenty-three", L"twenty-four"};
     const size_t n = known.size();
     releases = (n < std::size(kWords) ? std::wstring(kWords[n]) : std::to_wstring(n)) + (n == 1 ? L" release" : L" releases");
   } else {

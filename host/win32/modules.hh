@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "loader/pe.hh"
+#include "win32/layout.hh"
 
 namespace adw::win32 {
 
@@ -59,6 +60,13 @@ class ModuleTable {
   // the emulated DLLs it imports; binds every import. Does not run DllMain.
   // Throws loader::LoaderError (damaged image) or std::runtime_error.
   Module* load(const std::string& path_or_name);
+  // A whole program (RuntimeOptions::program): maps its EXE as the process
+  // image, at its preferred base when that is free (0x400000: no stand-in
+  // host EXE in this mode) and binds its imports; exe_handle(),
+  // GetModuleHandleA(NULL) and PEB.ImageBaseAddress are its base from then
+  // on. Not attached: the lane starts it at its entry point.
+  Module* load_exe(const std::string& host_path);
+  Module* exe() const { return exe_; }
   // DLL_PROCESS_ATTACH to m's dependencies and then m, each image at most
   // once. False when a DllMain returned FALSE (that module is not attached).
   bool attach(Module* m);
@@ -111,6 +119,8 @@ class ModuleTable {
   std::map<uint32_t, uint32_t> occupied_;          // base -> size, image area
   mutable std::map<std::string, uint32_t> shim_handles_;  // normalized dll -> pseudo HMODULE
   std::set<std::string> missing_logged_;                  // "importer|DLL" already reported missing
+  Module* exe_ = nullptr;                                 // the program's EXE (load_exe)
+  uint32_t image_low_ = layout::kImageLow;                // lowest base an image may get
 };
 
 }  // namespace adw::win32

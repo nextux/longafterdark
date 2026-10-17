@@ -638,6 +638,38 @@ bool is_intermission_reader(std::string_view file_name) {
   return u.size() == 12 && u.compare(0, 2, "IM") == 0 && u.compare(5, 7, "PLY.IMQ") == 0;
 }
 
+std::optional<std::vector<std::string>> parse_toy_list(std::string_view data, size_t toys) {
+  // Lines end in CRLF, the last one (the "*" line) too or not; no other
+  // break, no tab or control character, no line longer than a name can be.
+  std::vector<std::string_view> lines;
+  while (!data.empty()) {
+    const size_t eol = data.find("\r\n");
+    lines.push_back(data.substr(0, eol));
+    data.remove_prefix(eol == std::string_view::npos ? data.size() : eol + 2);
+  }
+  // The set's name, its toys, its random entry and the "*" line.
+  if (lines.size() != toys + 3 || lines.back().empty() || lines.back().front() != '*') return std::nullopt;
+  for (std::string_view l : lines)
+    if (l.empty() || l.size() > 63 || std::any_of(l.begin(), l.end(), [](char c) { return uint8_t(c) < 0x20; }))
+      return std::nullopt;
+  std::vector<std::string> names;
+  for (size_t i = 1; i <= toys; i++) {
+    std::string name = trim_name(cp1252_to_utf8(lines[i]));
+    if (name.empty()) return std::nullopt;
+    names.push_back(std::move(name));
+  }
+  return names;
+}
+
+std::string toy_id(std::string_view name) {
+  std::string id;
+  for (char c : name) {
+    if (is_digit(c) || is_lower(c)) id += c;
+    else if (c >= 'A' && c <= 'Z') id += char(c - 'A' + 'a');
+  }
+  return id;
+}
+
 CatalogControl speed_control(SpeedStop start) {
   CatalogControl c;
   c.index = 1;
@@ -876,6 +908,49 @@ bool key_names(const char* key, const std::string& pkg_rel) {
   return CompareStringOrdinal(to_wide(key).c_str(), -1, to_wide(pkg_rel).c_str(), -1, TRUE) == CSTR_EQUAL;
 }
 
+// A Desktop Toys set's entries (catalog.h): one per toy, each the program,
+// named by the set's toy list (the registry's names when it cannot be read).
+// Throws for a program that cannot be read or is no PE32 program.
+std::vector<CatalogModule> toy_modules(const Package& pkg, const fs::path& dir,
+                                       const std::function<void(const std::string&)>& log) {
+  std::string data = read_whole_file(dir / to_wide(pkg.toys_program));
+  if (loader::detect_format(data) != loader::Format::pe32)
+    throw ImportError(Status::source_invalid, "not a PE32 program");
+  const std::string md5 = md5_hex(data.data(), data.size());
+  loader::pe::Image img(std::move(data));
+  if (img.header().is_dll()) throw ImportError(Status::source_invalid, "a DLL, not a Desktop Toys program");
+  std::set<std::string> dlls;
+  for (const auto& imp : img.imports()) dlls.insert(ascii_upper(imp.dll));
+  std::vector<std::string> names(pkg.toys.begin(), pkg.toys.end());
+  std::optional<std::vector<std::string>> listed;
+  try {
+    if (pkg.toys_list) listed = parse_toy_list(read_whole_file(dir / to_wide(pkg.toys_list)), pkg.toys.size());
+  } catch (const std::exception&) {
+  }
+  if (listed) names = std::move(*listed);
+  else if (log)
+    log("catalog: " + std::string(pkg.root) + "/" + (pkg.toys_list ? pkg.toys_list : "?") + " is no list of " +
+        std::to_string(pkg.toys.size()) + " toys; the registry's names are used");
+  std::vector<CatalogModule> out;
+  for (size_t i = 0; i < pkg.toys.size(); i++) {
+    CatalogModule m;
+    m.id = std::string(pkg.id) + "." + toy_id(pkg.toys[i]);
+    m.display_name = m.module_name = names[i];
+    m.lane = "pe32";
+    m.path = std::string(pkg.root) + "/" + pkg.toys_program;
+    m.system.assign(dlls.begin(), dlls.end());  // the lane supplies a program every DLL
+    m.package = pkg.id;
+    m.package_title = pkg.title;
+    m.md5 = md5;
+    m.abi = kDesktopToysAbi;
+    if (pkg.screen) m.screen = pkg.screen;
+    m.game = true;
+    m.host_env = {{kToyHost, std::to_string(i + 1)}};
+    out.push_back(std::move(m));
+  }
+  return out;
+}
+
 }  // namespace
 
 CatalogDoc build_catalog(const std::vector<CatalogTree>& trees, const std::function<void(const std::string&)>& log) {
@@ -924,6 +999,21 @@ CatalogDoc build_catalog(const std::vector<CatalogTree>& trees, const std::funct
         if (log) log("catalog: skipped " + f.rel + ": " + e.what());
       }
     }
+    // A Desktop Toys set: its toys, each the program.
+    if (pkg.toys_program && !pkg.toys.empty()) {
+      try {
+        for (CatalogModule& m : toy_modules(pkg, t.dir, log)) {
+          if (!ids.insert(m.id).second) {
+            if (log) log("catalog: skipped " + m.path + " (" + m.module_name + "): duplicate id " + m.id);
+            continue;
+          }
+          doc.modules.push_back(std::move(m));
+          cp.modules++;
+        }
+      } catch (const std::exception& e) {
+        if (log) log("catalog: skipped " + std::string(pkg.root) + "/" + pkg.toys_program + ": " + e.what());
+      }
+    }
     doc.packages.push_back(std::move(cp));
   }
   // Display names stay unique within a lane (the front-end lists by lane):
@@ -944,7 +1034,9 @@ CatalogDoc build_catalog(const std::vector<CatalogTree>& trees, const std::funct
     }
     taken.insert(key(name));
     m.display_name = name;
-    if (!m.md5.empty()) {
+    // A Desktop Toys set's toys share their program's bytes, yet each plays
+    // a toy of its own: no copies of one another.
+    if (!m.md5.empty() && m.abi != kDesktopToysAbi) {
       auto [it, fresh] = first_by_md5.emplace(m.md5, m.id);
       if (!fresh) m.same_as = it->second;
     }
@@ -1118,6 +1210,13 @@ Json module_json(const CatalogModule& m) {
   if (!m.requires_release.empty()) {
     j.add("requires", Json::str(m.requires_release));
     if (!m.requires_title.empty()) j.add("requiresTitle", Json::str(m.requires_title));
+  }
+  // After all of them, and only on an entry with host variables (a Desktop
+  // Toys entry's toy number): every other entry is laid out as before.
+  if (!m.host_env.empty()) {
+    Json env = Json::obj();
+    for (const auto& [name, value] : m.host_env) env.add(name, Json::str(value));
+    j.add("hostEnv", std::move(env));
   }
   return j;
 }

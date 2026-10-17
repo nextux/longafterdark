@@ -137,6 +137,11 @@ bool host_variable_ok(std::string_view name) {
   return std::find(std::begin(kOwn), std::end(kOwn), name) == std::end(kOwn);
 }
 
+bool host_variable_value_ok(std::string_view value) {
+  return !value.empty() && value.size() <= 64 &&
+         std::all_of(value.begin(), value.end(), [](char ch) { return ch >= 0x20 && ch <= 0x7E; });
+}
+
 HostControlValues host_control_values(const Module& m, const std::map<int, int>* values) {
   HostControlValues r;
   std::map<int, int> cv;
@@ -157,6 +162,8 @@ HostControlValues host_control_values(const Module& m, const std::map<int, int>*
     }
     r.env.emplace_back(widen(c.host), std::to_wstring(v));
   }
+  // The catalog's fixed ones, which no setting changes (a toy's number).
+  for (const auto& [name, value] : m.host_env) r.env.emplace_back(widen(name), widen(value));
   return r;
 }
 
@@ -477,6 +484,17 @@ bool parse_catalog(const std::string& json_text, Catalog& out, std::string* erro
         }
         std::sort(mod.controls.begin(), mod.controls.end(),
                   [](const Control& a, const Control& b) { return a.index < b.index; });
+      }
+      // Its fixed host variables (written last, only on an entry that has
+      // them), by name: absent or not an object, none.
+      if (m.contains("hostEnv") && m.at("hostEnv").is_dict()) {
+        for (const auto& [name, value] : m.at("hostEnv").as_dict()) {
+          if (!value->is_string() || !host_variable_value_ok(value->as_string()) || !host_variable_ok(name)) continue;
+          if (std::any_of(mod.controls.begin(), mod.controls.end(), [&](const Control& o) { return o.host == name; }))
+            continue;
+          mod.host_env.emplace_back(name, value->as_string());
+        }
+        std::sort(mod.host_env.begin(), mod.host_env.end());
       }
       if (!out.find(mod.id)) out.modules.push_back(std::move(mod));
     }

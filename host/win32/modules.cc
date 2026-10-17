@@ -97,7 +97,11 @@ bool ModuleTable::is_system_dll(std::string_view n) {
   return kSystem.count(n) != 0;
 }
 
-ModuleTable::ModuleTable(Runtime& rt) : rt_(rt) { build_exe_header(); }
+ModuleTable::ModuleTable(Runtime& rt) : rt_(rt) {
+  // A whole program's EXE takes 0x400000 itself (load_exe); a module's host is the stand-in.
+  if (rt.options().program) image_low_ = layout::kExeBase;
+  else build_exe_header();
+}
 
 ModuleTable::~ModuleTable() = default;
 
@@ -112,7 +116,7 @@ void ModuleTable::add_search_dir(const std::string& host_dir) {
     search_dirs_.push_back(host_dir);
 }
 
-uint32_t ModuleTable::exe_handle() const { return layout::kExeBase; }
+uint32_t ModuleTable::exe_handle() const { return exe_ ? exe_->base : layout::kExeBase; }
 
 std::optional<std::string> ModuleTable::locate(std::string_view name, const std::string& first_dir) const {
   std::string file = file_part(name);
@@ -130,7 +134,7 @@ std::optional<std::string> ModuleTable::locate(std::string_view name, const std:
 uint32_t ModuleTable::place(uint32_t preferred, uint32_t size) {
   uint32_t need = align_up(size, layout::kImageAlign);
   auto free_at = [&](uint32_t base) {
-    if (base < layout::kImageLow || uint64_t(base) + need > layout::kImageHigh) return false;
+    if (base < image_low_ || uint64_t(base) + need > layout::kImageHigh) return false;
     auto it = occupied_.upper_bound(base);
     if (it != occupied_.end() && it->first < base + need) return false;
     if (it != occupied_.begin()) {
@@ -189,6 +193,15 @@ Module* ModuleTable::load(const std::string& path_or_name) {
     throw std::runtime_error("cannot find " + path_or_name);
   }
   return load_image(host, file_part(host));
+}
+
+Module* ModuleTable::load_exe(const std::string& host_path) {
+  if (exe_) throw std::logic_error("the process image is already loaded");
+  Module* m = load_image(host_path, file_part(host_path));
+  if (m->dll) throw loader::LoaderError(loader::LoaderError::Kind::unsupported, m->name + ": a DLL, not a program");
+  exe_ = m;
+  rt_.mem().write_u32l(layout::kPeb + 0x08, m->base);  // PEB.ImageBaseAddress
+  return m;
 }
 
 Module* ModuleTable::load_image(const std::string& host_path, const std::string& name) {
@@ -410,10 +423,7 @@ uint32_t ModuleTable::proc_address(uint32_t hmod, std::string_view name) {
     // optional export must see it missing rather than get a stub.
     ShimEntry* e = rt_.shims().find(dll, name);
     if (!e) {
-      bool known = false;
-      for (const ShimSig& s : win32_signatures())
-        if (dll == s.dll && name == s.name) known = true;
-      if (!known) return 0;
+      if (!rt_.shims().known(dll, name)) return 0;
       e = &rt_.shims().get(dll, name);
     }
     return rt_.shims().thunk_address(*e);

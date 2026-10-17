@@ -157,10 +157,11 @@ struct PeSpec {
   std::vector<std::string> imports;   // DLL names, one function each
   std::vector<std::string> exports;   // exported names
   std::vector<PeResource> resources;
+  bool dll = true;                    // false: a program (IMAGE_FILE_DLL clear)
 };
 
-// A DLL with one section (RVA 0x1000) holding the import, export and
-// resource directories.
+// A DLL (or, `dll` false, a program) with one section (RVA 0x1000) holding
+// the import, export and resource directories.
 inline std::string build_pe(const PeSpec& spec) {
   const uint32_t kSecRva = 0x1000, kSecFile = 0x200;
   Bytes sec;  // section contents; RVA = kSecRva + offset
@@ -318,7 +319,7 @@ inline std::string build_pe(const PeSpec& spec) {
   f.u16(coff, 0x014C);
   f.u16(coff + 2, 1);
   f.u16(coff + 16, 0xE0);
-  f.u16(coff + 18, 0x2102);  // executable, 32-bit, DLL
+  f.u16(coff + 18, spec.dll ? 0x2102 : 0x0102);  // executable, 32-bit, (DLL)
   size_t opt = coff + 20;
   uint32_t image = uint32_t(kSecRva + ((sec.d.size() + 0xFFF) & ~size_t(0xFFF)));
   f.u16(opt, 0x10B);

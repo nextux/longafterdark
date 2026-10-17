@@ -12,8 +12,10 @@
 //     registry's list against the package's modules), After Dark 2.0's
 //     About rules and "screen" (the startrek package's entries only), 7th
 //     Level scenes (made-up 7L files: the title read strictly, the
-//     registry's names and games, the program's own scene left out), and
-//     regenerate_catalog (adimport --catalog-only)
+//     registry's names and games, the program's own scene left out), a
+//     Desktop Toys set (a made-up program and toy list: one entry per toy,
+//     the list read strictly, else the registry's names; "hostEnv" last; no
+//     sameAs; a DLL refused), and regenerate_catalog (adimport --catalog-only)
 //   test_import_catalog real <scratch> <adimport.exe> <reference.json>
 //     semantic identity with the prototype's output (research/win/
 //     make_catalog.py -> research/win/catalog-win.json) over the real
@@ -1069,6 +1071,108 @@ void test_sevenl(const fs::path& dir) {
   }
 }
 
+// ---- Desktop Toys ----------------------------------------------------------------------------
+
+// A made-up Win32 program (`dll`: a DLL instead) importing what a program does.
+std::string synth_program(bool dll = false) {
+  test::PeSpec pe;
+  pe.imports = {"KERNEL32.DLL", "USER32.DLL", "DSOUND.DLL", "WINSPOOL.DRV"};
+  pe.dll = dll;
+  return test::build_pe(pe);
+}
+
+void test_desktoptoys(const fs::path& dir) {
+  // The toy list, strictly: the set's name, its toys, the random entry and
+  // a "*" line, CRLF between them; anything else is no list.
+  const auto list = parse_toy_list("Set\r\nOne\r\nTwo 'Em\r\nRandom\r\n*42", 2);
+  CHECK(list && (*list == std::vector<std::string>{"One", "Two 'Em"}));
+  CHECK(parse_toy_list("Set\r\nOne\r\nTwo\r\nRandom\r\n*42\r\n", 2));  // a CRLF after the last line too
+  CHECK(parse_toy_list("Set\r\n\xC9t\xE9\r\nTwo\r\nRandom\r\n*1", 2) ==
+        std::optional<std::vector<std::string>>(std::vector<std::string>{"\xC3\x89t\xC3\xA9", "Two"}));  // Windows-1252
+  CHECK(!parse_toy_list("Set\r\nOne\r\nRandom\r\n*42", 2));            // a toy short
+  CHECK(!parse_toy_list("Set\r\nOne\r\nTwo\r\nThree\r\nRandom\r\n*42", 2));  // a toy more
+  CHECK(!parse_toy_list("Set\r\nOne\r\nTwo\r\nRandom\r\n42", 2));      // no "*" line
+  CHECK(!parse_toy_list("Set\nOne\nTwo\nRandom\n*42", 2));            // LF alone
+  CHECK(!parse_toy_list("Set\r\n\r\nTwo\r\nRandom\r\n*42", 2));        // an empty name
+  CHECK(!parse_toy_list("Set\r\nO\tne\r\nTwo\r\nRandom\r\n*42", 2));   // a control character
+  CHECK(!parse_toy_list("Set\r\n" + std::string(64, 'x') + "\r\nTwo\r\nRandom\r\n*42", 2));  // overlong
+  CHECK(!parse_toy_list("", 2));
+  CHECK(toy_id("Shoot 'Em") == "shootem" && toy_id("Kick The Can") == "kickthecan" && toy_id("Toy 9!") == "toy9");
+
+  // The registry's set: one entry per toy, every one the program, named by
+  // the toy list, ids from the registry's names; its number in hostEnv;
+  // games; no sameAs although they share the program's md5.
+  const Package* wr = find_package("wreckers");
+  CHECK(wr && wr->toys_program && wr->toys_list && wr->toys.size() == 9);
+  if (!wr) return;
+  const fs::path root = dir / L"wreckers";
+  fs::create_directories(root / L"DT03");
+  auto put = [](const fs::path& p, const std::string& data) {
+    test::write_bytes(p, std::vector<uint8_t>(data.begin(), data.end()));
+  };
+  std::string dtx = "Made-Up Set";
+  for (const char* t : wr->toys) dtx += std::string("\r\nMade Up ") + t;
+  dtx += "\r\nMade-Up Random\r\n*1";
+  put(root / L"DTTY3203.EXE", synth_program());
+  put(root / L"DTTS03.DTX", dtx);
+  put(root / L"DT03" / L"HELP01.TXT", "not a module");
+  put(root / L"OTHER.EXE", synth_program());  // never listed: only the registry's program is
+  CatalogTree t;
+  t.package = wr;
+  t.dir = root;
+  std::vector<std::string> logged;
+  CatalogDoc doc = build_catalog({t}, [&](const std::string& s) { logged.push_back(s); });
+  CHECK(logged.empty());
+  CHECK_EQ(doc.modules.size(), size_t(9));
+  CHECK(doc.packages.size() == 1 && doc.packages[0].modules == 9);
+  const std::vector<std::string> ids = {"wreckers.cornholio",     "wreckers.tiretrouble", "wreckers.karatebeavis",
+                                        "wreckers.paintingdudes", "wreckers.kickthecan",  "wreckers.chuckfest",
+                                        "wreckers.sodajerks",     "wreckers.shootem",     "wreckers.digger"};
+  for (size_t i = 0; i < doc.modules.size() && i < ids.size(); i++) {
+    const CatalogModule& m = doc.modules[i];
+    CHECK_EQ(m.id, ids[i]);
+    CHECK_EQ(m.display_name, std::string("Made Up ") + wr->toys[i]);
+    CHECK(m.module_name == m.display_name && m.lane == "pe32" && m.abi == "desktoptoys" && m.entry.empty());
+    CHECK(m.path == "packages/wreckers/DTTY3203.EXE" && m.package == "wreckers" && m.about.empty() &&
+          m.controls.empty() && m.needs.empty() && m.screen == "640x480" && m.game && m.same_as.empty());
+    CHECK((m.system == std::vector<std::string>{"DSOUND.DLL", "KERNEL32.DLL", "USER32.DLL", "WINSPOOL.DRV"}));
+    CHECK(m.md5 == doc.modules[0].md5 && m.md5.size() == 32);
+    CHECK((m.host_env == std::vector<std::pair<std::string, std::string>>{{"ADTOY", std::to_string(i + 1)}}));
+  }
+  // The JSON: "hostEnv" last of all (after "game"), only on such an entry.
+  if (!doc.modules.empty()) {
+    const std::string j = render_catalog_json({doc.modules[7]});
+    CHECK(j.find("\"abi\": \"desktoptoys\",\n   \"screen\": \"640x480\",\n   \"game\": true,\n   \"hostEnv\": {\n    "
+                 "\"ADTOY\": \"8\"\n   }\n  }") != std::string::npos);
+    CHECK(j.find("sameAs") == std::string::npos);
+    const phosg::JSON parsed = phosg::JSON::parse(j);
+    CHECK(parsed.at("modules").as_list()[0]->at("hostEnv").get_string("ADTOY") == "8");
+  }
+  // A list that is not one of nine toys: the registry's names, logged.
+  put(root / L"DTTS03.DTX", "Made-Up Set\r\nOnly One\r\nRandom\r\n*1");
+  logged.clear();
+  doc = build_catalog({t}, [&](const std::string& s) { logged.push_back(s); });
+  CHECK(doc.modules.size() == 9 && doc.modules[7].display_name == "Shoot 'Em" && doc.modules[7].id == "wreckers.shootem");
+  CHECK((logged == std::vector<std::string>{"catalog: packages/wreckers/DTTS03.DTX is no list of 9 toys; the "
+                                            "registry's names are used"}));
+  fs::remove(root / L"DTTS03.DTX");
+  CHECK(build_catalog({t}).modules.size() == 9);
+  // A DLL, or no PE32 image, is no program: nothing listed, logged.
+  put(root / L"DTTY3203.EXE", synth_program(true));
+  logged.clear();
+  doc = build_catalog({t}, [&](const std::string& s) { logged.push_back(s); });
+  CHECK(doc.modules.empty() && doc.packages.size() == 1 && doc.packages[0].modules == 0);
+  CHECK((logged == std::vector<std::string>{"catalog: skipped packages/wreckers/DTTY3203.EXE: a DLL, not a Desktop "
+                                            "Toys program"}));
+  put(root / L"DTTY3203.EXE", "MZ not a program");
+  CHECK(build_catalog({t}).modules.empty());
+  // Another package's tree lists no toys.
+  CatalogTree other;
+  other.package = find_package("castaway");
+  other.dir = root;
+  CHECK(build_catalog({other}).modules.empty());
+}
+
 void write_tree(const fs::path& files) {
   auto put = [&](const std::wstring& rel, const std::string& data) {
     test::write_bytes(files / rel, std::vector<uint8_t>(data.begin(), data.end()));
@@ -1464,6 +1568,7 @@ int main(int argc, char** argv) {
   test_speed(dir / L"speed");
   test_scrnsave(dir / L"scrnsave");
   test_sevenl(dir / L"sevenl");
+  test_desktoptoys(dir / L"desktoptoys");
   test_scan(dir / L"scan");
   test_ad20(dir / L"ad20");
   test_json();

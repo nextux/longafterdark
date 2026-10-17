@@ -94,6 +94,18 @@ ShimEntry& ShimRegistry::add(std::string_view dll, std::string_view name, Conv c
   return *e;
 }
 
+void ShimRegistry::add_signatures(std::span<const ShimSig> sigs) {
+  for (const ShimSig& s : sigs) {
+    sigs_[std::string(s.dll) + "!" + s.name] = &s;
+    dlls_.insert(s.dll);
+  }
+}
+
+bool ShimRegistry::known(std::string_view dll, std::string_view name) const {
+  std::string key = normalize_dll(dll) + "!" + std::string(name);
+  return sigs_.count(key) || by_key_.count(key);
+}
+
 bool ShimRegistry::has_dll(std::string_view dll) const { return dlls_.count(normalize_dll(dll)) != 0; }
 
 std::vector<std::string> ShimRegistry::dlls() const { return {dlls_.begin(), dlls_.end()}; }

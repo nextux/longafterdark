@@ -277,7 +277,7 @@ void Page::fit(bool keep_pos) {
   const RECT wa = work_area();
   const int max_cw = std::max(px(320), (int)(wa.right - wa.left) - frame_w);
   const int max_ch = std::max(px(240), (int)(wa.bottom - wa.top) - frame_h);
-  // COVERS.md §4.2: 924 DIP wide (eight covers to a row on Sources: the twenty-three releases
+  // COVERS.md §4.2: 924 DIP wide (eight covers to a row on Sources: the twenty-four releases
   // on three rows, every one showing at once on a 1080-line screen), 560 at the least (a narrow
   // work area wins over both).
   int cw = std::min(px(924), max_cw);

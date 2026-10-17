@@ -114,6 +114,31 @@
 //                  both absent on every other entry. A front-end shows such
 //                  a module, while the catalog's packages lack that release,
 //                  as needing it, and never starts it
+//   Desktop Toys (lane pe32; a package whose registry entry names a toys
+//   program, Package::toys_program: Beavis and Butt-head Screen Wreckers'
+//   DTTY3203.EXE, a Win32 program, a PE32 image that is no DLL): one entry
+//   per toy of Package::toys, in their numbers' order, after the package's
+//   module folders' entries, every one the program
+//     id           "<package>.<the registry's name for the toy, lower case,
+//                  letters and digits only>" ("wreckers.shootem")
+//     displayName  the toy's name in the set's toy list (Package::toys_list,
+//                  DTTS03.DTX: Windows-1252 lines, CRLF-separated, the set's
+//                  name, then each toy's, then the set's random entry and a
+//                  last line starting "*"; read strictly), else the
+//                  registry's name for it
+//     about        "" (no controls either)
+//     entry        "" (a program: it runs whole, from its entry point)
+//     needs        none: every DLL it imports is in `system` (the lane
+//                  supplies them all to a program)
+//     abi          "desktoptoys"
+//     game         true: each toy is played too (written last, as for a
+//                  7th Level game)
+//     hostEnv      {"ADTOY": "<n>"}, the toy's number (1-based), written
+//                  last of all: a variable the front-end sets in adhostwin's
+//                  environment for every run of the module, as it does a
+//                  host control's, so the one program plays that toy. The
+//                  entries share the program's md5 but are no copies of one
+//                  another: none has a sameAs
 //   Any lane, from the registry: "screen" ("640x480"), the fixed screen every
 //   module of a package is shown at (Package::screen: Star Trek: The Screen
 //   Saver's, several of whose modules compose a fixed scene for it), written
@@ -187,8 +212,9 @@ struct CatalogModule {
   std::string same_as;                  // id of the first entry with the same md5 ("" = none)
   // The module ABI when it is not After Dark's: "intermission" for an
   // Intermission module, IMX, ASA or IMQ, "scrnsave" for a Windows 3.1
-  // screen-saver program, "7thlevel" for a 7th Level scene ("" = After
-  // Dark; the JSON then has no "abi").
+  // screen-saver program, "7thlevel" for a 7th Level scene, "desktoptoys"
+  // for a toy of a Desktop Toys program ("" = After Dark; the JSON then has
+  // no "abi").
   std::string abi;
   // The fixed screen the module is shown at, "WxH", from its package's
   // registry entry ("" = any screen; the JSON then has no "screen").
@@ -200,6 +226,11 @@ struct CatalogModule {
   // (Package::requires_release, "pythonizer") and that release's title ("" =
   // none; the JSON then has no "requires" and no "requiresTitle").
   std::string requires_release, requires_title;
+  // Variables the front-end sets in adhostwin's environment, to these
+  // values, for every run of the module: a toy's number (kToyHost) on a
+  // Desktop Toys entry (empty for every other entry; the JSON then has no
+  // "hostEnv").
+  std::vector<std::pair<std::string, std::string>> host_env;
 };
 
 // An installed package's box cover as the catalog lists it (COVERS.md §2.7).
@@ -267,6 +298,22 @@ inline constexpr char kScrnsaveSetup[] = "Setup...";
 // (Take Your Best Shot's; named for the engine, which 7th Level's other
 // desktop products share).
 inline constexpr char k7thLevelAbi[] = "7thlevel";
+// The ABI of a toy of Cyclops Software's Desktop Toys engine, a Win32 program
+// that plays any toy of its set (Beavis and Butt-head Screen Wreckers';
+// named for the engine, which Cyclops' other Desktop Toys sets share), and
+// the host variable that names the toy: its number, 1-based, in the set's
+// order (the program's [1]-[9] keys).
+inline constexpr char kDesktopToysAbi[] = "desktoptoys";
+inline constexpr char kToyHost[] = "ADTOY";
+
+// A Desktop Toys set's toy list (Package::toys_list, above), strictly: the
+// names of its `toys` toys, in their order, as UTF-8; nullopt for a list
+// that is not one of `toys` toys (another line count, an empty or
+// overlong name, a control character, no "*" line last).
+std::optional<std::vector<std::string>> parse_toy_list(std::string_view data, size_t toys);
+// A toy's id below its package's: its name in lower case, ASCII letters and
+// digits only ("Shoot 'Em" -> "shootem").
+std::string toy_id(std::string_view name);
 
 // The Speed control: a host control (CatalogControl::host) that the merge
 // gives each module of Package::speed_modules after its own controls, at
@@ -322,7 +369,8 @@ struct CatalogDoc {
 // sorted, ENGINE\STARRYNI.AD, CLASSIC\*.AD sorted; every other package: each
 // module dir's *.AD and *.IMX — a Delrina release's also *.ASA, *.IMQ,
 // *.FLI, *.MRF and *.MSV, an is1 package's *.SCR, a cdcopy package's *.BIN —
-// sorted together, then ENGINE's *.AD and *.IMX; never WINDOWS),
+// sorted together, then ENGINE's *.AD and *.IMX; never WINDOWS; then a
+// Desktop Toys set's toys, each its program),
 // paths "<package root>/<dir>/<file>" whatever the directory is called now. Ids are unique (a second file with a taken id is skipped
 // and logged); name overrides apply, and an Intermission module of
 // Package::speed_modules gets the Speed control (speed_control); display

@@ -904,7 +904,7 @@ int main(int argc, char** argv) {
           std::vector<std::string>({"deluxe", "ad10", "ad32", "tt", "simpsons", "swse", "startrek", "marvel", "snoopy",
                                     "looney", "screams", "disney", "farside", "dilbert", "tng", "castaway", "opus",
                                     "opusroad", "flintstones", "intermission", "bestshot", "pythonizer",
-                                    "pythonle"}));
+                                    "pythonle", "wreckers"}));
     for (const Package& p : builtin_packages()) {
       CHECK(!p.downloads.empty());
       std::map<std::string, std::wstring> name_of_md5;

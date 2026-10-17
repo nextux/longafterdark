@@ -193,6 +193,65 @@ TEST(small_screen_downsample) {
   CHECK(memcmp(out2.row(0), out.row(0), 2) == 0);
 }
 
+// A whole program (program.cc): a PE32 EXE is one, a DLL (every After Dark
+// module) is not; the Desktop Toys command line TOYSAV32.SCR built; the ABI
+// in --capabilities. The images are made up (headers and a "ret").
+TEST(program_recognition_and_command_line) {
+  using adw::pe32::Pe32Lane;
+  CHECK_EQ(Pe32Lane::desktop_toys_command_line("C:\\DTToys", 3, 1), std::string("C:\\DTToys\\dtty3203.exe /s /t0"));
+  CHECK_EQ(Pe32Lane::desktop_toys_command_line("C:\\DTToys", 3, 9), std::string("C:\\DTToys\\dtty3203.exe /s /t8"));
+  CHECK_EQ(Pe32Lane::desktop_toys_command_line("D:\\T", 12, 3), std::string("D:\\T\\dtty3212.exe /s /t2"));
+  // Play (Caps Lock): the toy selector's command line, no ghost mode.
+  CHECK_EQ(Pe32Lane::desktop_toys_command_line("C:\\DTToys", 3, 4, false), std::string("C:\\DTToys\\dtty3203.exe /t3"));
+  Pe32Lane lane;
+  auto abis = lane.abis();
+  CHECK(std::find(abis.begin(), abis.end(), "desktoptoys") != abis.end());
+  CHECK(std::find(abis.begin(), abis.end(), "afterdark") != abis.end());
+  auto image = [](bool dll) {
+    std::string f(0x400, '\0');
+    auto u16 = [&](size_t o, uint16_t v) { memcpy(&f[o], &v, 2); };
+    auto u32 = [&](size_t o, uint32_t v) { memcpy(&f[o], &v, 4); };
+    f[0] = 'M', f[1] = 'Z';
+    u32(0x3C, 0x40);
+    memcpy(&f[0x40], "PE\0\0", 4);
+    u16(0x44, 0x014C);
+    u16(0x46, 1);
+    u16(0x54, 0xE0);
+    u16(0x56, dll ? 0x2103 : 0x0103);
+    u16(0x58, 0x10B);
+    u32(0x58 + 16, 0x1000);
+    u32(0x58 + 28, 0x00400000);
+    u32(0x58 + 32, 0x1000);
+    u32(0x58 + 36, 0x200);
+    u32(0x58 + 56, 0x2000);
+    u32(0x58 + 60, 0x200);
+    u32(0x58 + 92, 16);
+    size_t s = 0x58 + 0xE0;
+    memcpy(&f[s], ".text", 5);
+    u32(s + 8, 0x10);
+    u32(s + 12, 0x1000);
+    u32(s + 16, 0x200);
+    u32(s + 20, 0x200);
+    u32(s + 36, 0x60000020);
+    f[0x200] = char(0xC3);
+    return f;
+  };
+  char tmp[MAX_PATH];
+  GetTempPathA(MAX_PATH, tmp);
+  std::string base = std::string(tmp) + "adw_pe32_prog_" + std::to_string(GetCurrentProcessId());
+  for (int dll = 0; dll < 2; dll++) {
+    std::string path = base + (dll ? ".dll" : ".exe"), bytes = image(dll);
+    FILE* f = fopen(path.c_str(), "wb");
+    CHECK(f != nullptr);
+    if (!f) continue;
+    fwrite(bytes.data(), 1, bytes.size(), f);
+    fclose(f);
+    CHECK_EQ(Pe32Lane::is_program_file(path), !dll);
+    remove(path.c_str());
+  }
+  CHECK(!Pe32Lane::is_program_file(base + ".missing"));
+}
+
 namespace {
 
 // Runs adhostwin on `module` for `frames` frames; returns its exit code and output.

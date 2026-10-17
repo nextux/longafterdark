@@ -206,13 +206,19 @@ uint32_t Runtime::call_guest(uint32_t addr, std::span<const uint32_t> args, Conv
   r.eip = addr;
 
   if (boundaries_.empty()) budget_end_ = cpu_->cycles() + opts_.call_budget;
-  uint64_t now = cpu_->cycles();
-  uint64_t budget = budget_end_ > now ? budget_end_ - now : 0;
   const uint32_t seh_head = mem_->read_u32l(layout::kTeb);  // fs:[0]
   boundaries_.push_back(esp);
   X86::StopReason why;
   try {
-    why = cpu_->run_until(sentinel_, budget);
+    for (;;) {
+      uint64_t now = cpu_->cycles();
+      uint64_t budget = budget_end_ > now ? budget_end_ - now : 0;
+      // A slice hook (set_slice_hook) gets control between two slices.
+      uint64_t run = slice_hook_ && slice_ && slice_ < budget ? slice_ : budget;
+      why = cpu_->run_until(sentinel_, run);
+      if (why != X86::StopReason::LIMIT || run == budget) break;
+      slice_hook_();
+    }
   } catch (const AbandonGuestCall&) {
     // The machine as this level found it (the frames the call built on the
     // stack are dropped with their SEH registrations).

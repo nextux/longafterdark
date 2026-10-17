@@ -108,6 +108,10 @@ const KnownFile kPythonleKnown[] = {
 #include "known_files_pythonle.inc"
     {nullptr, 0, nullptr},
 };
+const KnownFile kWreckersKnown[] = {
+#include "known_files_wreckers.inc"
+    {nullptr, 0, nullptr},
+};
 
 template <size_t N>
 std::span<const KnownFile> manifest(const KnownFile (&a)[N]) {
@@ -1603,6 +1607,41 @@ const NameOverride kPythonleNames[] = {
     {"PENGUINS.BIN", "Penguins"},
 };
 
+// ---- wreckers -----------------------------------------------------------------------------
+//
+// Beavis and Butt-head Screen Wreckers (Viacom New Media, MTV's "Cheap Clicks",
+// November 1996; made by Cyclops Software): the third set of Cyclops' Desktop
+// Toys, nine toys that wreck the desktop, played by one Win32 program,
+// DTTY3203.EXE, from the set's data (DTTS03.DTV, DTTS03.DTX and DT03\: the
+// toys' sprites, sounds and help). One CD installed by InstallShield 3: the
+// program and its data in compressed libraries with folders (isz.h), DATA03.Z
+// and DATA0332.Z, which BB03.INS copies whole into the install folder
+// (research/bbsw, gitignored). Never installed: the screen-saver stub (it only
+// started the program with "/s /t<toy>"), the toy selector and the rest of
+// DATATW32.Z, DirectX, the videos and their player, setup.
+
+// The program and its data, in the package root (the install folder).
+const char* const kWreckersModuleDirs[] = {""};
+// The CD (ISO-9660, volume WRECKERS, mastered 1996-11-11), as the Internet
+// Archive's item of it holds it; its download.
+const KnownImage kWreckersImages[] = {
+    {"4ab43ef0f47af1363dfa976b33dad474", 48351232, "ISO-9660 CD", "WRECKERS"},
+};
+const Download kWreckersDownloads[] = {
+    {"https://archive.org/download/screen-wreckers/Screen%20Wreckers.iso", L"Screen Wreckers.iso", 48351232,
+     "4ab43ef0f47af1363dfa976b33dad474", "image"},
+};
+// The program, the set it plays and its palette: a toy is nothing without them.
+const char* const kWreckersRequired[] = {"DTTY3203.EXE", "DTTS03.DTV", "DTTS03.DTX", "DT03/TOYS_PAL"};
+// BB03.INS's two components, each library copied whole into the install
+// folder (CompressGet data03.z and data0332.z *.* to TARGETDIR, with their
+// folders); DATA03.Z, the set's data, sits beside SETUP.INI.
+const char* const kWreckersLibraries[] = {"DATA03.Z", "DATA0332.Z"};
+// DTTS03.DTX's toys, in their numbers' order (the program's [1]-[9] keys);
+// its last entry, Random Toy, is no toy.
+const char* const kWreckersToys[] = {"Cornholio",  "Tire Trouble", "Karate Beavis", "Painting Dudes", "Kick The Can",
+                                     "Chuckfest",  "Soda Jerks",   "Shoot 'Em",     "Digger"};
+
 // ---- box covers (COVERS.md §2.3) ------------------------------------------------------------
 //
 // Only URLs, md5s, sizes, paths and crops: the pictures are fetched (md5- and
@@ -1903,6 +1942,14 @@ const CoverSource kPythonleCovers[] = {
                    "2fc7df5ce1e34602127c2fec31c5bcdd", 2047677, L"monty-pythons-flying-circus_img20250111_20571690.jpg",
                    Crop{216, 40, 1654, 1202}),
 };
+// Screen Wreckers: the box front, as the Internet Archive's item of the CD
+// holds it (136x148; the whole front, no crop). Viacom's, MTV's and Cyclops'
+// art: fetched onto the user's machine only, never bundled. The CD's own
+// pictures are icons and the installer's sprites, no cover.
+const CoverSource kWreckersCovers[] = {
+    cover_download("box", "Box front", "Internet Archive", "https://archive.org/download/screen-wreckers/Cover.jpg",
+                   "a87c89162b3cec95c286f914f750a158", 6587, L"screen-wreckers_Cover.jpg"),
+};
 
 const Package kPackages[] = {
     {"deluxe", "After Dark 4.0 Deluxe", "Deluxe", Recipe::tree, "FILES", kDeluxeModuleDirs, kDeluxeImages,
@@ -2058,6 +2105,17 @@ const Package kPackages[] = {
      {}, kPythonleNames, manifest(kPythonleKnown), kPythonleDownloads, kPythonleCovers, "1995-01", nullptr,
      kPythonleLoose, nullptr, "640x480", Package::About::as_is, {}, nullptr, nullptr, {}, nullptr, {}, {}, {},
      "pythonizer"},
+    // After the first twenty-three, so they keep their places (and the GUI's
+    // command ids). The program is dated 1996-11-04, the libraries 1996-11-08,
+    // the CD 1996-11-11. Each toy is the program, playing that toy. The
+    // program covers whatever screen it is given, its sprites drawn for the
+    // 640x480 desktops of 1996 ("requires VGA or better"): the catalog gives
+    // every toy that screen, as for Take Your Best Shot.
+    {"wreckers", "Beavis and Butt-head Screen Wreckers", "Screen Wreckers", Recipe::is3, "packages/wreckers",
+     kWreckersModuleDirs, kWreckersImages, kWreckersRequired, {}, "BB03.INS", {}, "", nullptr, nullptr,
+     kWreckersLibraries, {}, {}, manifest(kWreckersKnown), kWreckersDownloads, kWreckersCovers, "1996-11", nullptr, {},
+     "Beavis and Butt-head Screen Wreckers", "640x480", Package::About::as_is, {}, "DATA0332.Z", "DTTY3203.EXE", {},
+     nullptr, {}, {}, {}, nullptr, "DTTY3203.EXE", "DTTS03.DTX", kWreckersToys},
 };
 
 }  // namespace
@@ -2075,6 +2133,7 @@ const char* recipe_name(Recipe r) {
     case Recipe::islib: return "islib";
     case Recipe::is1: return "is1";
     case Recipe::cdcopy: return "cdcopy";
+    case Recipe::is3: return "is3";
   }
   return "?";
 }

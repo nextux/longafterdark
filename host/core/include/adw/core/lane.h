@@ -132,9 +132,11 @@ class Lane {
   // means "afterdark") and "scrnsave" (a Windows 3.1 screen saver: a .SCR
   // program built on SCRNSAVE.LIB, run as Windows 3.1 ran it;
   // "abi":"scrnsave") and "7thlevel" (a scene of 7th Level's Runtime Player,
-  // run by the player itself as Take Your Best Shot ran it; "abi":"7thlevel").
-  // The pe32 lane runs {afterdark}, the ne16 lane {afterdark, intermission,
-  // scrnsave, 7thlevel}.
+  // run by the player itself as Take Your Best Shot ran it; "abi":"7thlevel")
+  // and "desktoptoys" (a toy of Cyclops' Desktop Toys engine, a whole Win32
+  // program run as Windows 95 ran it for its screen saver; "abi":"desktoptoys").
+  // The pe32 lane runs {afterdark, desktoptoys}, the ne16 lane {afterdark,
+  // intermission, scrnsave, 7thlevel}.
   virtual std::vector<std::string> abis() const { return {}; }
   // Run a module's button handler (§6.1). ctx.input holds ADCVSET, ADCAPS and ADNUMLOCK;
   // ctx.env.state_root is persistent in this mode. The lane may fill

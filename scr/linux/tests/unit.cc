@@ -147,6 +147,10 @@ void test_status() {
   // So do Take Your Best Shot's scenes.
   CHECK(!parse_capabilities("lanes=pe32,ne16 abis=afterdark,intermission,scrnsave").runs("ne16", "7thlevel") &&
         parse_capabilities("lanes=pe32,ne16 abis=afterdark,intermission,scrnsave,7thlevel").runs("ne16", "7thlevel"));
+  // And Screen Wreckers' toys: a pe32 program, run by a host that lists the ABI.
+  CHECK(!parse_capabilities("lanes=pe32,ne16 abis=afterdark,intermission,scrnsave,7thlevel").runs("pe32", "desktoptoys") &&
+        parse_capabilities("lanes=pe32,ne16 abis=afterdark,intermission,scrnsave,7thlevel,desktoptoys")
+            .runs("pe32", "desktoptoys"));
   HostCapabilities old = parse_capabilities("lanes=pe32,ne16 status=1");
   CHECK(old.known && !old.numlock && !old.takes_numlock_lines() && !old.takes_numlock_env());
   CHECK(old.runs("ne16", "afterdark") && !old.runs("ne16", "intermission"));
@@ -567,7 +571,15 @@ void test_catalog() {
        "package": "addon", "abi": "7thlevel", "screen": "640x480", "requires": "player",
        "requiresTitle": "A Made-Up Player"},
       {"id": "addon2.made", "displayName": "Made Too", "lane": "ne16", "path": "packages/addon2/MADE.BIN",
-       "package": "addon2", "abi": "7thlevel", "requires": "bestshot"}]})";
+       "package": "addon2", "abi": "7thlevel", "requires": "bestshot"},
+      {"id": "toys.one", "displayName": "Made Up One", "lane": "pe32", "path": "packages/toys/TOYS.EXE",
+       "controls": [], "package": "toys", "abi": "desktoptoys", "game": true, "hostEnv": {"ADTOY": "1"}},
+      {"id": "toys.two", "displayName": "Made Up Two", "lane": "pe32", "path": "packages/toys/TOYS.EXE",
+       "package": "toys", "abi": "desktoptoys",
+       "hostEnv": {"ADZED": "z", "ADTOY": "2", "ADSTATE": "1", "adlow": "1", "ADNUM": 3, "ADEMPTY": ""},
+       "controls": [{"index": 0, "name": "Pick", "type": "popup", "items": ["a", "b"], "default": 1, "host": "ADZED"}]},
+      {"id": "toys.three", "displayName": "Made Up Three", "lane": "pe32", "path": "packages/toys/TOYS.EXE",
+       "package": "toys", "abi": "desktoptoys", "hostEnv": ["ADTOY", "3"]}]})";
   }
   Catalog cat;
   std::string err;
@@ -602,6 +614,19 @@ void test_catalog() {
   // checkbox's 0/1, a labels-only slider's value its stop index.
   CHECK(mixed && (mixed->host_env == Env{{"ADTWO", "10"}, {"ADPICK", "2"}, {"ADBOX", "1"}, {"ADPLAIN", "20"},
                                          {"ADLABELS", "1"}}));
+  // A Desktop Toys toy: its host controls' variables, then its fixed ones
+  // ("hostEnv") by name, as the Windows saver passes them; a name the front
+  // end sets itself or a control sets, a value that is no short printable
+  // text, or a hostEnv that is no object, left out. Its screen is the
+  // display's (no "screen").
+  const Module* one = cat.find("toys.one");
+  CHECK(one && one->abi == "desktoptoys" && one->lane == "pe32" && (one->host_env == Env{{"ADTOY", "1"}}) &&
+        (one->screen == SizeI{}));
+  const Module* two = cat.find("toys.two");
+  CHECK(two && (two->host_env == Env{{"ADZED", "1"}, {"ADTOY", "2"}}));
+  const Module* three = cat.find("toys.three");
+  CHECK(three && three->host_env.empty());
+  CHECK((own_screen("desktoptoys") == SizeI{}));
   unlink(file.c_str());
   rmdir(dir);
 }

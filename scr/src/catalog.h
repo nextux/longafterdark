@@ -13,7 +13,10 @@
 // absent = none). A 7th Level scene's `game` (true on the three that are
 // games too) is the host's business: the saver reads nothing of it. An
 // add-on's scene's `requires` and `requiresTitle` (the release whose player
-// plays it: Monty Python's Limited Edition Desktop Extras') are optional too.
+// plays it: Monty Python's Limited Edition Desktop Extras') are optional too,
+// and so is `hostEnv`, variables of the host's own the catalog fixes for the
+// module (a Desktop Toys toy's number: {"ADTOY": "3"}), which every start of
+// its host sets (Module::host_env).
 //
 // Control shapes, as the generator (adimport, importer/catalog.h;
 // ABI.md §2.10)
@@ -60,6 +63,12 @@ inline constexpr char kScrnsaveAbi[] = "scrnsave";
 // entry's, and a host without the ABI shows it "Coming soon" and the
 // rotation leaves it out, as for a Windows 3.1 screen-saver program.
 inline constexpr char k7thLevelAbi[] = "7thlevel";
+// A toy of Cyclops Software's Desktop Toys engine (a Win32 program that plays
+// any toy of its set; lane pe32): Beavis and Butt-head Screen Wreckers'. The
+// catalog's entries for a set's toys are one program, each with its toy's
+// number in `hostEnv` (ADTOY). A host without the ABI shows them "Coming
+// soon" and the rotation leaves them out, as for a 7th Level scene.
+inline constexpr char kDesktopToysAbi[] = "desktoptoys";
 
 enum class ControlType { slider, checkbox, popup, button, unknown };
 
@@ -107,8 +116,9 @@ struct Module {
   std::string lane;                // "pe32" | "ne16"
   // The module ABI, which a host must list (--capabilities abis=) to run it:
   // "afterdark", "intermission" (an IMX module; lane ne16), "scrnsave" (a
-  // Windows 3.1 screen-saver program; lane ne16) or "7thlevel" (a 7th Level
-  // scene; lane ne16). Never empty.
+  // Windows 3.1 screen-saver program; lane ne16), "7thlevel" (a 7th Level
+  // scene; lane ne16) or "desktoptoys" (a Desktop Toys toy; lane pe32).
+  // Never empty.
   std::string abi = kAfterDarkAbi;
   // The screen the catalog gives it ("screen": "WxH", PACKAGES.md §6): a
   // module shown at a fixed size (Star Trek: The Screen Saver's, ScreamSavers'
@@ -142,6 +152,13 @@ struct Module {
   // (Catalog::lacks_release), the module is shown as needing it
   // (needs_text), never started, and Random leaves it out.
   std::string requires_release, requires_title;
+  // `hostEnv`: variables of the host's own the catalog fixes for the module,
+  // by name ({"ADTOY", "3"}: a Desktop Toys entry's toy number), which every
+  // start of its host sets after its host controls' (host_control_values).
+  // Each name one host_variable_ok() accepts and no host control of the
+  // module names, each value 1 to 64 printable ASCII characters: the parser
+  // drops any other. Empty for every other module.
+  std::vector<std::pair<std::string, std::string>> host_env;
   int release = -1;                // index into Catalog::releases (always set by parse_catalog)
 
   const Control* control(int index) const;
@@ -217,6 +234,9 @@ const Module* resolve_module(const Catalog& c, const std::string& name, std::vec
 // variable a control before it in the file names, can do nothing, and the
 // parser drops it, as it does a host control without a value (a button).
 bool host_variable_ok(std::string_view name);
+// Whether a catalog's fixed host variable (Module::host_env) may have
+// `value`: 1 to 64 printable ASCII characters.
+bool host_variable_value_ok(std::string_view value);
 
 // What a module's host is started with of its control values (DESIGN.md §1,
 // §6a). `values` is the module's [Module.<id>] section (catalog index ->
@@ -227,8 +247,9 @@ struct HostControlValues {
   // value without a control, or for a button or a host control, is left out.
   std::string cvset;
   // The host controls' variables, each set to its control's value (clamped)
-  // or, with none, its default, ascending by index: every start of the
-  // module's host gets them (add_host_control_env, host_process.h).
+  // or, with none, its default, ascending by index, then the module's fixed
+  // ones (Module::host_env) by name: every start of the module's host gets
+  // them (add_host_control_env, host_process.h).
   std::vector<std::pair<std::wstring, std::wstring>> env;
   bool operator==(const HostControlValues&) const = default;
 };

@@ -284,6 +284,31 @@ bool cdcopy_fingerprint(const SourceFs& fs, const Package& p) {
   return true;
 }
 
+// is3: the release's own script (`marker`, never read) and its first library
+// (required_archives[0]) beside the setup's SETUP.INI, at the source's root
+// (the CD, or a copy of its files).
+bool is3_fingerprint(const SourceFs& fs, const Package& p) {
+  if (!p.marker || p.required_archives.empty()) return false;
+  const SourceNode root = fs.root();
+  for (const char* n : {p.marker, p.required_archives[0]}) {
+    auto x = fs.child(root, n);
+    if (!x || x->is_dir) return false;
+  }
+  return true;
+}
+
+// InstallShield 3's SETUP.INI is a small text file: the real one is 86 bytes.
+constexpr uint64_t kMaxSetupIni = 64 * 1024;
+
+// is3: the [Startup] AppName of InstallShield 3's SETUP.INI at the source's
+// root, in Windows-1252 as the file holds it ("Beavis and Butt-head Screen
+// Wreckers"). Only a plain file of plausible size is read.
+std::optional<std::string> is3_app_name(const SourceFs& fs) {
+  auto n = fs.child(fs.root(), "SETUP.INI");
+  if (!n || n->is_dir || n->size > kMaxSetupIni) return std::nullopt;
+  return ini_value(fs.read_all(*n, kMaxSetupIni), "Startup", "AppName");
+}
+
 // Microsoft Setup's SETUP.LST is a small text file: the real one is 654 bytes.
 constexpr uint64_t kMaxSetupLst = 64 * 1024;
 
@@ -550,9 +575,10 @@ Identified identify(const SourceFs& fs, std::span<const Package> registry, const
   auto uses = [&](Recipe r) {
     return std::any_of(registry.begin(), registry.end(), [r](const Package& p) { return p.recipe == r; });
   };
-  std::optional<std::string> shortname, setup_title;
+  std::optional<std::string> shortname, setup_title, app_name;
   if (uses(Recipe::intermission)) shortname = presage_shortname(fs);
   if (uses(Recipe::ad2kwaj)) setup_title = mssetup_title(fs);
+  if (uses(Recipe::is3)) app_name = is3_app_name(fs);
   // islib: SETUP.PKG is read once, and only beside a package's first library
   // volume (another installer's package list is never opened).
   bool pkg_read = false;
@@ -572,6 +598,11 @@ Identified identify(const SourceFs& fs, std::span<const Package> registry, const
       if (is1_fingerprint(fs, p)) matches.push_back(Identified{&p, fs.root(), ""});
     } else if (p.recipe == Recipe::cdcopy) {
       if (cdcopy_fingerprint(fs, p)) matches.push_back(Identified{&p, fs.root(), ""});
+    } else if (p.recipe == Recipe::is3) {
+      // SETUP.INI names the product; its script and first library must be
+      // beside it.
+      if (app_name && p.setup_title && iequals(*app_name, p.setup_title) && is3_fingerprint(fs, p))
+        matches.push_back(Identified{&p, fs.root(), ""});
     } else if (p.recipe == Recipe::intermission) {
       // The script names the product; its first archive (disk 1's) must be
       // beside it.
@@ -1208,6 +1239,60 @@ class Importer {
     }
   }
 
+  // ---- recipe "is3": InstallShield 3's libraries, each installed whole (PACKAGES.md) ----
+  // Every library the registry lists must be there; each is read whole and
+  // every member expanded where its folder table puts it below the package
+  // root, as the script's CompressGet put it below the install folder; the
+  // tag library must hold the release's program. Only SETUP.INI (read to
+  // identify) and the registry's libraries are ever opened (I5): the
+  // installer and its scripts, the other components' libraries (Screen
+  // Wreckers' DATATW32.Z: its screen-saver stub and toy selector), DirectX,
+  // the videos and their player are never read.
+  void plan_is3(const SourceFs& fs, const Identified& id) {
+    const Package& p = *pkg_;
+    std::string missing;
+    for (const char* a : p.required_archives) {
+      auto n = fs.child(id.dir, a);
+      if (!n || n->is_dir) missing += std::string(missing.empty() ? "" : ", ") + a;
+    }
+    if (!missing.empty()) invalid("the source is missing " + missing + ", which the CD of " + title_ + " holds");
+    for (const char* a : p.required_archives) {
+      const SourceNode n = *fs.child(id.dir, a);
+      const std::string where = join(id.dir_path, n.name);
+      std::shared_ptr<const IszLibrary> lib;
+      try {
+        std::vector<IszVolume> volumes;
+        volumes.push_back({where, std::make_shared<const std::vector<uint8_t>>(fs.read_all(n, 64ull << 20))});
+        lib = std::make_shared<const IszLibrary>(std::move(volumes));
+      } catch (const IszError& e) {
+        invalid(e.what());  // a damaged library is a corrupt source, never a verify failure
+      }
+      // The library that holds the release's program, as every copy of its
+      // CD has it: one without it is not this release's.
+      if (p.tag_library && iequals(a, p.tag_library) && !lib->find(p.tag_member))
+        invalid(where + " holds no " + p.tag_member + " (not the CD of " + title_ + "?)");
+      for (const IszMember& m : lib->members()) {
+        std::string rel = m.path();
+        std::replace(rel.begin(), rel.end(), '\\', '/');
+        Planned pl;
+        pl.rel = root_ + "/" + rel;
+        pl.size = m.size;
+        pl.from = m.volumes + "!" + m.path();
+        const IszMember* member = &m;  // lives as long as `lib`
+        pl.read = [lib, member](const Sink& sink) {
+          try {
+            lib->extract(*member, sink);
+          } catch (const IszError& e) {
+            invalid(e.what());  // a damaged member is a corrupt source, never a verify failure
+          }
+        };
+        if (auto t = dos_filetime(uint16_t(m.dos_datetime >> 16), uint16_t(m.dos_datetime & 0xFFFF)))
+          pl.has_mtime = true, pl.mtime = *t;
+        add(std::move(pl));
+      }
+    }
+  }
+
   // The registry's loose files (intermission, ad2kwaj, is1), under the names
   // the installer gave them, expanded when compressed. One the source lacks is
   // not planned: the manifest then reports it missing.
@@ -1494,7 +1579,8 @@ class Importer {
   // in I4; for the InstallShield 2 packages (islib) AD.EXE out of the module
   // folders in I1, the DLLs' and drivers' imports in I2, and their own I3;
   // for the InstallShield 1 package (is1, a screen-saver program) its own I3;
-  // for a 7th Level package (cdcopy: scenes and their player) its own I3.
+  // for a 7th Level package (cdcopy: scenes and their player) its own I3; for
+  // a Desktop Toys set (is3: the program and its data) its own I3.
   void check_invariants(const fs::path& stage) const {
     const Package& p = *pkg_;
     const bool imx = p.recipe == Recipe::intermission;
@@ -1502,6 +1588,7 @@ class Importer {
     const bool isl = p.recipe == Recipe::islib;
     const bool is1 = p.recipe == Recipe::is1;
     const bool cdc = p.recipe == Recipe::cdcopy;
+    const bool is3 = p.recipe == Recipe::is3;
     std::set<std::string> have;  // upper case, relative to the package root
     for (const ImportedFile& f : r_.files) have.insert(ascii_upper(f.path.substr(root_.size() + 1)));
     std::vector<std::string> folders;
@@ -1627,6 +1714,15 @@ class Importer {
       for (const std::string& f : have)
         if (f.rfind("ENGINE/", 0) == 0 || f.rfind("WINDOWS/", 0) == 0)
           fail("I3", f + ": a 7th Level package has only its scenes and their player");
+    } else if (is3) {
+      // The program that plays the toys and the set's toy list, where the
+      // catalog and the lane find them, and nothing of After Dark's: no
+      // ENGINE and no WINDOWS folder (the program's settings are the lane's).
+      for (const char* f : {p.toys_program, p.toys_list})
+        if (!f || !have.count(ascii_upper(f))) fail("I3", "no " + std::string(f ? f : "Desktop Toys program"));
+      for (const std::string& f : have)
+        if (f.rfind("ENGINE/", 0) == 0 || f.rfind("WINDOWS/", 0) == 0)
+          fail("I3", f + ": a Desktop Toys package has only its program and its data");
     } else {
       if (!have.count("ENGINE/AD_SND.DLL")) fail("I3", "no ENGINE\\AD_SND.DLL");
       if (!(have.count("ENGINE/OLDMOD16.DLL") && have.count("ENGINE/AFTERDAR.SCR")) && !have.count("ENGINE/ADTASK.DLL"))
@@ -2325,6 +2421,7 @@ ImportResult run_import(const Source& src, const ImportOptions& opts) {
     else if (pkg.recipe == Recipe::islib) imp.plan_islib(*sfs, id);
     else if (pkg.recipe == Recipe::is1) imp.plan_is1(*sfs, id);
     else if (pkg.recipe == Recipe::cdcopy) imp.plan_cdcopy(*sfs, id);
+    else if (pkg.recipe == Recipe::is3) imp.plan_is3(*sfs, id);
     else imp.plan_ad2kwaj(*sfs, id);
     imp.check_required();
     imp.check_sizes();

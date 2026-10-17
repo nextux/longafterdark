@@ -60,92 +60,13 @@
 #include "win32/modules.hh"
 #include "win32/runtime.hh"
 #include "win32/shim_families.hh"
+#include "win32/user32_state.hh"
 
 namespace adw::win32 {
 
-namespace {
+using namespace user32;
 
-constexpr const char* U = "USER32.DLL";
-
-struct WndClass {
-  std::string name;
-  uint32_t atom = 0, style = 0, wndproc = 0, instance = 0, background = 0, icon = 0, cursor = 0, icon_sm = 0;
-  int32_t cls_extra = 0, wnd_extra = 0;
-};
-
-struct Window {
-  uint32_t hwnd = 0;
-  std::string class_name, title;
-  uint32_t wndproc = 0;  // guest address; 0 = host default procedure
-  uint32_t parent = 0, style = 0, exstyle = 0, instance = 0, id = 0, user_data = 0;
-  RECT rect{};           // screen coordinates
-  std::vector<uint8_t> extra;
-  std::vector<std::pair<std::string, uint32_t>> props;
-  bool alive = true;
-};
-
-constexpr uint32_t kFirstHwnd = 0x00010010, kHwndStep = 4;
-
-// GetWindowLong indices as a 32-bit guest uses them (the x64 headers omit the
-// non-PTR spellings of some).
-constexpr int32_t kGwlWndProc = -4, kGwlHInstance = -6, kGwlHwndParent = -8, kGwlId = -12, kGwlStyle = -16,
-                  kGwlExStyle = -20, kGwlUserData = -21;
-
-// Cursor handles: system cursors (LoadCursorA(NULL, IDC_*)) are kSysCursorBase +
-// their id; a module's own cursor resources get kCursorBase + 4n in load order.
-constexpr uint32_t kSysCursorBase = 0x00030000, kCursorBase = 0x00040000;
-
-struct Timer {
-  uint32_t hwnd = 0, id = 0, elapse_ms = 0, proc = 0;
-  uint64_t due_us = 0;  // virtual time the next WM_TIMER is due
-};
-
-struct User32State : RuntimeState {
-  std::vector<WndClass> classes;
-  std::vector<Window> windows;
-  uint32_t saver = 0;
-  // Cursors: nothing is ever shown, but the handles and counts are coherent.
-  std::vector<std::pair<uint32_t, std::string>> cursors;  // (hInstance, resource name) → kCursorBase + 4n
-  uint32_t cursor = 0;
-  int32_t cursor_count = 0;  // ShowCursor's display count
-  // The thread's message queue: what PostMessageA/PostQuitMessage/SetTimer
-  // put there for PeekMessageA to find.
-  std::deque<g32::MSG> posted;
-  std::vector<Timer> timers;
-  uint32_t next_timer_id = 1;
-  bool quit = false;
-  uint32_t quit_code = 0;
-  // Input: the VKs down at the previous GetAsyncKeyState call (bit 0), and
-  // whether the module asked the saver window to close.
-  std::bitset<256> async_seen;
-  bool wake = false;
-
-  Window* get(uint32_t hwnd) {
-    if (hwnd < kFirstHwnd || (hwnd - kFirstHwnd) % kHwndStep) return nullptr;
-    size_t i = (hwnd - kFirstHwnd) / kHwndStep;
-    return i < windows.size() && windows[i].alive ? &windows[i] : nullptr;
-  }
-  WndClass* find_class(std::string_view name) {
-    for (WndClass& c : classes) {
-      if (c.name.size() == name.size() &&
-          std::equal(name.begin(), name.end(), c.name.begin(), [](char a, char b) { return tolower(a) == tolower(b); }))
-        return &c;
-    }
-    return nullptr;
-  }
-  WndClass* find_atom(uint32_t atom) {
-    for (WndClass& c : classes)
-      if (c.atom == atom) return &c;
-    return nullptr;
-  }
-  uint32_t add(Window w) {
-    w.hwnd = kFirstHwnd + uint32_t(windows.size()) * kHwndStep;
-    windows.push_back(std::move(w));
-    return windows.back().hwnd;
-  }
-};
-
-User32State& us(Runtime& rt) { return rt.state<User32State>(); }
+namespace user32 {
 
 // A class name argument: a string pointer, or an atom in the low word.
 std::string class_arg(Runtime& rt, uint32_t p) {
@@ -179,11 +100,21 @@ bool next_message(Runtime& rt, uint32_t hwnd_filter, uint32_t min, uint32_t max,
     if (remove) s.posted.erase(it);
     return true;
   }
+  // A whole program's input queue (user32_program_key/_mouse), after posted messages.
+  for (auto it = s.input.begin(); it != s.input.end(); ++it) {
+    if (!for_hwnd(it->hwnd) || !in_range(it->message)) continue;
+    out = *it;
+    if (remove) s.input.erase(it);
+    return true;
+  }
   if (s.quit && in_range(WM_QUIT)) {
     out = g32::MSG{0, WM_QUIT, s.quit_code, 0, rt.clock().tick_count(), 0, 0};
     if (remove) s.quit = false;
     return true;
   }
+  // A whole program's windows that need painting (never removed: a window
+  // gets WM_PAINT until it validates its update region).
+  if (s.program && in_range(WM_PAINT) && program_paint_message(rt, hwnd_filter, out)) return true;
   if (in_range(WM_TIMER)) {
     uint64_t now = rt.clock().now_us();
     Timer* due = nullptr;
@@ -207,6 +138,10 @@ uint32_t dispatch(Runtime& rt, const g32::MSG& m) {
   }
   return m.hwnd ? send(rt, m.hwnd, m.message, m.wParam, m.lParam) : 0;
 }
+
+}  // namespace user32
+
+namespace {
 
 // ---- wsprintfA ----------------------------------------------------------------------------------
 //
@@ -460,6 +395,7 @@ void register_user32(ShimRegistry& r) {
   // ---- message boxes and dialogs (never shown) ----
   r.impl(U, "MessageBoxA", [](Call& c) {
     log("MessageBox \"%s\": %s", c.str(2).c_str(), c.str(1).c_str());
+    us(c.rt).last_box = c.str(2) + ": " + c.str(1);
     uint32_t type = c.arg(3) & 0xF;
     // The affirmative button of each style: OK, OK, Abort→Ignore, Yes, Yes, Retry.
     static const uint32_t kAnswer[] = {IDOK, IDOK, IDIGNORE, IDYES, IDYES, IDRETRY};
@@ -496,6 +432,7 @@ void register_user32(ShimRegistry& r) {
     k.icon_sm = wc.hIconSm;
     k.cls_extra = wc.cbClsExtra;
     k.wnd_extra = wc.cbWndExtra;
+    k.menu_name = wc.lpszMenuName;
     s.classes.push_back(k);
     trace("user", "RegisterClass \"%s\" -> 0x%X", name.c_str(), k.atom);
     c.ret(k.atom);

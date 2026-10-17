@@ -64,6 +64,10 @@ struct ShimSig {
 // Every import of the Win32 lane (API_SURFACE.md §1) plus what is resolved
 // dynamically through GetProcAddress.
 std::span<const ShimSig> win32_signatures();
+// What a whole program imports besides (ABI.md §2.15), added to a program's
+// registry only (ShimRegistry::add_signatures; shim_families.hh
+// register_program_shims).
+std::span<const ShimSig> program_signatures();
 
 struct ShimEntry {
   std::string dll;   // normalized: "KERNEL32.DLL"
@@ -131,6 +135,10 @@ class ShimRegistry {
   void impl(std::string_view dll, std::string_view name, ShimFn fn);
   // Declares (and optionally implements) a function with an explicit signature.
   ShimEntry& add(std::string_view dll, std::string_view name, Conv conv, uint16_t arg_bytes, ShimFn fn = {});
+  // More signature rows (program_signatures()): their DLLs become emulated DLLs.
+  void add_signatures(std::span<const ShimSig> sigs);
+  // A signature row or a declared entry exists for the name.
+  bool known(std::string_view dll, std::string_view name) const;
 
   // ---- lookup ----
   bool has_dll(std::string_view dll) const;   // a DLL we emulate (a shim module)

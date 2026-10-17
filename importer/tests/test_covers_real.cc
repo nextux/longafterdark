@@ -22,7 +22,8 @@
 //      compressed files or libraries; Johnny Castaway: its floppy holds only
 //      the installer's logos; Take Your Best Shot: its box front is the
 //      Internet Archive's; the Desktop Pythonizer and its Desktop Extras:
-//      the Internet Archive's scans of the disc and the floppy) is skipped.
+//      the Internet Archive's scans of the disc and the floppy; Screen
+//      Wreckers: its box front is the Internet Archive's) is skipped.
 //   3. Every tile is drawn side by side into covers-sheet.png, for a person
 //      to look at.
 // Nothing is written outside <scratch> and the sheet; the scratch tree is

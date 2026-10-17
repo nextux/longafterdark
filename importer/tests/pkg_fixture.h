@@ -23,7 +23,11 @@
 // 3.1 screen-saver program, the installer's files and a placeholder that must
 // never be read); and a 7th Level CD shaped like Take Your Best Shot's (a
 // made-up Runtime Player, its libraries, 7L scene files, the customizer and
-// the rest of the disc as decoys). Each fixture is a tree (path -> bytes) that can be written as a
+// the rest of the disc as decoys); and an InstallShield 3 CD shaped like
+// Beavis and Butt-head Screen Wreckers' (SETUP.INI, made-up compressed
+// libraries with folders written by isz_builder.h, a made-up Win32 program
+// and toy list, the installer and the other component's library as decoys).
+// Each fixture is a tree (path -> bytes) that can be written as a
 // folder, an ISO image, a FAT floppy image (or several), a flat ZIP or a ZIP
 // of floppy images, plus exactly what an import must install and the catalog
 // ids it must list. Modules come from module_builder.h: made-up resources, no
@@ -1877,6 +1881,127 @@ inline const std::vector<std::string>& pythonle_decoys() {
   static const std::vector<std::string> v = {"SETUP.EXE",   "SETUP.HLP",   "DUNZIP.DLL", "PYTHONLE.DLL", "README.TXT",
                                              "BALLONS.BMP", "FINGERS.BMP", "FROGS.BMP",  "ROYALNVY.BMP"};
   return v;
+}
+
+// ---- InstallShield 3: Beavis and Butt-head Screen Wreckers' CD ------------------------------------
+
+// A made-up Desktop Toys program: a PE32 executable (no DLL) importing what a
+// Win32 program does.
+inline std::vector<uint8_t> toys_program(const std::string& desc = "Made-up desktop toys") {
+  PeSpec pe;
+  pe.imports = {"KERNEL32.DLL", "USER32.DLL", "GDI32.DLL", "WINMM.DLL", "DSOUND.DLL", "ADVAPI32.DLL"};
+  pe.resources = {{16, "", 1, 0x409, version_resource({{"FileDescription", desc}})}};
+  pe.dll = false;
+  return vec(build_pe(pe));
+}
+
+// A toy list laid out as DTTS03.DTX is: the set's name, each toy's, the
+// random entry and a "*" line, CRLF between them (none after the last).
+inline std::vector<uint8_t> toy_list(const std::vector<std::string>& toys, const std::string& set = "Made-Up Set") {
+  std::string s = set;
+  for (const std::string& t : toys) s += "\r\n" + t;
+  return vec(s + "\r\nMade-Up Random\r\n*1234");
+}
+
+// An InstallShield 3 library with folders (isz_builder.h): `files` (path ->
+// bytes, '\'-separated, as the library names them) grouped by directory, the
+// unnamed one first, then each folder in the order its first file comes;
+// every member a made-up literal stream. `version`: the file version given
+// to the member at that path (MS, LS).
+inline std::vector<uint8_t> is3_library(const std::vector<std::pair<std::string, std::vector<uint8_t>>>& files,
+                                        const std::map<std::string, std::pair<uint32_t, uint32_t>>& version = {}) {
+  std::vector<std::string> dirs = {""};
+  std::map<std::string, std::vector<std::pair<std::string, const std::vector<uint8_t>*>>> by_dir;
+  for (const auto& [path, data] : files) {
+    const size_t slash = path.rfind('\\');
+    const std::string dir = slash == std::string::npos ? "" : path.substr(0, slash);
+    if (std::find(dirs.begin(), dirs.end(), dir) == dirs.end()) dirs.push_back(dir);
+    by_dir[dir].push_back({path, &data});
+  }
+  if (by_dir[""].empty()) dirs.erase(dirs.begin());  // only a library with root files has the unnamed one first
+  std::vector<IszSpec> specs;
+  std::vector<IszDirSpec> table;
+  for (size_t i = 0; i < dirs.size(); i++) {
+    table.push_back({dirs[i], uint16_t(by_dir[dirs[i]].size())});
+    for (const auto& [path, data] : by_dir[dirs[i]]) {
+      IszSpec s;
+      s.name = path.substr(path.rfind('\\') + 1);
+      s.size = uint32_t(data->size());
+      s.stream = dcl_stream(*data);
+      s.dir = uint16_t(i);
+      s.attrs = 0x20;
+      if (auto v = version.find(path); v != version.end()) s.version_ms = v->second.first, s.version_ls = v->second.second;
+      specs.push_back(std::move(s));
+    }
+  }
+  return isz_library(specs, table, 0x2168, 0x6BEF, 0).volumes[0];  // 1996-11-08 13:31:30
+}
+
+// The registry's toys' names, made up ("Made Up Cornholio"): what the
+// fixture's toy list names them.
+inline std::vector<std::string> wreckers_toy_names() {
+  std::vector<std::string> v;
+  for (const char* t : adw::import::find_package("wreckers")->toys) v.push_back(std::string("Made Up ") + t);
+  return v;
+}
+
+// The files a Screen Wreckers import must never open (I5): the installer, its
+// scripts and package list, the other component's library (the screen-saver
+// stub and the toy selector), DirectX, the videos and their player.
+inline const std::vector<std::string>& wreckers_decoys() {
+  static const std::vector<std::string> v = {
+      "SETUP.EXE", "SETUP.INS",  "SETUP.PKG",    "_SETUP.LIB",   "_INST32I.EX_",       "BB03.INS",
+      "BBDTW.INS", "DATATW32.Z", "AUTORUN.INF",  "EDPLAYER.EXE", "MORONS.AVI",         "TODD.EXE",
+      "DATA/TITLE.SPR",          "DIRECTX/DSETUP.DLL"};
+  return v;
+}
+
+// Its CD's files: SETUP.INI naming the release, the release's script, the
+// set's data in DATA03.Z (made-up files in its folders, the same name in two
+// of them) and the program in DATA0332.Z (a made-up PE32 program with a file
+// version), and the decoys. The import installs both libraries' members in
+// the package root, each in its folder. `change` edits the libraries' files
+// (path -> bytes) before they are laid out; the expected files follow.
+inline PkgFixture wreckers_fixture(
+    const std::function<void(std::vector<std::pair<std::string, std::vector<uint8_t>>>&,
+                             std::vector<std::pair<std::string, std::vector<uint8_t>>>&)>& change = {}) {
+  PkgFixture f;
+  const std::string root = "packages/wreckers/";
+  std::vector<std::pair<std::string, std::vector<uint8_t>>> data = {
+      {"DTTS03.DTV", blob("a made-up set", 900)},
+      {"DTTS03.DTX", toy_list(wreckers_toy_names())},
+      {"DTTS03.ICO", blob("a made-up icon", 120)},
+      {"DT03\\README.TXT", vec("A made-up readme.\r\n")},
+      {"DT03\\HELP01.TXT", vec("Made-up help.\r\n")},
+      {"DT03\\TOYS_PAL", blob("a made-up palette", 768)},
+      {"DT03\\DATA\\TAP.WAV", blob("a made-up tap", 300)},
+      {"DT03\\TOYSPR\\BEAVIS\\BEAVIS1.SPR", blob("a made-up sprite", 500)},
+      {"DT03\\TOYSPR\\BEAVIS\\BEAVIS2.SPR", blob("another made-up sprite", 450)},
+      {"DT03\\TOYSPR\\MISC\\SPLAT.SPR", blob("a made-up splat", 260)},
+      {"DT03\\TOYSPR\\TOYS\\SPLAT.SPR", blob("a made-up splat of another toy", 270)},
+      {"DT03\\TOYWAV\\BEAVIS\\HEH.WAV", blob("a made-up laugh", 400)},
+  };
+  std::vector<std::pair<std::string, std::vector<uint8_t>>> program = {{"DTTY3203.EXE", toys_program()}};
+  if (change) change(data, program);
+  f.source["DATA03.Z"] = is3_library(data);
+  f.source["DATA0332.Z"] = is3_library(program, {{"DTTY3203.EXE", {0x10000, 1}}});
+  for (const auto* lib : {&data, &program})
+    for (const auto& [path, bytes] : *lib) {
+      std::string rel = path;
+      std::replace(rel.begin(), rel.end(), '\\', '/');
+      f.expect[root + rel] = bytes;
+    }
+  f.source["SETUP.INI"] = vec("[Startup]\r\nAppName=Beavis and Butt-head Screen Wreckers\r\nEnableStatusDlg=Y\r\n");
+  for (const std::string& d : wreckers_decoys()) f.source[d] = blob("decoy " + d, 200);
+  // The other component's library is one, as on the CD: never opened all the same.
+  f.source["DATATW32.Z"] = is3_library({{"TOYSAV32.SCR", toys_program("A made-up saver stub")}});
+  for (const char* t : adw::import::find_package("wreckers")->toys) {
+    std::string id;
+    for (char c : std::string(t))
+      if (isalnum(uint8_t(c))) id += char(tolower(uint8_t(c)));
+    f.ids.push_back("wreckers." + id);
+  }
+  return f;
 }
 
 // An install disk's files as a 1.44 MB floppy image (8.3 names, upper case:

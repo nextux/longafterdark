@@ -242,6 +242,7 @@ struct IszSpec {
   uint16_t date = 0x1B8D;         // 1993-12-13
   uint16_t time = 0;
   uint32_t attrs = 0;
+  uint32_t version_ms = 0, version_ls = 0;  // a file version (InstallShield 3's DTTY3203.EXE has one)
 };
 
 struct IszDirSpec {
@@ -302,7 +303,10 @@ inline std::vector<uint8_t> file_entry(const IszSpec& m, uint32_t offset, uint8_
   e.push_back(first_vol);
   e.push_back(uint8_t(m.name.size()));
   e.insert(e.end(), m.name.begin(), m.name.end());
-  e.insert(e.end(), 13, 0);  // NUL, version MS, version LS, reserved
+  e.push_back(0);
+  put32(e, m.version_ms);
+  put32(e, m.version_ls);
+  put32(e, 0);  // reserved
   return e;
 }
 

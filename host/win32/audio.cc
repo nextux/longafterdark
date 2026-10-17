@@ -89,6 +89,13 @@ void attach_audio(Runtime& rt, audio::Engine& engine, const AudioOptions& opts) 
   if (added) trace("sound", "deluxe music: %d rename(s) added", added);
 }
 
+void audio_end_process(Runtime& rt) {
+  if (!audio_enabled(rt)) return;
+  dsound_end_process(rt);
+  mmio_end_process(rt);
+  winmm_end_process(rt);
+}
+
 audio::Engine& audio_engine(Runtime& rt) {
   AudioState& s = st(rt);
   return s.engine ? *s.engine : audio::null_engine();

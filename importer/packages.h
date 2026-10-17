@@ -6,7 +6,9 @@
 // Saver Collection and Intermission 4.0 itself — Sierra's Screen Antics:
 // Johnny Castaway, a Windows 3.1 screen-saver program, and 7th Level's Take
 // Your Best Shot, Monty Python's Flying Circus Desktop Pythonizer and its
-// Limited Edition Desktop Extras, scenes of 7th Level's Runtime Player.
+// Limited Edition Desktop Extras, scenes of 7th Level's Runtime Player, and
+// Beavis and Butt-head Screen Wreckers, the toys of Cyclops Software's
+// Desktop Toys program.
 // Registry order is the catalog's module order and the precedence order for
 // display-name disambiguation (§6); the catalog's packages list goes by
 // `released` instead.
@@ -39,6 +41,8 @@
 //                                                 cdcopy        -> <win>\packages\pythonizer\{INTERACT,PYTHON}
 //   pythonle  Monty Python's Limited Edition Desktop Extras
 //                                                 cdcopy        -> <win>\packages\pythonle (its two scenes)
+//   wreckers  Beavis and Butt-head Screen Wreckers
+//                                                 is3           -> <win>\packages\wreckers (the program, DT03\...)
 //
 // Each entry carries what identifies the release (known image md5s — of one
 // image, or of every install disk of a set — and fingerprints), how to
@@ -54,7 +58,8 @@
 // that is its own engine, nor bestshot, whose player is in its BESTSHOT
 // folder beside the scenes' BESTACT, nor pythonizer, whose player is in its
 // PYTHON folder with three of its scenes, nor pythonle, whose two scenes are
-// its root's only files and play with pythonizer's player). An optional WINDOWS folder
+// its root's only files and play with pythonizer's player, nor wreckers, a
+// program in its root with its data beside it in DT03). An optional WINDOWS folder
 // holds the files the original installer put in C:\WINDOWS (swse:
 // SWSE.INI); it is never a module folder either, and the 16-bit lane lays it
 // under the guest's C:\WINDOWS.
@@ -155,10 +160,16 @@ struct SpeedModule {
 // Shot, Monty Python's Desktop Pythonizer, and its Limited Edition Desktop
 // Extras' floppy), every file a loose file named by its path on the disc,
 // the installer's copies and the disc's own files the program reads baked
-// into one table; nothing is read to identify it.
-enum class Recipe { tree, ad3zip, intermission, ad2kwaj, islib, is1, cdcopy };
-// "tree", "ad3zip", "intermission", "ad2kwaj", "islib", "is1" or "cdcopy"
-// (import.json's package.recipe).
+// into one table; nothing is read to identify it. is3: the InstallShield 3
+// installs of compressed libraries with folders (isz.h: Beavis and Butt-head
+// Screen Wreckers' CD), each library a component the script copies whole into
+// the install folder (CompressGet <library> *.* with its folders), every
+// member installed where its library's folder table puts it; the setup's
+// SETUP.INI names the release (read to identify it, with the release's own
+// script and its first library beside it; no IS-script interpreter).
+enum class Recipe { tree, ad3zip, intermission, ad2kwaj, islib, is1, cdcopy, is3 };
+// "tree", "ad3zip", "intermission", "ad2kwaj", "islib", "is1", "cdcopy" or
+// "is3" (import.json's package.recipe).
 const char* recipe_name(Recipe r);
 
 // How a loose file is stored on the install medium: as it is, compressed by
@@ -343,7 +354,12 @@ struct Package {
   // folder ("" for the package root itself, as module_dirs then lists it:
   // pythonle's), and the disc's files whose names together are the
   // fingerprint (paths from its root: the release's own programs and a
-  // scene), side by side; every loose file must be there too.
+  // scene), side by side; every loose file must be there too. is3: the
+  // module folder ("": the package root, the install folder), the libraries
+  // installed whole, in order (the first beside SETUP.INI, the
+  // fingerprint's), which must all be present, and `marker`, the release's
+  // own compiled script beside them (never read; another InstallShield 3 CD
+  // has its own).
   const char* module_dir;
   const char* engine_dll;
   const char* folder_afi;
@@ -369,7 +385,8 @@ struct Package {
   std::span<const LooseFile> loose_files = {};
   // ad2kwaj: the SETUP.LST [Params] WndTitle that names the package (the
   // fingerprint, with required_archives[0] beside SETUP.LST), in Windows-1252
-  // as the file holds it.
+  // as the file holds it. is3: SETUP.INI's [Startup] AppName, the same way
+  // (with `marker` and required_archives[0] beside SETUP.INI).
   const char* setup_title = nullptr;
   // The fixed screen every module of the package is shown at, "WxH"
   // ("640x480": Star Trek: The Screen Saver, several of whose modules compose
@@ -390,7 +407,9 @@ struct Package {
   // lists `tag_member` in the library `tag_library` (the script's logical
   // name for it, "modules.lib", "AD_MODS.z"; both compared without ASCII
   // case). The tag member is one of `library_members`, the placement table:
-  // every file the recipe installs.
+  // every file the recipe installs. is3: one of required_archives, by its
+  // file, and the member it must hold, by its path there (the release's
+  // program: a library without it is not the release's).
   const char* tag_library = nullptr;
   const char* tag_member = nullptr;
   std::span<const LibraryMember> library_members = {};
@@ -420,6 +439,18 @@ struct Package {
   // each of its entries "requires" (catalog.h); nullptr for every other
   // release.
   const char* requires_release = nullptr;
+  // A Desktop Toys set (Cyclops Software's Desktop Toys engine: Beavis and
+  // Butt-head Screen Wreckers): the program that plays every toy, relative to
+  // the package root ("DTTY3203.EXE"); the set's toy list ("DTTS03.DTX": the
+  // set's name, then each toy's, one a line, in their numbers' order, the
+  // program's [1]-[9] keys), which the catalog reads for the toys' names; and
+  // those names, in the same order, which give each toy's id and its name
+  // when the list cannot be read. The catalog lists one entry per toy, each
+  // the program with its toy's number (catalog.h). nullptr, nullptr and none
+  // for every other release.
+  const char* toys_program = nullptr;
+  const char* toys_list = nullptr;
+  std::span<const char* const> toys = {};
 
   bool is_deluxe() const;
   // An Intermission release installed by Delrina's own Intermission

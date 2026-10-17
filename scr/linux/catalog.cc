@@ -102,7 +102,7 @@ bool control_default(const JsonValue& c, int* out) {
 }
 
 // The module's host controls, in index order (the Windows saver sorts its
-// controls by index).
+// controls by index), then its fixed host variables.
 std::vector<std::pair<std::string, std::string>> host_env_of(const JsonValue& module) {
   struct Var {
     int index;
@@ -110,8 +110,8 @@ std::vector<std::pair<std::string, std::string>> host_env_of(const JsonValue& mo
   };
   std::vector<Var> vars;
   const JsonValue* controls = module.get("controls");
-  if (!controls || controls->kind != Kind::array) return {};
-  for (const JsonValue& c : controls->array) {
+  static const std::vector<JsonValue> kNone;
+  for (const JsonValue& c : controls && controls->kind == Kind::array ? controls->array : kNone) {
     if (c.kind != Kind::object || !c.get("index")) continue;
     const int index = int_of(c, "index", -1);
     const JsonValue* host = c.get("host");
@@ -128,6 +128,24 @@ std::vector<std::pair<std::string, std::string>> host_env_of(const JsonValue& mo
   std::stable_sort(vars.begin(), vars.end(), [](const Var& a, const Var& b) { return a.index < b.index; });
   std::vector<std::pair<std::string, std::string>> env;
   for (Var& v : vars) env.emplace_back(std::move(v.name), std::move(v.value));
+  // Then the catalog's fixed ones ("hostEnv": a Desktop Toys toy's number),
+  // by name, as the Windows saver rules: a name it may not set or a control
+  // sets, or a value that is no 1 to 64 printable ASCII characters, left out.
+  std::vector<std::pair<std::string, std::string>> fixed;
+  const JsonValue* host_env = module.get("hostEnv");
+  if (host_env && host_env->kind == Kind::object) {
+    for (const auto& [name, value] : host_env->object) {
+      if (value.kind != Kind::string || value.string.empty() || value.string.size() > 64 ||
+          !std::all_of(value.string.begin(), value.string.end(), [](char ch) { return ch >= 0x20 && ch <= 0x7E; }))
+        continue;
+      if (!host_variable_ok(name)) continue;
+      auto named = [&](const auto& e) { return e.first == name; };
+      if (std::any_of(env.begin(), env.end(), named) || std::any_of(fixed.begin(), fixed.end(), named)) continue;
+      fixed.emplace_back(name, value.string);
+    }
+  }
+  std::sort(fixed.begin(), fixed.end());
+  env.insert(env.end(), fixed.begin(), fixed.end());
   return env;
 }
 

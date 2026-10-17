@@ -21,8 +21,10 @@
 // floppy images or the Internet Archive's ZIP of them (research/five/dl: add
 // it to AD_SOURCE_ISO_DIR), Take Your Best Shot the Internet Archive's
 // BESTSHOT.iso (research/bestshot/dl), the Desktop Pythonizer the Internet
-// Archive's ISO of its CD or the raw BIN beside it, and its Desktop Extras
-// the Internet Archive's image of its floppy (research/monty/dl).
+// Archive's ISO of its CD or the raw BIN beside it, its Desktop Extras the
+// Internet Archive's image of its floppy (research/monty/dl), and Beavis and
+// Butt-head Screen Wreckers the Internet Archive's ISO of its CD
+// (research/bbsw/dl).
 //   1. Each package's image(s) into a fresh root through adimport.exe: exit
 //      0, verified "image", nothing missing, every file matches the package
 //      manifest, the installed files are exactly the manifest (the §4 layout
@@ -72,7 +74,7 @@
 //   2. Every package plus Deluxe (imported --from the installed assets, which
 //      are only read: AD_ASSETS_DIR picks them, e.g.
 //      <repo>/build/win-pkg-setup/assets, else the data folder's) in one root:
-//      470 modules (232 over the first seven), display names unique per lane,
+//      479 modules (232 over the first seven), display names unique per lane,
 //      sameAs consistent (73), and every Deluxe entry's existing fields equal
 //      to the installed catalog's.
 //   3. Re-importing each package into that root changes nothing else.
@@ -142,6 +144,8 @@ const std::map<std::string, Expect> kExpect = {
     {"bestshot", {23, {{"BESTACT", 17}, {"BESTSHOT", 6}}, 17, 0}},
     {"pythonizer", {27, {{"INTERACT", 19}, {"PYTHON", 8}}, 22, 0}},
     {"pythonle", {2, {{"FOOT.BIN", 1}, {"PENGUINS.BIN", 1}}, 2, 0}},
+    {"wreckers",
+     {457, {{"DT03", 453}, {"DTTS03.DTV", 1}, {"DTTS03.DTX", 1}, {"DTTS03.ICO", 1}, {"DTTY3203.EXE", 1}}, 9, 9}},
 };
 // The catalog over every release with the Deluxe tree: 232 entries over the
 // first seven, 284 with Marvel Comics Screen Posters, Snoopy's Screen Savers,
@@ -149,8 +153,9 @@ const std::map<std::string, Expect> kExpect = {
 // Side and Dilbert, 327 with Star Trek: The Next Generation Screen Saver,
 // 328 with Johnny Castaway, 429 with the Opus 'n Bill Screen Saver, On the
 // Road Again, The Flintstones and Intermission 4.0, 446 with Take Your Best
-// Shot, 470 with the Desktop Pythonizer and its Desktop Extras; still 73 of
-// them the same bytes as an earlier entry.
+// Shot, 470 with the Desktop Pythonizer and its Desktop Extras, 479 with
+// Screen Wreckers' nine toys (one program, no sameAs among them); still 73
+// of them the same bytes as an earlier entry.
 size_t combined_modules() {
   size_t n = 84;
   for (const auto& [id, e] : kExpect) n += e.modules;
@@ -212,7 +217,7 @@ void check_package_root(const fs::path& win, const Package& p) {
   // packages.
   const bool imx = p.recipe == Recipe::intermission, ad2 = p.recipe == Recipe::ad2kwaj,
              isl = p.recipe == Recipe::islib, is1 = p.recipe == Recipe::is1, delrina = p.delrina_installer(),
-             cdc = p.recipe == Recipe::cdcopy;
+             cdc = p.recipe == Recipe::cdcopy, is3 = p.recipe == Recipe::is3;
   for (const char* dir : p.module_dirs) {
     if (std::string_view(dir) == "ENGINE") continue;
     for (const char* never : {"AD_SND.DLL", "OLDMOD16.DLL", "OLDMOD32.DLL", "ADTASK.DLL", "ADW30.EXE"})
@@ -292,6 +297,16 @@ void check_package_root(const fs::path& win, const Package& p) {
     for (const char* n : {"FOOT.BIN", "PENGUINS.BIN"}) CHECK(fs::exists(root / to_wide(n)));
     for (const char* n : {"PYTHONLE.DLL", "SETUP.EXE", "BALLONS.BMP"}) CHECK(!fs::exists(root / to_wide(n)));
     CHECK(!fs::exists(root / L"ENGINE") && !fs::exists(root / L"WINDOWS"));
+  } else if (is3) {
+    // Screen Wreckers: the program and its set's files in the package root,
+    // the toys' data in DT03 with its folders; nothing of the other
+    // component (the screen-saver stub, the toy selector), no ENGINE, no
+    // WINDOWS.
+    for (const char* n : {"DTTY3203.EXE", "DTTS03.DTV", "DTTS03.DTX"}) CHECK(fs::exists(root / to_wide(n)));
+    CHECK(fs::is_directory(root / L"DT03" / L"TOYSPR" / L"BEAVIS") &&
+          fs::is_directory(root / L"DT03" / L"TOYWAV" / L"BEAVIS") && fs::exists(root / L"DT03" / L"TOYS_PAL"));
+    for (const char* n : {"TOYSAV32.SCR", "TOYSEL32.EXE", "TODD.EXE"}) CHECK(!fs::exists(root / to_wide(n)));
+    CHECK(!fs::exists(root / L"ENGINE") && !fs::exists(root / L"WINDOWS"));
   } else {
     CHECK(fs::exists(root / L"ENGINE" / L"AD_SND.DLL"));
     CHECK((fs::exists(root / L"ENGINE" / L"OLDMOD16.DLL") && fs::exists(root / L"ENGINE" / L"AFTERDAR.SCR")) ||
@@ -299,7 +314,10 @@ void check_package_root(const fs::path& win, const Package& p) {
   }
   std::string text = test::read_text(root / L"import.json");
   CHECK(text.find("SERIAL") == std::string::npos && text.find("CEREAL") == std::string::npos);
-  CHECK(text.find("README.TXT") == std::string::npos && text.find("WING.DL_") == std::string::npos);
+  // (Screen Wreckers' DT03\README.TXT is the set's own, installed with the
+  // rest of its library as InstallShield put it: the toys' notes beside
+  // their HELP files, no owner's.)
+  CHECK((is3 || text.find("README.TXT") == std::string::npos) && text.find("WING.DL_") == std::string::npos);
   // The owners' notes in the Looney Tunes', ScreamSavers', the Disney
   // Collection's, Marvel Comics Screen Posters' and Snoopy's Screen Savers'
   // copies, the archive the Disney Collection never opens, and what the
@@ -332,7 +350,8 @@ void check_package_root(const fs::path& win, const Package& p) {
 void check_catalog_of(const phosg::JSON& cat, const Package& p) {
   const Expect& e = kExpect.at(p.id);
   const bool imx = p.recipe == Recipe::intermission, ad2 = p.recipe == Recipe::ad2kwaj,
-             isl = p.recipe == Recipe::islib, is1 = p.recipe == Recipe::is1, cdc = p.recipe == Recipe::cdcopy;
+             isl = p.recipe == Recipe::islib, is1 = p.recipe == Recipe::is1, cdc = p.recipe == Recipe::cdcopy,
+             is3 = p.recipe == Recipe::is3;
   size_t n = 0, pe = 0, controls = 0, speeds = 0, games = 0;
   for (auto& m : cat.at("modules").as_list()) {
     if (m->get_string("package") != p.id) continue;
@@ -340,8 +359,32 @@ void check_catalog_of(const phosg::JSON& cat, const Package& p) {
     pe += m->get_string("lane") == "pe32";
     CHECK(m->get_string("id").rfind(std::string(p.id) + ".", 0) == 0);
     CHECK(m->get_string("path").rfind(std::string(p.root) + "/", 0) == 0);
-    CHECK_EQ(m->contains("abi"), imx || is1 || cdc);
-    CHECK(!m->contains("game") || cdc);
+    CHECK_EQ(m->contains("abi"), imx || is1 || cdc || is3);
+    CHECK(!m->contains("game") || cdc || is3);
+    CHECK_EQ(m->contains("hostEnv"), is3);
+    if (is3) {
+      // Screen Wreckers: one entry per toy, every one the program, named by
+      // its toy list, in its numbers' order (ADTOY), each a game; no entry,
+      // nothing to set, no sameAs among them.
+      static const std::vector<std::pair<std::string, std::string>> toys = {
+          {"wreckers.cornholio", "Cornholio"},      {"wreckers.tiretrouble", "Tire Trouble"},
+          {"wreckers.karatebeavis", "Karate Beavis"}, {"wreckers.paintingdudes", "Painting Dudes"},
+          {"wreckers.kickthecan", "Kick The Can"},  {"wreckers.chuckfest", "Chuckfest"},
+          {"wreckers.sodajerks", "Soda Jerks"},     {"wreckers.shootem", "Shoot 'Em"},
+          {"wreckers.digger", "Digger"}};
+      CHECK(n <= toys.size() && m->get_string("id") == toys[n - 1].first &&
+            m->get_string("displayName") == toys[n - 1].second && m->get_string("moduleName") == toys[n - 1].second);
+      CHECK_EQ(m->get_string("abi"), std::string("desktoptoys"));
+      CHECK_EQ(m->get_string("lane"), std::string("pe32"));
+      CHECK_EQ(m->get_string("path"), std::string("packages/wreckers/DTTY3203.EXE"));
+      CHECK_EQ(m->get_string("md5"), std::string("12f8d4e582258a96eced0561c5020118"));
+      CHECK_EQ(m->get_string("entry"), std::string());
+      CHECK(m->at("controls").as_list().empty() && m->at("needs").as_list().empty() && !m->contains("sameAs") &&
+            m->get_string("screen") == "640x480");
+      CHECK(m->get_bool("game") && m->at("hostEnv").get_string("ADTOY") == std::to_string(n));
+      games++;
+      continue;
+    }
     if (cdc) {
       // Take Your Best Shot, the Desktop Pythonizer and its Desktop Extras:
       // 7th Level scenes, each named by its own title, at the release's
@@ -546,7 +589,7 @@ void check_catalog_of(const phosg::JSON& cat, const Package& p) {
   if (ad2) CHECK_EQ(controls, size_t(40));
   if (isl && std::string_view(p.id) == "snoopy") CHECK_EQ(controls, size_t(27));
   CHECK_EQ(speeds, p.speed_modules.size());  // every module listed has it (Intermission 4.0's alone)
-  CHECK_EQ(games, p.games.size());           // Best Shot's three
+  CHECK_EQ(games, is3 ? p.toys.size() : p.games.size());  // Best Shot's three; every toy
 }
 
 // Star Wars Screen Entertainment's installer script, read from its image,
@@ -1296,7 +1339,8 @@ int main(int argc, char** argv) {
   // registry order too; the Desktop Extras (1995-01), Take Your Best Shot
   // (1995-02) and the Desktop Pythonizer (1995-03) next; ScreamSavers
   // ties with the Looney Tunes (1995-04) the same way; the Disney Collection
-  // (1995-09) comes after Totally Twisted.
+  // (1995-09) comes after Totally Twisted; Screen Wreckers (1996-11) between
+  // Deluxe (1996-10) and the 10th Anniversary.
   {
     std::vector<std::string> order;
     for (auto& pk : cat.at("packages").as_list()) order.push_back(pk->get_string("id"));
@@ -1304,7 +1348,7 @@ int main(int argc, char** argv) {
                                              "flintstones", "farside", "simpsons", "swse",       "opusroad",
                                              "snoopy",   "dilbert",    "tng",      "pythonle",   "bestshot",
                                              "pythonizer", "looney",   "screams",  "ad32",       "tt",
-                                             "disney",   "deluxe",     "ad10"}));
+                                             "disney",   "deluxe",     "wreckers", "ad10"}));
   }
   // The Looney Tunes' Messages comes after 3.2's: it is told apart by its
   // short title.

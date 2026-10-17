@@ -854,6 +854,17 @@ void audio_pump(Runtime& rt) {
   run_deferred(rt);
 }
 
+void winmm_end_process(Runtime& rt) {
+  WinmmState& s = ws(rt);
+  audio::Engine& e = audio_engine(rt);
+  for (auto& [h, w] : s.waves) e.close_stream(w.stream, audio_now(rt));
+  s.waves.clear();
+  for (auto& [id, d] : s.mci)
+    if (d.song) e.close_song(d.song, audio_now(rt));
+  s.mci.clear();
+  s.deferred.clear();
+}
+
 void register_winmm(ShimRegistry& r) {
   r.impl(W, "timeGetTime", [](Call& c) {
     entry(c.rt);

@@ -63,7 +63,7 @@ void fake_install(const fs::path& assets, const std::vector<std::string>& ids,
                                                       {"farside", 14},  {"dilbert", 16},  {"tng", 13},
                                                       {"castaway", 1},  {"opus", 16},     {"opusroad", 16},
                                                       {"flintstones", 15}, {"intermission", 54}, {"bestshot", 17},
-                                                      {"pythonizer", 22}, {"pythonle", 2}};
+                                                      {"pythonizer", 22}, {"pythonle", 2},   {"wreckers", 9}};
   for (const std::string& id : ids) {
     auto md5 = image_md5.find(id);
     const std::string source = md5 == image_md5.end() ? "" : ", \"source\": {\"imageMd5\": \"" + md5->second + "\"}";
@@ -185,8 +185,8 @@ void test_model(const fs::path& dir) {
                      L"Dilbert Screen Saver Collection, Star Trek: The Next Generation Screen Saver, Screen Antics: "
                      L"Johnny Castaway, Opus 'n Bill Screen Saver, Opus 'n Bill: On the Road Again!, The Flintstones "
                      L"Screen Saver Collection, Intermission 4.0, Take Your Best Shot, Monty Python's Flying Circus Desktop "
-                     L"Pythonizer and Monty Python's Limited Edition Desktop Extras. Choose where to copy them "
-                     L"from.") !=
+                     L"Pythonizer, Monty Python's Limited Edition Desktop Extras and Beavis and Butt-head Screen "
+                     L"Wreckers. Choose where to copy them from.") !=
           std::wstring::npos);
     const std::wstring later = gui::sources_intro(true);
     CHECK(later.find(L"After Dark 4.0 Deluxe") == std::wstring::npos);
@@ -207,7 +207,8 @@ void test_model(const fs::path& dir) {
     if (reg.size() == 20) CHECK(later.find(L" of twenty releases. ") != std::wstring::npos);
     if (reg.size() == 21) CHECK(later.find(L" of twenty-one releases. ") != std::wstring::npos);
     if (reg.size() == 23) CHECK(later.find(L" of twenty-three releases. ") != std::wstring::npos);
-    CHECK_EQ(reg.size(), size_t(23));
+    if (reg.size() == 24) CHECK(later.find(L" of twenty-four releases. ") != std::wstring::npos);
+    CHECK_EQ(reg.size(), size_t(24));
   }
 
   // Nothing installed, and an assets folder that doesn't exist stays that way.
@@ -329,7 +330,7 @@ void test_model(const fs::path& dir) {
     fs::resize_file(downloads / d.file_name, d.size);
   }
   auto dl = gui::download_rows(assets, "", downloads);
-  CHECK_EQ(dl.size(), size_t(23));
+  CHECK_EQ(dl.size(), size_t(24));
   for (const auto& r : dl) {
     CHECK(r.text.find(r.title + L"\n") == 0);
     if (r.id == "deluxe" || r.id == "tt")
@@ -395,8 +396,8 @@ void test_model(const fs::path& dir) {
     CHECK((all->ids == std::vector<std::string>{"ad10", "ad32", "simpsons", "swse", "startrek", "marvel", "snoopy",
                                                 "looney", "screams", "disney", "farside", "dilbert", "tng",
                                                 "castaway", "opus", "opusroad", "flintstones", "intermission",
-                                                "bestshot", "pythonizer", "pythonle"}));
-    CHECK(all->text.find(L"Every release not imported yet\n21 releases") == 0);
+                                                "bestshot", "pythonizer", "pythonle", "wreckers"}));
+    CHECK(all->text.find(L"Every release not imported yet\n22 releases") == 0);
   }
   auto one = gui::download_rows(assets, "tt", downloads);
   CHECK_EQ(one.size(), size_t(1));
@@ -639,7 +640,7 @@ void test_shots(const std::wstring& exe, const fs::path& dir) {
     }
   }
   // The Sources page on common screens, every release installed: their
-  // covers are a grid, eight to a row in the 924-DIP window (twenty-three on
+  // covers are a grid, eight to a row in the 924-DIP window (twenty-four on
   // three rows), which shows whole at 150% on a 2560x1440 monitor (a 2560x1392 DIP
   // work area) and on a 1080-line screen at 100%. A work area too narrow and
   // short for it (640x900 at 100%: five to a row, five rows) shows as many

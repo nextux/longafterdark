@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
   std::string out;
   CHECK_EQ(run(exe, {L"--help"}, "help", &out), 0);
   CHECK(out.find("usage: adimport") != std::string::npos);
-  // Every release by title, and every id for --package, the twenty-third last.
+  // Every release by title, and every id for --package, the twenty-fourth last.
   const size_t tng_at = out.find("\n  Star Trek: The Next Generation Screen Saver"),
                castaway_at = out.find("\n  Screen Antics: Johnny Castaway"),
                intermission_at = out.find("\n  Intermission 4.0\r\n") != std::string::npos
@@ -116,13 +116,15 @@ int main(int argc, char** argv) {
                                      : out.find("\n  Intermission 4.0\n"),
                bestshot_at = out.find("\n  Take Your Best Shot"),
                pythonizer_at = out.find("\n  Monty Python's Flying Circus Desktop Pythonizer"),
-               pythonle_at = out.find("\n  Monty Python's Limited Edition Desktop Extras");
+               pythonle_at = out.find("\n  Monty Python's Limited Edition Desktop Extras"),
+               wreckers_at = out.find("\n  Beavis and Butt-head Screen Wreckers");
   CHECK(tng_at != std::string::npos && castaway_at != std::string::npos && tng_at < castaway_at &&
         intermission_at != std::string::npos && castaway_at < intermission_at && bestshot_at != std::string::npos &&
         intermission_at < bestshot_at && pythonizer_at != std::string::npos && bestshot_at < pythonizer_at &&
-        pythonle_at != std::string::npos && pythonizer_at < pythonle_at);
+        pythonle_at != std::string::npos && pythonizer_at < pythonle_at && wreckers_at != std::string::npos &&
+        pythonle_at < wreckers_at);
   CHECK(out.find(", farside, dilbert, tng, castaway, opus, opusroad, flintstones, intermission, bestshot, pythonizer, "
-                 "pythonle)") !=
+                 "pythonle, wreckers)") !=
         std::string::npos);
   CHECK_EQ(run(exe, {}, "no arguments, no console"), 1);
   CHECK_EQ(run(exe, {L"--bogus"}, "unknown flag"), 1);
@@ -275,6 +277,9 @@ int main(int argc, char** argv) {
                  "not installed; download 181.4 MB (disc image)") != std::string::npos);
   CHECK(out.find("\n  pythonle     Monty Python's Limited Edition Desktop Extras   "
                  "not installed; download 1.4 MB (floppy image)") != std::string::npos);
+  // Screen Wreckers' CD image.
+  CHECK(out.find("\n  wreckers     Beavis and Butt-head Screen Wreckers            "
+                 "not installed; download 46.1 MB (disc image)") != std::string::npos);
   CHECK_EQ(run(exe, {L"--set-cover", L"tt", pic, L"--dest", dest.wstring()}, "--set-cover, not imported", &out), 1);
   CHECK(out.find("Totally Twisted After Dark isn't imported") != std::string::npos);
   CHECK_EQ(run(exe, {L"--set-cover", L"deluxe", pic, L"--dest", dest.wstring()}, "--set-cover, no picture"), 2);

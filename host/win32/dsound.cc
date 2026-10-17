@@ -729,4 +729,18 @@ void register_dsound(Runtime& rt) {
   });
 }
 
+void dsound_end_process(Runtime& rt) {
+  for (auto& [id, o] : ds(rt).objects)
+    if (!o.device) kill_buffer(rt, o);
+}
+
+void register_dsound_absent(Runtime& rt) {
+  if (ds(rt).registered) return;
+  rt.shims().impl("DSOUND.DLL", "DirectSoundCreate", [](Call& c) {
+    if (c.arg(1)) c.mem().write_u32l(c.arg(1), 0);
+    trace("sound", "DirectSoundCreate -> DSERR_NODRIVER (sound is off)");
+    c.ret(0x88780078);  // DSERR_NODRIVER
+  });
+}
+
 }  // namespace adw::win32

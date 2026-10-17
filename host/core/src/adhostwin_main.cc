@@ -97,7 +97,7 @@ std::vector<LinkedLane> linked_lanes() {
   return v;
 }
 
-// "lanes=pe32,ne16 configure=pe32,ne16 abis=afterdark,intermission,scrnsave,7thlevel
+// "lanes=pe32,ne16 configure=pe32,ne16 abis=afterdark,desktoptoys,intermission,scrnsave,7thlevel
 // status=1 state=1 seed=1 audio=1 numlock=1" (§3.3; audio: AUDIO.md §4; numlock: the
 // NUMLOCK line and ADNUMLOCK are understood): only what this build has.
 // abis= is the union of the linked lanes' Lane::abis(), in lane order.

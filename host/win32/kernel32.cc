@@ -103,6 +103,11 @@ struct Kernel32State : RuntimeState {
   uint64_t time_base = 0;
   bool time_base_set = false;
   std::string std_line;  // guest stdout/stderr text awaiting its newline
+  // A whole program's (ABI.md §2.15): the global atom table (GlobalAddAtomA:
+  // 0xC000 + index, with its reference count; 0 = deleted), SetErrorMode's
+  // and SetUnhandledExceptionFilter's previous values.
+  std::vector<std::pair<std::string, uint32_t>> atoms;
+  uint32_t error_mode = 0, unhandled_filter = 0;
 
   uint32_t add(KObject o) {
     for (size_t i = 3; i < objects.size(); i++) {
@@ -332,6 +337,12 @@ void register_kernel32(ShimRegistry& r) {
   r.impl(K, "GetStartupInfoA", [](Call& c) {
     g32::STARTUPINFOA si{};
     si.cb = sizeof(si);
+    if (c.rt.options().program) {
+      // A program started by ShellExecuteA(..., SW_SHOWNORMAL), as
+      // TOYSAV32.SCR started the Desktop Toys (pe32/program.cc).
+      si.dwFlags = STARTF_USESHOWWINDOW;
+      si.wShowWindow = SW_SHOWNORMAL;
+    }
     write_pod(c.mem(), c.arg(0), si);
   });
   r.impl(K, "GetCurrentThreadId", [](Call& c) { c.ret(c.mem().read_u32l(c.rt.teb() + 0x24)); });
@@ -1283,6 +1294,198 @@ void register_kernel32(ShimRegistry& r) {
       return c.ret(0);
     }
     c.ret_bool(ks(c.rt).close(c.arg(0)));
+  });
+}
+
+// What a whole program adds (Screen Wreckers' DTTY3203.EXE, MFC 4.2; ABI.md
+// §2.15): names only program_signatures() has, so only a program's registry
+// gets them (shim_families.hh register_program_shims).
+void register_kernel32_program(ShimRegistry& r) {
+  r.impl(K, "SetUnhandledExceptionFilter", [](Call& c) {
+    // The filter is kept and handed back; an unhandled exception still stops
+    // the program (seh.hh), as its default filter's dialog would have.
+    uint32_t prev = ks(c.rt).unhandled_filter;
+    ks(c.rt).unhandled_filter = c.arg(0);
+    c.ret(prev);
+  });
+  r.impl(K, "SetErrorMode", [](Call& c) {
+    uint32_t prev = ks(c.rt).error_mode;
+    ks(c.rt).error_mode = c.arg(0);
+    c.ret(prev);
+  });
+  r.impl(K, "GetCurrentThread", [](Call& c) { c.ret(0xFFFFFFFE); });  // the pseudo-handle
+  r.impl(K, "GetProcessVersion", [](Call& c) {
+    // The Windows version the process expects (0 = this one): Windows 95's 4.0.
+    if (c.arg(0) && c.arg(0) != c.mem().read_u32l(c.rt.teb() + 0x20)) return c.ret(0);
+    c.ret(0x00040000);
+  });
+  r.impl(K, "GetThreadLocale", [](Call& c) { c.ret(0x0409); });
+  r.impl(K, "InterlockedIncrement", [](Call& c) {
+    uint32_t v = c.mem().read_u32l(c.arg(0)) + 1;
+    c.mem().write_u32l(c.arg(0), v);
+    c.ret(v);
+  });
+  r.impl(K, "InterlockedDecrement", [](Call& c) {
+    uint32_t v = c.mem().read_u32l(c.arg(0)) - 1;
+    c.mem().write_u32l(c.arg(0), v);
+    c.ret(v);
+  });
+  r.impl(K, "lstrcpynA", [](Call& c) {
+    // At most n-1 characters and a NUL; n 0 copies nothing.
+    uint32_t n = c.arg(2);
+    if (n) write_cstr(c.mem(), c.arg(0), c.str(1), n);
+    c.ret(c.arg(0));
+  });
+  auto cmp = [](Call& c, bool nocase) {
+    // Windows' word sort (CompareStringA, en-US), as lstrcmp(i)A used it.
+    std::string a = c.str(0), b = c.str(1);
+    int r2 = ::CompareStringA(0x0409, nocase ? NORM_IGNORECASE : 0, a.c_str(), -1, b.c_str(), -1);
+    c.ret(uint32_t(r2 - 2));
+  };
+  r.impl(K, "lstrcmpA", [cmp](Call& c) { cmp(c, false); });
+  r.impl(K, "lstrcmpiA", [cmp](Call& c) { cmp(c, true); });
+  r.impl(K, "MulDiv", [](Call& c) {
+    // a * b / d rounded half away from zero; -1 for d 0 or an overflow.
+    int64_t a = c.iarg(0), b = c.iarg(1), d = c.iarg(2);
+    if (!d) return c.ret(0xFFFFFFFF);
+    int64_t p = a * b, ad = d < 0 ? -d : d;
+    int64_t q = ((p < 0) != (d < 0)) ? -((std::llabs(p) + ad / 2) / ad) : (std::llabs(p) + ad / 2) / ad;
+    if (q > INT32_MAX || q < INT32_MIN) return c.ret(0xFFFFFFFF);
+    c.ret(uint32_t(int32_t(q)));
+  });
+  for (const char* n : {"IsBadReadPtr", "IsBadWritePtr"}) {
+    r.impl(K, n, [](Call& c) {
+      // (lp, ucb): TRUE when any byte is unmapped.
+      uint32_t p = c.arg(0), size = c.arg(1);
+      if (!size) return c.ret(0);
+      c.ret_bool(!p || !c.mem().exists(p, size));
+    });
+  }
+  r.impl(K, "IsBadCodePtr", [](Call& c) { c.ret_bool(!c.arg(0) || !c.mem().exists(c.arg(0), 1)); });
+  r.impl(K, "GetCurrentDirectoryA", [](Call& c) {
+    // (nBufferLength, lpBuffer): the length, or the size needed with its NUL.
+    std::string d = c.rt.vfs().cwd();
+    if (c.arg(0) <= d.size()) return c.ret(uint32_t(d.size() + 1));
+    c.ret(uint32_t(write_cstr(c.mem(), c.arg(1), d, c.arg(0))));
+  });
+  r.impl(K, "GetFullPathNameA", [](Call& c) {
+    // (lpFileName, nBufferLength, lpBuffer, lpFilePart)
+    std::string full = c.rt.vfs().full_path(c.str(0));
+    if (c.arg(1) <= full.size()) return c.ret(uint32_t(full.size() + 1));
+    write_cstr(c.mem(), c.arg(2), full, c.arg(1));
+    if (c.arg(3)) {
+      size_t s = full.find_last_of('\\');
+      c.mem().write_u32l(c.arg(3), s == std::string::npos || s + 1 == full.size() ? 0 : c.arg(2) + uint32_t(s + 1));
+    }
+    c.ret(uint32_t(full.size()));
+  });
+  r.impl(K, "GetShortPathNameA", [](Call& c) {
+    // (long, short, cch): the path as it exists (the guest's install folder
+    // and its files have 8.3 names already).
+    std::string p = c.str(0);
+    if (!c.rt.vfs().exists(p)) {
+      c.set_last_error(ERROR_FILE_NOT_FOUND);
+      return c.ret(0);
+    }
+    if (c.arg(2) <= p.size()) return c.ret(uint32_t(p.size() + 1));
+    c.ret(uint32_t(write_cstr(c.mem(), c.arg(1), p, c.arg(2))));
+  });
+  r.impl(K, "GetTempFileNameA", [](Call& c) {
+    // (path, prefix, unique, out): <path>\<pre>XXXX.TMP, created when unique is 0.
+    std::string dir = c.str(0), pre = c.str(1).substr(0, 3);
+    uint32_t u = c.arg(2) & 0xFFFF;
+    Vfs& vfs = c.rt.vfs();
+    for (uint32_t tries = 0; tries < 0xFFFF; tries++) {
+      uint32_t n = u ? u : tries + 1;
+      char b[16];
+      snprintf(b, sizeof(b), "%X.TMP", n);
+      std::string path = dir + (dir.empty() || dir.back() == '\\' ? "" : "\\") + pre + b;
+      if (!u) {
+        if (vfs.exists(path)) continue;
+        uint32_t err = 0;
+        if (!vfs.write_file(path, "", &err)) {
+          c.set_last_error(err);
+          return c.ret(0);
+        }
+      }
+      write_cstr(c.mem(), c.arg(3), path, MAX_PATH);
+      return c.ret(n);
+    }
+    c.ret(0);
+  });
+  r.impl(K, "GetDiskFreeSpaceA", [](Call& c) {
+    // (root, sectors/cluster, bytes/sector, free clusters, clusters): a 1996
+    // disk of 1 GB with 500 MB free, in 32 KB clusters.
+    if (c.arg(1)) c.mem().write_u32l(c.arg(1), 64);
+    if (c.arg(2)) c.mem().write_u32l(c.arg(2), 512);
+    if (c.arg(3)) c.mem().write_u32l(c.arg(3), 16000);
+    if (c.arg(4)) c.mem().write_u32l(c.arg(4), 32000);
+    c.ret(1);
+  });
+  r.impl(K, "GetStringTypeExA", [](Call& c) {
+    // (Locale, dwInfoType, lpSrcStr, cchSrc, lpCharType): en-US, as GetStringTypeA.
+    int32_t len = c.iarg(3);
+    std::string in = len < 0 ? read_cstr(c.mem(), c.arg(2)) + '\0' : c.mem().read(c.arg(2), uint32_t(len));
+    std::vector<WORD> types(in.size());
+    BOOL ok = ::GetStringTypeExA(0x0409, c.arg(1), in.data(), int(in.size()), types.data());
+    for (size_t i = 0; i < types.size(); i++) c.mem().write_u16l(c.arg(4) + 2 * uint32_t(i), types[i]);
+    c.ret_bool(ok);
+  });
+  r.impl(K, "DuplicateHandle", [](Call& c) {
+    // (srcProcess, src, dstProcess, lpDst, access, inherit, options): the
+    // process and thread pseudo-handles become themselves; anything else fails.
+    uint32_t src = c.arg(1);
+    if (src != 0xFFFFFFFF && src != 0xFFFFFFFE) {
+      c.set_last_error(ERROR_INVALID_HANDLE);
+      return c.ret(0);
+    }
+    if (c.arg(3)) c.mem().write_u32l(c.arg(3), src);
+    c.ret(1);
+  });
+  for (const char* n : {"LockFile", "UnlockFile"}) {
+    // One process: every region is free.
+    r.impl(K, n, [](Call& c) {
+      if (!ks(c.rt).file(c.arg(0))) {
+        c.set_last_error(ERROR_INVALID_HANDLE);
+        return c.ret(0);
+      }
+      c.ret(1);
+    });
+  }
+  // Atoms: the global table, case-insensitive; "#123" and MAKEINTATOM are integer atoms.
+  r.impl(K, "GlobalAddAtomA", [](Call& c) {
+    auto& atoms = ks(c.rt).atoms;
+    uint32_t p = c.arg(0);
+    if (p < 0x10000) return c.ret(p && p < 0xC000 ? p : 0);
+    std::string name = c.str(0);
+    if (!name.empty() && name[0] == '#') {
+      uint32_t v = uint32_t(strtoul(name.c_str() + 1, nullptr, 10));
+      return c.ret(v && v < 0xC000 ? v : 0);
+    }
+    for (size_t i = 0; i < atoms.size(); i++) {
+      if (atoms[i].second && _stricmp(atoms[i].first.c_str(), name.c_str()) == 0) {
+        atoms[i].second++;
+        return c.ret(0xC000 + uint32_t(i));
+      }
+    }
+    atoms.push_back({name, 1});
+    c.ret(0xC000 + uint32_t(atoms.size() - 1));
+  });
+  r.impl(K, "GlobalDeleteAtom", [](Call& c) {
+    auto& atoms = ks(c.rt).atoms;
+    uint32_t a = c.arg(0) & 0xFFFF;
+    if (a >= 0xC000 && a - 0xC000 < atoms.size() && atoms[a - 0xC000].second) atoms[a - 0xC000].second--;
+    c.ret(0);
+  });
+  r.impl(K, "GlobalGetAtomNameA", [](Call& c) {
+    // (atom, buffer, size): the name's length, 0 when there is no such atom.
+    auto& atoms = ks(c.rt).atoms;
+    uint32_t a = c.arg(0) & 0xFFFF;
+    std::string name;
+    if (a && a < 0xC000) name = "#" + std::to_string(a);
+    else if (a >= 0xC000 && a - 0xC000 < atoms.size() && atoms[a - 0xC000].second) name = atoms[a - 0xC000].first;
+    if (name.empty() || !c.arg(2)) return c.ret(0);
+    c.ret(uint32_t(write_cstr(c.mem(), c.arg(1), name, c.arg(2))));
   });
 }
 

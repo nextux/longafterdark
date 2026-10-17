@@ -46,11 +46,16 @@ std::string num(uint64_t v) { return std::to_string(v); }
 //   0x33  4  file table offset, 0x37 4 its size     0x3B  4  split: this volume's size
 //   0x3F-0xFE  zero
 // A directory entry: u16 files, u16 entry size (11 + n), u16 n, the name, NUL, u32 0.
+// InstallShield 2's libraries have one, unnamed; InstallShield 3's (Screen
+// Wreckers' DATA03.Z) one per folder, the first unnamed (the install folder
+// itself) and the others named by their path below it ("DT03\TOYSPR\BEAVIS").
 // A file entry (43 + n bytes): u8 last volume, u16 directory, u32 size, u32 compressed
 // size, u32 data offset (in its first volume), u16 DOS date, u16 DOS time, u32 attributes,
 // u16 entry size, u16 flags (0x0100: continues into the next volume; 0x0010: stored), u8 0
-// or 1 (1 in the releases, 0 in ICOMP's output), u8 first volume, u8 n, the name, NUL,
-// then u32 version MS, u32 version LS, u32 reserved (all 0).
+// or 1 (1 in the InstallShield 2 releases, 0 in ICOMP's output and InstallShield 3's), u8
+// first volume, u8 n, the name, NUL, then u32 version MS, u32 version LS (0, or a
+// program's file version: Screen Wreckers' DTTY3203.EXE has 1.0.0.1), u32 reserved (0).
+// The entries are grouped by directory, in directory order.
 
 constexpr uint8_t kSignature[8] = {0x13, 0x5D, 0x65, 0x8C, 0x3A, 0x01, 0x02, 0x00};
 constexpr size_t kHeader = 0xFF;                   // the header's size: where the data starts
@@ -128,15 +133,36 @@ Header read_header(std::span<const uint8_t> d, const std::string& vol) {
 struct Entry {  // one file-table entry
   std::string name;
   uint8_t first_volume = 0, last_volume = 0;
-  uint16_t flags = 0, date = 0, time = 0;
+  uint16_t flags = 0, date = 0, time = 0, dir = 0;
   uint32_t size = 0, csize = 0, offset = 0, attributes = 0;
 };
 
 struct Volume {
   Header h;
+  std::vector<std::string> dirs;  // the directories' names, in table order ("" the unnamed one)
   std::vector<Entry> files;
   std::span<const uint8_t> tables;  // both tables, which every volume of a set repeats
 };
+
+// A directory's name: "" (the install folder itself), or its path below it,
+// components separated by '\', each a usable file name.
+void check_dir_name(const std::string& name, const std::string& vol) {
+  if (name.empty()) return;
+  if (name.find_first_of("/:") != std::string::npos || name.front() == '\\' || name.back() == '\\' ||
+      name.find("\\\\") != std::string::npos)
+    throw IszError(vol + ": directory \"" + name + "\" is not a relative path");
+  size_t a = 0;
+  for (;;) {
+    const size_t b = name.find('\\', a);
+    try {
+      check_component(name.substr(a, b == std::string::npos ? std::string::npos : b - a), vol);
+    } catch (const ImportError& ex) {
+      throw IszError(ex.what());
+    }
+    if (b == std::string::npos) break;
+    a = b + 1;
+  }
+}
 
 // One file of a library, parsed and checked on its own: its header, its size,
 // where its tables are, and both tables.
@@ -160,26 +186,44 @@ Volume read_volume(const IszVolume& v) {
     throw IszError(vol + ": damaged header (field 0x1A is " + num(h.taken) +
                    ", not the continued part and the tables)");
 
-  // The directory table: one directory, unnamed, holding every file.
-  if (h.dirs != 1)
-    throw IszError(vol + ": " + num(h.dirs) + " directories (only a library of one unnamed directory is supported)");
+  // The directory table: one unnamed directory holding every file
+  // (InstallShield 2), or the unnamed one and the folders below it, each
+  // holding at least one file (InstallShield 3).
+  if (h.dirs == 0) throw IszError(vol + ": 0 directories (a library has at least one)");
   size_t p = h.dir_off;
   const size_t dir_end = h.file_off;
-  if (dir_end - p < 6) throw IszError(vol + ": damaged directory table");
-  const size_t dir_files = le16(&d[p]), dir_esize = le16(&d[p + 2]), dir_n = le16(&d[p + 4]);
-  if (dir_esize != kDirEntry + dir_n || dir_end - p < dir_esize)
-    throw IszError(vol + ": damaged directory table (entry size)");
-  if (d[p + 6 + dir_n] != 0 || le32(&d[p + 7 + dir_n]) != 0)
-    throw IszError(vol + ": damaged directory table (the name's end)");
-  if (dir_n) throw IszError(vol + ": named directories are not supported");
-  if (dir_files != h.files)
-    throw IszError(vol + ": the directory holds " + num(dir_files) + " files, the header records " + num(h.files));
-  p += dir_esize;
+  std::vector<size_t> dir_files;
+  std::set<std::string> dir_names;
+  for (size_t i = 0; i < h.dirs; i++) {
+    if (dir_end - p < 6) throw IszError(vol + ": damaged directory table");
+    const size_t files = le16(&d[p]), esize = le16(&d[p + 2]), n = le16(&d[p + 4]);
+    if (esize != kDirEntry + n || dir_end - p < esize) throw IszError(vol + ": damaged directory table (entry size)");
+    if (d[p + 6 + n] != 0 || le32(&d[p + 7 + n]) != 0)
+      throw IszError(vol + ": damaged directory table (the name's end)");
+    const std::string raw(reinterpret_cast<const char*>(&d[p + 6]), n);
+    if (raw.find('\0') != std::string::npos) throw IszError(vol + ": damaged directory table (a NUL inside a name)");
+    std::string name = oem437_to_utf8(raw);
+    if (i == 0 && !name.empty())
+      throw IszError(vol + ": the first directory is named \"" + name + "\" (it must be the unnamed one)");
+    if (i > 0 && name.empty()) throw IszError(vol + ": directory " + num(i) + " is unnamed (only the first may be)");
+    check_dir_name(name, vol);
+    if (!dir_names.insert(name_key(name)).second) throw IszError(vol + ": two directories are named " + name);
+    if (h.dirs > 1 && files == 0) throw IszError(vol + ": directory \"" + name + "\" holds no files");
+    dir_files.push_back(files);
+    r.dirs.push_back(std::move(name));
+    p += esize;
+  }
+  const size_t total_files = std::accumulate(dir_files.begin(), dir_files.end(), size_t(0));
+  if (total_files != h.files)
+    throw IszError(vol + (h.dirs == 1 ? ": the directory holds " : ": the directories hold ") + num(total_files) +
+                   " files, the header records " + num(h.files));
   if (p != dir_end)
-    throw IszError(vol + ": damaged directory table (" + num(dir_end - p) + " byte(s) after its entry)");
+    throw IszError(vol + ": damaged directory table (" + num(dir_end - p) + " byte(s) after its " +
+                   (h.dirs == 1 ? "entry)" : "entries)"));
 
-  // The file table.
-  std::set<std::string> names;
+  // The file table, grouped by directory in directory order.
+  std::set<std::string> names;  // name_key of directory + '\' + name
+  size_t want_dir = 0, left_in_dir = dir_files[0];
   const size_t end = d.size();
   for (size_t i = 0; i < h.files; i++) {
     const std::string at = " (entry " + num(i) + ")";
@@ -204,8 +248,9 @@ Volume read_volume(const IszVolume& v) {
     if (e[kFileFields + n] != 0) throw IszError(vol + ": damaged file table" + at + " (the name's end)");
     if (raw.empty() || raw.find('\0') != std::string::npos)
       throw IszError(vol + ": damaged file table" + at + " (an empty name, or a NUL inside it)");
-    for (size_t k = kFileFields + n + 1; k < esize; k++)
-      if (e[k]) throw IszError(vol + ": damaged file table" + at + " (version fields not zero)");
+    // The version (8 bytes) is the file's own; the reserved field after it is zero.
+    for (size_t k = kFileFields + n + 1 + 8; k < esize; k++)
+      if (e[k]) throw IszError(vol + ": damaged file table" + at + " (reserved field not zero)");
     f.name = oem437_to_utf8(raw);
     if (f.name.find_first_of("/\\:") != std::string::npos)
       throw IszError(vol + ": member \"" + f.name + "\" is not a bare file name");
@@ -214,13 +259,20 @@ Volume read_volume(const IszVolume& v) {
     } catch (const ImportError& ex) {
       throw IszError(ex.what());
     }
-    // One name, as Windows compares them (code page 437's letters too).
-    if (!names.insert(name_key(f.name)).second) throw IszError(vol + ": two members are named " + f.name);
     const std::string what = vol + "!" + f.name;
+    if (dir >= h.dirs) throw IszError(what + ": damaged entry (directory " + num(dir) + " of " + num(h.dirs) + ")");
+    while (left_in_dir == 0) left_in_dir = dir_files[++want_dir];  // the counts add up to the entries
+    if (dir != want_dir)
+      throw IszError(what + ": damaged entry (in directory " + num(dir) + ", where the table's order has " +
+                     num(want_dir) + ")");
+    left_in_dir--;
+    f.dir = dir;
+    // One path, as Windows compares them (code page 437's letters too).
+    const std::string path = r.dirs[dir].empty() ? f.name : r.dirs[dir] + "\\" + f.name;
+    if (!names.insert(name_key(path)).second) throw IszError(vol + ": two members are named " + path);
     if (f.flags & kStored) throw IszError(what + ": stored (uncompressed) members are not supported");
     if (f.flags & ~kContinues) throw IszError(what + ": unsupported flags " + hex(f.flags, 4));
     if (f.attributes & ~kAttributes) throw IszError(what + ": unsupported attributes " + hex(f.attributes, 2));
-    if (dir != 0) throw IszError(what + ": damaged entry (directory " + num(dir) + " of 1)");
     if (b1b > 1) throw IszError(what + ": damaged entry (byte 0x1B is " + num(b1b) + ")");
     if (!dos_date_valid(f.date, f.time)) throw IszError(what + ": damaged entry (an invalid date)");
     r.files.push_back(std::move(f));
@@ -520,6 +572,7 @@ IszLibrary::IszLibrary(std::vector<IszVolume> volumes) : volumes_(std::move(volu
     const std::string what = vol(cur) + "!" + f.name;
     IszMember m;
     m.name = f.name;
+    m.dir = parsed[0].dirs[f.dir];
     m.size = f.size;
     m.csize = f.csize;
     m.dos_datetime = uint32_t(f.date) << 16 | f.time;
@@ -592,14 +645,18 @@ IszLibrary::IszLibrary(std::vector<IszVolume> volumes) : volumes_(std::move(volu
   }
 }
 
-const IszMember* IszLibrary::find(std::string_view name) const {
+std::string IszMember::path() const { return dir.empty() ? name : dir + "\\" + name; }
+
+const IszMember* IszLibrary::find(std::string_view path) const {
+  std::string want(path);
+  std::replace(want.begin(), want.end(), '/', '\\');
   for (const IszMember& m : members_)
-    if (iequals(m.name, name)) return &m;
+    if (iequals(m.path(), want)) return &m;
   return nullptr;
 }
 
 void IszLibrary::extract(const IszMember& m, const Sink& sink) const {
-  const std::string what = m.volumes + "!" + m.name;
+  const std::string what = m.volumes + "!" + m.path();
   std::vector<std::span<const uint8_t>> pieces;
   uint64_t csize = 0;
   for (const IszSegment& s : m.segments) {

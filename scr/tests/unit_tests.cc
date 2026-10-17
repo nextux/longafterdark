@@ -970,6 +970,81 @@ void test_catalog() {
     hr = rotation_for_host(s, j, nullptr, runs_on(with_7l));
     CHECK(hr.plan.ids.size() == 3 && hr.left_out == 0);
   }
+  // A Desktop Toys set's toys (made-up ids, as Screen Wreckers' are): one
+  // program, each entry with its toy's number in "hostEnv", which every start
+  // of its host sets (after its host controls'), whatever its settings; no
+  // sameAs, so each is a module of its own. A name the front end sets itself
+  // or a host control sets, a value that is no short printable text, or a
+  // hostEnv that is no object is dropped. A host without the ABI shows the
+  // toys "Coming soon" and the rotation leaves them out. Every other module
+  // gets no fixed variable: its environment is what it was.
+  {
+    Catalog d;
+    CHECK(parse_catalog(R"({"version": 1, "modules": [
+        {"id": "ad40.alpha", "displayName": "Alpha", "lane": "pe32", "path": "FILES/AD40/ALPHA.AD",
+         "controls": [{"index": 1, "name": "Speed", "type": "slider", "min": 0, "max": 9, "default": 4}]},
+        {"id": "toys.one", "displayName": "Made Up One", "lane": "pe32", "path": "packages/toys/TOYS.EXE",
+         "about": "", "controls": [], "entry": "", "needs": [], "system": ["KERNEL32.DLL"], "package": "toys",
+         "packageTitle": "Made-Up Toys", "moduleName": "Made Up One", "md5": "0123456789abcdef0123456789abcdef",
+         "abi": "desktoptoys", "game": true, "hostEnv": {"ADTOY": "1"}},
+        {"id": "toys.two", "displayName": "Made Up Two", "lane": "pe32", "path": "packages/toys/TOYS.EXE",
+         "package": "toys", "md5": "0123456789abcdef0123456789abcdef", "abi": "desktoptoys", "game": true,
+         "hostEnv": {"ADTOY": "2", "ADZED": "z", "ADSTREAM": "1", "ADSOUND": "0", "adlower": "1", "ADBIG": 3,
+                     "ADEMPTY": "", "ADLONG": "0123456789012345678901234567890123456789012345678901234567890123x"},
+         "controls": [{"index": 0, "name": "Pick", "type": "popup", "items": ["a", "b"], "default": 1,
+                       "host": "ADZED"}]},
+        {"id": "toys.three", "displayName": "Made Up Three", "lane": "pe32", "path": "packages/toys/TOYS.EXE",
+         "package": "toys", "abi": "desktoptoys", "hostEnv": ["ADTOY", "3"]}]})",
+                        d, &err));
+    CHECK_EQ(d.modules.size(), (size_t)4);
+    using Env = std::vector<std::pair<std::wstring, std::wstring>>;
+    using Fixed = std::vector<std::pair<std::string, std::string>>;
+    const Module* alpha = d.find("ad40.alpha");
+    const Module* one = d.find("toys.one");
+    const Module* two = d.find("toys.two");
+    const Module* three = d.find("toys.three");
+    CHECK(alpha && one && two && three);
+    if (alpha && one && two && three) {
+      CHECK(one->abi == kDesktopToysAbi && one->lane == "pe32" && one->same_as.empty() && two->same_as.empty());
+      CHECK((one->host_env == Fixed{{"ADTOY", "1"}}));
+      CHECK((two->host_env == Fixed{{"ADTOY", "2"}}));   // ADZED is its control's; the rest dropped
+      CHECK(three->host_env.empty() && alpha->host_env.empty());
+      // Every start: the controls' variables, then the fixed ones, whatever the settings say.
+      CHECK((host_control_values(*one, nullptr).env == Env{{L"ADTOY", L"1"}}));
+      const std::map<int, int> picked = {{0, 0}};
+      CHECK((host_control_values(*two, &picked).env == Env{{L"ADZED", L"0"}, {L"ADTOY", L"2"}}));
+      CHECK((host_control_values(*two, nullptr).env == Env{{L"ADZED", L"1"}, {L"ADTOY", L"2"}}));
+      CHECK(host_control_values(*one, nullptr).cvset.empty());
+      CHECK(describe_env(host_control_values(*two, nullptr).env) == "ADZED=1,ADTOY=2");
+      // Every other module: as it was (its own control in ADCVSET, no variable).
+      const std::map<int, int> speed = {{1, 7}};
+      CHECK(host_control_values(*alpha, &speed).env.empty() && host_control_values(*alpha, &speed).cvset == "1=7");
+      // Each toy is a module of its own, though they share the program's bytes.
+      std::vector<const Module*> amb;
+      CHECK(resolve_module(d, "Made Up Two", &amb) == two && resolve_module(d, "toys.one", &amb) == one);
+      CHECK(!resolve_module(d, "packages/toys/TOYS.EXE", &amb) && amb.size() == 3);
+      const HostCapabilities with_7l =
+                                 parse_capabilities("lanes=pe32,ne16 abis=afterdark,intermission,scrnsave,7thlevel"),
+                             with_toys = parse_capabilities(
+                                 "lanes=pe32,ne16 abis=afterdark,intermission,scrnsave,7thlevel,desktoptoys");
+      CHECK(module_run(*one, with_7l, false, false) == ModuleRun::coming_soon);
+      CHECK(module_run(*one, with_toys, false, false) == ModuleRun::runs);
+      Settings s;
+      auto runs_on = [&d](const HostCapabilities& h) {
+        return [&d, h](const std::string& id) {
+          const Module* m = d.find(id);
+          return m && h.runs(m->lane, m->abi);
+        };
+      };
+      HostRotation hr = rotation_for_host(s, d, nullptr, runs_on(with_7l));
+      CHECK((hr.plan.ids == std::vector<std::string>{"ad40.alpha"}) && hr.left_out == 3);
+      hr = rotation_for_host(s, d, nullptr, runs_on(with_toys));
+      CHECK(hr.plan.ids.size() == 4 && hr.left_out == 0);
+    }
+    CHECK(host_variable_value_ok("1") && host_variable_value_ok(std::string(64, 'x')) &&
+          !host_variable_value_ok(std::string(65, 'x')) && !host_variable_value_ok("") &&
+          !host_variable_value_ok("a\tb") && !host_variable_value_ok("\xC3\xA9"));
+  }
   // An add-on's scene ("requires": made-up ids, as Monty Python's Limited
   // Edition Desktop Extras need the Desktop Pythonizer's player): while the
   // catalog lists no such release it lacks it (shown as needing it, never
@@ -1154,9 +1229,12 @@ void test_catalog() {
     // After Dark's module ABI, or Intermission's (the Intermission
     // releases' modules), a Windows 3.1 screen-saver program's (Johnny
     // Castaway's) or a 7th Level scene's (Take Your Best Shot's), on the
-    // 16-bit lane.
+    // 16-bit lane; or a Desktop Toys toy's (Screen Wreckers'), on the 32-bit
+    // lane, with its toy's number as its one fixed host variable.
     CHECK(m.abi == kAfterDarkAbi ||
-          ((m.abi == "intermission" || m.abi == kScrnsaveAbi || m.abi == k7thLevelAbi) && m.lane == "ne16"));
+          ((m.abi == "intermission" || m.abi == kScrnsaveAbi || m.abi == k7thLevelAbi) && m.lane == "ne16") ||
+          (m.abi == kDesktopToysAbi && m.lane == "pe32"));
+    CHECK(m.host_env.empty() || (m.abi == kDesktopToysAbi && m.host_env.size() == 1 && m.host_env[0].first == "ADTOY"));
     CHECK(!m.display_name.empty() && !m.path.empty());
     const auto& ctls = mods[i]->at("controls").as_list();
     CHECK_EQ(m.controls.size(), ctls.size());
@@ -2339,12 +2417,12 @@ void test_ui() {
   }
 
   // Status text: no closing full stop (the releases' own line is checked in
-  // the releases suite). Not every release is After Dark's: the words fit all twenty-three.
+  // the releases suite). Not every release is After Dark's: the words fit all twenty-four.
   CHECK(assets_summary({}) == L"Nothing imported yet");
   // The not-imported welcome: what importing does.
   CHECK(welcome_text().find(L"The screen saver runs the original modules of After Dark and Star Wars Screen "
                             L"Entertainment from your own discs.\n\n"
-                            L"Import them from any of your discs (twenty-three releases are supported), a disc image, "
+                            L"Import them from any of your discs (twenty-four releases are supported), a disc image, "
                             L"or the Internet Archive download.") == 0);
   CHECK(welcome_text().find(L"After Dark discs") == std::wstring::npos);
   Catalog c;
@@ -2637,8 +2715,9 @@ void test_ui() {
   // doesn't show, there was no room for it.
   {
     HDC dc = CreateCompatibleDC(nullptr);
-    // The twenty-three releases' line, "470 modules from 23 releases", is as
-    // long as the twenty-one's ("446 modules from 21 releases"), the
+    // The twenty-four releases' line, "479 modules from 24 releases", is as
+    // long as the twenty-three's ("470 modules from 23 releases"), the
+    // twenty-one's ("446 modules from 21 releases"), the
     // twenty's ("429 modules from 20 releases"), the
     // sixteen's ("328 modules from 16 releases"), the
     // fifteen's ("327 modules from 15 releases"), the
@@ -2647,9 +2726,9 @@ void test_ui() {
     // seven's ("232 modules from 7 releases"), whose digits were
     // already wider in the caption face, Segoe UI Variable Small, than the
     // six's ("216 modules from 6 releases").
-    const wchar_t* texts[] = {L"Nothing imported yet", L"470 modules from 23 releases",
+    const wchar_t* texts[] = {L"Nothing imported yet", L"479 modules from 24 releases",
                               L"84 modules from After Dark 4.0 Deluxe",
-                              L"470 modules from 23 releases · 2 missing — import again to restore"};
+                              L"479 modules from 24 releases · 2 missing — import again to restore"};
     int shown = 0, hidden = 0, min_twelve = 0;
     std::string min_twelve_at;   // the scales it fits the narrowest window at
     for (int dpi = 96; dpi <= 240; dpi += 24) {
@@ -2706,7 +2785,7 @@ void test_ui() {
           // The status line it sits beside is never under it.
           CHECK(C.box.x > in.assets_right);
         }
-        // Where it matters: with twenty-three releases it shows at the first-open
+        // Where it matters: with twenty-four releases it shows at the first-open
         // size (with room to spare) at every scale; one release's long title
         // and the assets line at its longest (files missing) leave it no room
         // in the minimum window. (In the minimum window beside the releases'
@@ -2734,7 +2813,7 @@ void test_ui() {
         }
       }
     }
-    printf("ui: the credit fits beside \"470 modules from 23 releases\" in the narrowest window at %d of 7 scales (%s)\n",
+    printf("ui: the credit fits beside \"479 modules from 24 releases\" in the narrowest window at %d of 7 scales (%s)\n",
            min_twelve, min_twelve_at.c_str());
     CHECK(shown > 0 && hidden > 0);
     DeleteDC(dc);
@@ -3786,6 +3865,7 @@ void test_strip_wrap() {
   CHECK((strip_grid(20, false, design_area) == StripGrid{3, 8}));   // the twenty releases: 8, 8 and 4
   CHECK((strip_grid(21, false, design_area) == StripGrid{3, 8}));   // the twenty-one releases: 8, 8 and 5
   CHECK((strip_grid(23, false, design_area) == StripGrid{3, 8}));   // the twenty-three releases: 8, 8 and 7
+  CHECK((strip_grid(24, false, design_area) == StripGrid{3, 8}));   // the twenty-four releases: 8, 8 and 8
   CHECK((strip_grid(10, false, 1024) == StripGrid{2, 8}) && (strip_grid(15, false, 1024) == StripGrid{2, 8}));
   CHECK((strip_grid(14, true, 1024) == StripGrid{1, 14}));
   const double min_area = kMinClientW - 48 - kStripStatusW - kStripStatusGap;   // 636
@@ -3866,6 +3946,8 @@ void test_strip_wrap() {
       {21, kDesignClientW, 952, StripMode::compact, true, 2},   // too short for three regular rows: two compact
       {23, kDesignClientW, 1068, StripMode::regular, true, 3},  // twenty-three releases at the first-open size: 8, 8 and 7
       {23, kDesignClientW, 952, StripMode::compact, true, 3},   // too short for three regular rows: three compact
+      {24, kDesignClientW, 1068, StripMode::regular, true, 3},  // twenty-four releases at the first-open size: 8, 8 and 8
+      {24, kDesignClientW, 952, StripMode::compact, true, 3},   // too short for three regular rows: three compact
       {10, 1336, 952, StripMode::regular, true, 2},             // 8 and 2 where 9 would fit
       {7, kDesignClientW, kDesignClientHStrip, StripMode::regular, true, 1},
       {7, kMinClientW, kMinClientHStrip, StripMode::compact, true, 1},

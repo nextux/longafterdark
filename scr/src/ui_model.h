@@ -415,7 +415,7 @@ WindowLayout layout_window(const LayoutInput& in);
 // rows at the first-open width over it, so the columns have their design
 // heights: 836 (kDesignClientHStrip) for one row of covers (up to eight
 // releases), 952 for two (up to sixteen), 1068 for three (up to twenty-four:
-// the twenty-three releases' 8, 8 and 7).
+// the twenty-four releases' 8, 8 and 8).
 int design_client_h(int strip_tiles);
 
 // The Look link in WindowLayout::look_link (pixels): its text as it fits

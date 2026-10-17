@@ -4,6 +4,7 @@
 
 add_library(adw_lane_pe32 STATIC
   lane.cc
+  program.cc
   controls.cc
   package.cc
 )

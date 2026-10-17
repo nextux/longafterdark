@@ -18,7 +18,8 @@ struct Module {
   std::string name;            // moduleName, else displayName
   std::string lane;            // "pe32" | "ne16"
   std::string abi = "afterdark";   // or "intermission" (Star Wars Screen Entertainment), "scrnsave" (Johnny Castaway),
-                                   // "7thlevel" (Take Your Best Shot's scenes)
+                                   // "7thlevel" (Take Your Best Shot's scenes), "desktoptoys" (Screen Wreckers' toys,
+                                   // a pe32 program under Wine's adhostwin, as After Dark 4's modules are)
   SizeI screen;                // catalog "screen" ("640x480": Star Trek, ScreamSavers, Marvel), {0, 0} when none
   std::string path;            // relative to the win dir, forward slashes
   std::string package, package_title;
@@ -31,7 +32,9 @@ struct Module {
   // {"ADNE16IMXSPEED", "25"}), each variable at its control's default, in
   // index order: every host started for the module gets them. The player has
   // no settings of a module's own, so the default is always the value. The
-  // module's other controls aren't read: it sends no ADCVSET.
+  // module's other controls aren't read: it sends no ADCVSET. Then the
+  // catalog's fixed variables ("hostEnv": a Desktop Toys toy's number,
+  // {"ADTOY", "3"}), by name, as the Windows saver passes them.
   std::vector<std::pair<std::string, std::string>> host_env;
 };
 

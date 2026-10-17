@@ -1,6 +1,7 @@
-// InstallShield 2 compressed libraries ("Z" libraries: IMAGES.1 + IMAGES.2,
-// MODULES.LIB, AD_MODS.1 + AD_MODS.2) — what the installers of Marvel Comics
-// Screen Posters (1993) and Snoopy's Screen Savers (1994) unpack. The format
+// InstallShield 2 and 3 compressed libraries ("Z" libraries: IMAGES.1 +
+// IMAGES.2, MODULES.LIB, AD_MODS.1 + AD_MODS.2, DATA03.Z) — what the
+// installers of Marvel Comics Screen Posters (1993), Snoopy's Screen Savers
+// (1994) and Beavis and Butt-head Screen Wreckers (1996) unpack. The format
 // is research/win/pkg/installshield/SURVEY_REPORT.md; this reader was written
 // from that public description and the survey's Python reference
 // (tools/is3z.py, tools/dclexplode.py), not from any third-party decoder.
@@ -18,10 +19,15 @@
 // their sizes with NUL-terminated names that pass the importer's name rules
 // (names.h; code page 437 as UTF-8, as the DOS-era readers take them), no
 // gap and no overlap between members, identical tables in every volume of a
-// set, and a complete set. What neither release has is refused by name, never
-// guessed at: a password, a stored (uncompressed) member, a named or second
-// directory, a member spanning more than two volumes, a boundary between two
-// members, PKWARE's coded-literal ("ASCII") mode.
+// set, and a complete set. An InstallShield 3 library has a folder table: the
+// unnamed directory first (the install folder), then each folder below it by
+// its path ("DT03\TOYSPR\BEAVIS", components that pass the same rules), each
+// holding at least one member, the members grouped by directory in table
+// order; a member's version fields may hold its file version. What none of
+// the releases has is refused by name, never guessed at: a password, a stored
+// (uncompressed) member, a named first or a second unnamed directory, a member
+// spanning more than two volumes, a boundary between two members, PKWARE's
+// coded-literal ("ASCII") mode.
 //
 // Every member is PKWARE Data Compression Library "implode" data: binary
 // literals and a 1024-, 2048- or 4096-byte window (dictionary bits 4-6, the
@@ -65,13 +71,18 @@ struct IszSegment {
 };
 
 struct IszMember {
-  std::string name;                  // a bare name as stored (code page 437, as UTF-8), in the one unnamed directory
+  std::string name;                  // a bare name as stored (code page 437, as UTF-8)
+  std::string dir;                   // its directory's path, '\'-separated as stored; "" for the unnamed one
   uint32_t size = 0;                 // uncompressed: the recorded size, exactly what extract() produces
   uint32_t csize = 0;                // compressed, every segment together
   uint32_t dos_datetime = 0;         // DOS date << 16 | time (local time)
   uint32_t attributes = 0;           // DOS attributes: 0x01 read-only, 0x02 hidden, 0x04 system, 0x20 archive
   std::vector<IszSegment> segments;  // in stream order: one, or two for the member crossing into the next volume
   std::string volumes;               // "IMAGES.1+IMAGES.2": the volumes its segments are in
+
+  // "DT03\TOYSPR\BEAVIS\X.SPR": the directory and the name; the name alone in
+  // the unnamed directory.
+  std::string path() const;
 };
 
 class IszLibrary {
@@ -83,7 +94,8 @@ class IszLibrary {
 
   const std::vector<IszVolume>& volumes() const { return volumes_; }  // set order: volume 1 first
   const std::vector<IszMember>& members() const { return members_; }  // table order
-  const IszMember* find(std::string_view name) const;                 // case-insensitive
+  // By path() ('/' or '\' between its folders), case-insensitive.
+  const IszMember* find(std::string_view path) const;
 
   // Streams the member's bytes to `sink` in chunks of at most 64 KiB,
   // decoding its segments as one stream: exactly its recorded size, or an

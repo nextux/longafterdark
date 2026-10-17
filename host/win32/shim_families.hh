@@ -43,6 +43,27 @@ inline void register_all_shims(ShimRegistry& r) {
   register_user32_real(r);
 }
 
+// A whole program's (pe32/program.cc, ABI.md §2.15), after register_all_shims:
+// the emulated registry (advapi32.cc), the window manager a program needs
+// (user32_program.cc: in program mode it replaces some of USER32's handlers,
+// which it hands the call to otherwise), WINMM's mmio and sndPlaySoundA, and
+// KERNEL32's additions, over the signature rows only a program has
+// (program_signatures()). Never registered for a module, so
+// ADVAPI32.DLL stays "not found" for After Dark's LoadLibrary, as before.
+void register_advapi32(ShimRegistry& r);
+void register_user32_program(ShimRegistry& r);
+// WINMM's multimedia file I/O and sndPlaySoundA (mmio.cc).
+void register_mmio(ShimRegistry& r);
+// KERNEL32's atoms, strings, paths and the rest MFC's startup calls (kernel32.cc).
+void register_kernel32_program(ShimRegistry& r);
+inline void register_program_shims(ShimRegistry& r) {
+  r.add_signatures(program_signatures());
+  register_kernel32_program(r);
+  register_advapi32(r);
+  register_user32_program(r);
+  register_mmio(r);
+}
+
 // ---- host-facing helpers ----
 
 // USER32: the saver window every module draws in (AD_MODULE32 +0x10), created
@@ -85,6 +106,39 @@ IniStore& profile_store(Runtime& rt);
 // KERNEL32: closes every file the guest left open (each commits to its
 // overlay's upper layer), as process exit would.
 void close_guest_files(Runtime& rt);
+
+// USER32: a whole program (pe32/program.cc, ABI.md §2.15) owns its windows and
+// its message loop: windows get the messages Windows 95 sent them
+// (user32_program.cc), GetMessageA/WaitMessage with nothing to deliver wait
+// in Runtime::yield_frame, and the screen is the desktop the program's
+// windows lie on. Off (every module): nothing changes.
+void user32_set_program(Runtime& rt, bool on);
+bool user32_program(Runtime& rt);
+// USER32: the last MessageBoxA's caption and text ("" when none was shown).
+std::string user32_last_message_box(Runtime& rt);
+// USER32: a program's input while the lane lets it play (pe32/program.cc,
+// Caps Lock): a KEY line (vk, down) and a MOUSE line (screen coordinates,
+// the MOUSE button bitmask) become the messages Windows 95's input queue
+// held — WM_KEYDOWN/WM_KEYUP (WM_SYSKEY* with Alt or F10) to the focus
+// window, WM_MOUSEMOVE and the button messages (double clicks for a
+// CS_DBLCLKS class) to the capture window or the window under the pointer,
+// in client coordinates —, read after posted messages; the mouse moves the
+// emulated pointer. Queued only: no guest code runs. Nothing in program
+// mode queues input otherwise (ghost mode).
+void user32_program_key(Runtime& rt, uint32_t vk, bool down);
+void user32_program_mouse(Runtime& rt, int32_t x, int32_t y, uint32_t buttons);
+// USER32: whether the program's cursor is on (a cursor set, ShowCursor's count
+// not below 0).
+bool user32_cursor_shown(Runtime& rt);
+
+// ADVAPI32: the emulated registry (advapi32.cc). A REG_SZ value the
+// program's installer wrote ("HKEY_LOCAL_MACHINE\SOFTWARE\…", name, value);
+// the file (a guest path) the guest's writes go to, REGEDIT4 text read back
+// over the seeds now; a value as it stands (false when absent; REG_SZ
+// without its NUL).
+void registry_seed(Runtime& rt, std::string_view key_path, std::string_view name, std::string_view value);
+void registry_attach_file(Runtime& rt, std::string_view guest_path);
+bool registry_get(Runtime& rt, std::string_view key_path, std::string_view name, std::string* value);
 
 // KERNEL32: a resource of a loaded image, preferring US English, then
 // neutral, then any language (ABI.md §2.10.1). Null when absent.

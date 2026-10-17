@@ -69,6 +69,10 @@ struct RuntimeOptions {
   std::string command_line = "C:\\AFTERDRK\\AFTERDAR.SCR /s";
   // Guest directory the modules appear to live in, and its host counterpart.
   std::string guest_module_dir = "C:\\AFTERDRK";
+  // A whole program (pe32/program.cc, ABI.md §2.15): its EXE is the process
+  // image (ModuleTable::load_exe), mapped at its preferred base with no
+  // stand-in host EXE at 0x400000; exe_path and command_line are its own.
+  bool program = false;
 };
 
 // The x86 CONTEXT fields the runtime moves between the CPU and guest memory.
@@ -171,6 +175,21 @@ class Runtime {
   // (pe32/lane.hh "Long calls"). It may switch to another fiber and come
   // back, or throw AbandonGuestCall. Null = none.
   void set_call_hook(std::function<void()> fn) { call_hook_ = std::move(fn); }
+  // A whole program's waits (pe32/program.cc): GetMessageA/WaitMessage with
+  // nothing to deliver call yield_frame(), which runs the hook: true = a
+  // frame ended there and the guest was resumed by a later one (look again);
+  // false = there is no frame to end (no hook), and the caller moves virtual
+  // time on to what it waits for instead.
+  void set_yield_hook(std::function<bool()> fn) { yield_hook_ = std::move(fn); }
+  bool yield_frame() { return yield_hook_ ? yield_hook_() : false; }
+  // Preemption for code that runs long without an API call (pe32/program.cc):
+  // with a hook, call_guest runs the guest `instructions` at a time and calls
+  // `fn` between two runs (it may switch fibers and come back, or throw).
+  // Null = none: each call runs to its end or its budget, as before.
+  void set_slice_hook(uint64_t instructions, std::function<void()> fn) {
+    slice_ = instructions;
+    slice_hook_ = std::move(fn);
+  }
 
  private:
   void build_process();
@@ -201,6 +220,9 @@ class Runtime {
   uint64_t api_calls_ = 0;
   uint64_t pixels_ = 0;
   std::function<void()> call_hook_;
+  std::function<bool()> yield_hook_;
+  std::function<void()> slice_hook_;
+  uint64_t slice_ = 0;
   uint32_t last_edx_ = 0;
   uint32_t strings_next_ = layout::kSystemStrings;
   std::unordered_map<std::string, uint32_t> strings_;

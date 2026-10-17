@@ -251,6 +251,9 @@ bool Pe32Lane::init_impl(const std::string& module_path, LaneContext& ctx) {
           ctx.screen.height(), guest_screen_->width(), guest_screen_->height(), guest_scale_);
   }
 
+  // A PE32 EXE is a whole program, not a module (program.cc).
+  if (is_program_file(path)) return init_program(path, ctx);
+
   try {
     make_runtime(path, ctx, guest_screen_ ? *guest_screen_ : ctx.screen);
     Runtime& rt = *rt_;
@@ -390,6 +393,8 @@ bool Pe32Lane::apply(uint32_t message, uint32_t r) {
 }
 
 void Pe32Lane::on_command(const Command& c) {
+  // A program: Caps Lock play (program.cc "Caps Lock").
+  if (program_) return program_command(c);
   if (!rt_ || !block_) return;
   sync_input();
   auto& mem = rt_->mem();
@@ -511,6 +516,10 @@ bool Pe32Lane::draw_run() {
 void CALLBACK Pe32Lane::fiber_main(void* self) { static_cast<Pe32Lane*>(self)->fiber_body(); }
 
 void Pe32Lane::fiber_body() {
+  if (program_) {
+    program_body();  // switches back for good when the program has ended
+    return;
+  }
   for (;;) {
     try {
       run_result_ = draw_run() ? Run::frame_done : Run::failed;
@@ -583,6 +592,7 @@ void Pe32Lane::make_fibers() {
 }
 
 StepResult Pe32Lane::step() {
+  if (program_) return step_program();
   if (!rt_ || !entry_) return StepResult::failed;
   try {
     sync_input();
@@ -654,6 +664,7 @@ StepResult Pe32Lane::step() {
 
 LaneStatus Pe32Lane::status() const {
   LaneStatus st;
+  if (program_) return program_status();  // program.cc "Caps Lock"
   if (!rt_ || !block_) return st;
   uint32_t f = rt_->mem().read_u32l(block_ + block::kModuleFlags);
   st.interactive = f & block::kWantsEvents;
@@ -666,6 +677,7 @@ LaneStatus Pe32Lane::status() const {
 }
 
 void Pe32Lane::shutdown() {
+  if (program_) return shutdown_program();
   if (!rt_) return;
   try {
     abandon_long_call();

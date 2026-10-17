@@ -1,4 +1,4 @@
-// InstallShield 2 compressed libraries and PKWARE DCL explode (isz.h;
+// InstallShield 2 and 3 compressed libraries and PKWARE DCL explode (isz.h;
 // research/win/pkg/installshield/SURVEY_REPORT.md, "Test strategy"). Nothing
 // here compresses anything:
 //   vectors      the survey's libraries made by InstallShield's own ICOMP.EXE
@@ -19,10 +19,13 @@
 //   container    libraries and split sets laid out by isz_builder.h
 //                (volumes in every order, a boundary at every byte of a
 //                member): members(), find(), extract(), isz_header(),
-//                isz_volume_name(); every container rule broken, and every
-//                refusal by name (password, stored member, named or second
-//                directory, a member over three volumes, a boundary between
-//                members, a missing, doubled or misnamed volume)
+//                isz_volume_name(); InstallShield 3's folder tables (members
+//                by path, the same name in two folders, a file version),
+//                every rule of them broken; every container rule broken, and
+//                every refusal by name (password, stored member, a named
+//                first or second unnamed directory, a member over three
+//                volumes, a boundary between members, a missing, doubled or
+//                misnamed volume)
 //   bit flips    every single-bit flip of the vectors of 1 KB or less, and
 //                of a small split set: an IszError, or exactly the recorded
 //                size, never a crash
@@ -694,6 +697,77 @@ int main(int argc, char** argv) {
     // A member name in code page 437 is UTF-8 afterwards (0x81: u-umlaut).
     test::IszBuilt cp = test::isz_library({member("M\x81SIK.AD", test::dcl_literals("x")).spec});
     CHECK_EQ(IszLibrary(as_volumes(cp)).members()[0].name, std::string("M\xC3\xBCSIK.AD"));
+    // Unnamed members are in the unnamed directory: their path is their name.
+    CHECK(IszLibrary(as_volumes(b)).members()[0].dir.empty() &&
+          IszLibrary(as_volumes(b)).members()[0].path() == "FIRST.AD");
+  }
+
+  // ---- the container: InstallShield 3's folder tables -----------------------------------------------
+  {
+    // The unnamed directory (the install folder) first, then two folders
+    // below it by their paths, the same member name in both; a member with
+    // a file version (1.0.0.1, as Screen Wreckers' program has).
+    std::vector<Member> ms = four;
+    ms[3].spec.name = ms[2].spec.name;  // SHE-HULK.FIF in two folders
+    std::vector<test::IszSpec> s = specs(ms);
+    s[0].dir = 0;
+    s[1].dir = 1;
+    s[2].dir = 1;
+    s[3].dir = 2;
+    s[0].version_ms = 0x10000;
+    s[0].version_ls = 1;
+    const std::vector<test::IszDirSpec> dirs = {{"", 1}, {"DT03\\TOYSPR", 2}, {"DT03\\TOYWAV\\B\x81" "S", 1}};
+    test::IszBuilt b = test::isz_library(s, dirs, 0x2168, 0x6BEF, 0);
+    IszLibrary lib(as_volumes(b, "DATA03"));
+    CHECK(all_extract(lib, ms, "folders"));
+    CHECK(lib.members().size() == 4 && lib.members()[0].dir.empty() && lib.members()[1].dir == "DT03\\TOYSPR" &&
+          lib.members()[2].dir == "DT03\\TOYSPR" && lib.members()[3].dir == "DT03\\TOYWAV\\B\xC3\xBCS");
+    CHECK_EQ(lib.members()[2].path(), std::string("DT03\\TOYSPR\\SHE-HULK.FIF"));
+    CHECK_EQ(lib.members()[3].path(), std::string("DT03\\TOYWAV\\B\xC3\xBCS\\SHE-HULK.FIF"));
+    // Found by path, either slash, without case; a bare name finds only the
+    // unnamed directory's member.
+    CHECK(lib.find("dt03\\toyspr\\she-hulk.fif") == &lib.members()[2]);
+    CHECK(lib.find("DT03/TOYWAV/B\xC3\xBCS/SHE-HULK.FIF") == &lib.members()[3]);
+    CHECK(lib.find("FIRST.AD") == &lib.members()[0] && !lib.find("SHE-HULK.FIF") && !lib.find("DT03\\FIRST.AD"));
+    // A member's message names its path.
+    test::IszBuilt cut = b;
+    test::isz_set_entry(cut, 1, 0x03, uint32_t(ms[1].plain.size() + 1), 4);  // a byte more than its stream holds
+    test::isz_set(cut.volumes[0], 0x16, test::isz_get(cut.volumes[0], 0x16, 4) + 1, 4);
+    CHECK(extract_refused(cut, "DT03\\TOYSPR\\AVENGE#4.FIF", "a short member in a folder",
+                          "T.LIB!DT03\\TOYSPR\\AVENGE#4.FIF: "));
+    // Every rule of the table: the unnamed one first and only there, each
+    // folder a relative path of usable names holding a file at least, once;
+    // the members grouped in its order, each path once; the reserved field
+    // after a version zero.
+    auto with_dirs = [&](std::vector<test::IszDirSpec> d, std::vector<uint16_t> at = {0, 1, 1, 2}) {
+      std::vector<test::IszSpec> v = s;
+      for (size_t i = 0; i < v.size(); i++) v[i].dir = at[i];
+      return test::isz_library(v, d, 0x2168, 0x6BEF, 0);
+    };
+    CHECK(refused(with_dirs({{"DT03", 1}, {"DT03\\TOYSPR", 2}, {"X", 1}}), "a named first directory",
+                  "the first directory is named \"DT03\" (it must be the unnamed one)"));
+    CHECK(refused(with_dirs({{"", 1}, {"", 2}, {"X", 1}}), "a second unnamed directory",
+                  "directory 1 is unnamed (only the first may be)"));
+    CHECK(refused(with_dirs({{"", 1}, {"A", 2}, {"a", 1}}), "two directories alike", "two directories are named a"));
+    CHECK(refused(with_dirs({{"", 1}, {"A", 3}, {"B", 0}}, {0, 1, 1, 1}), "an empty directory",
+                  "directory \"B\" holds no files"));
+    for (const char* bad : {"\\A", "A\\", "A\\\\B", "A/B", "C:X"})
+      CHECK(refused(with_dirs({{"", 1}, {bad, 2}, {"X", 1}}), std::string("directory ") + bad, "is not a relative path"));
+    for (const char* bad : {"A\\..", "A\\CON", "A\\B?"})
+      CHECK(refused(with_dirs({{"", 1}, {bad, 2}, {"X", 1}}), std::string("directory ") + bad,
+                    "unusable file name"));
+    CHECK(refused(with_dirs({{"", 1}, {"A", 2}, {"B", 1}}, {0, 1, 2, 1}), "members out of their directories' order",
+                  "damaged entry (in directory 2, where the table's order has 1)"));
+    CHECK(refused(with_dirs({{"", 1}, {"A", 2}, {"B", 1}}, {0, 1, 1, 3}), "a directory past the table",
+                  "damaged entry (directory 3 of 3)"));
+    CHECK(refused(with_dirs({{"", 1}, {"A", 3}}, {0, 1, 1, 1}), "one path twice", "two members are named A\\SHE-HULK.FIF"));
+    CHECK(refused(with_dirs({{"", 1}, {"A", 2}, {"B", 2}}), "counts past the members",
+                  "the directories hold 5 files, the header records 4"));
+    for (size_t k = 0; k < 4; k++) {
+      test::IszBuilt r = b;
+      test::isz_set_entry(r, 0, 0x1E + ms[0].spec.name.size() + 1 + 8 + k, 1, 1);
+      CHECK(refused(r, "reserved byte " + std::to_string(k), "damaged file table (entry 0) (reserved field not zero)"));
+    }
   }
 
   // ---- the container: split sets ----------------------------------------------------------------------
@@ -774,11 +848,14 @@ int main(int argc, char** argv) {
                   "password-protected libraries are not supported"));
     CHECK(refused(entry(base, 2, 0x19, 0x0010, 2), "a stored member",
                   "SHE-HULK.FIF: stored (uncompressed) members are not supported"));
+    // A named directory alone, or a second unnamed one (InstallShield 3's
+    // folder tables, above, have the unnamed one first and only there).
     auto named = specs(four);
-    CHECK(refused(test::isz_library(named, {{"SUB", 4}}), "a named directory", "named directories are not supported"));
+    CHECK(refused(test::isz_library(named, {{"SUB", 4}}), "a named directory",
+                  "the first directory is named \"SUB\" (it must be the unnamed one)"));
     named[3].dir = 1;
     CHECK(refused(test::isz_library(named, {{"", 3}, {"", 1}}), "two directories",
-                  "2 directories (only a library of one unnamed directory is supported)"));
+                  "directory 1 is unnamed (only the first may be)"));
     // A member spanning three volumes: the cuts both inside member 1.
     const size_t s = four[0].spec.stream.size();
     CHECK(refused(test::isz_split(specs(four), {s + 10, 20}), "a member over three volumes",
@@ -895,9 +972,14 @@ int main(int argc, char** argv) {
     CHECK(refused(entry(base, 1, 0x17, 43 + 12 + 1, 2), "entry size", "damaged file table (entry 1) (entry size)"));
     CHECK(refused(entry(base, 1, 0x1E + 12, 'X', 1), "entry name's end",
                   "damaged file table (entry 1) (the name's end)"));
-    for (size_t k = 0; k < 12; k++)
-      CHECK(refused(entry(base, 3, 0x1F + 8 + k, 1, 1), "version byte " + std::to_string(k),
-                    "damaged file table (entry 3) (version fields not zero)"));
+    // The version (8 bytes) is the file's own, any value; the reserved field
+    // after it is zero.
+    for (size_t k = 0; k < 8; k++)
+      CHECK(all_extract(IszLibrary(as_volumes(entry(base, 3, 0x1F + 8 + k, 1, 1))), four,
+                        "version byte " + std::to_string(k)));
+    for (size_t k = 8; k < 12; k++)
+      CHECK(refused(entry(base, 3, 0x1F + 8 + k, 1, 1), "reserved byte " + std::to_string(k - 8),
+                    "damaged file table (entry 3) (reserved field not zero)"));
     CHECK(refused(entry(base, 0, 0x01, 1, 2), "directory 1", "FIRST.AD: damaged entry (directory 1 of 1)"));
     for (uint32_t f : {0x0001u, 0x0020u, 0x0040u, 0x0200u, 0x8000u})
       CHECK(refused(entry(base, 0, 0x19, f, 2), "flags " + std::to_string(f), "FIRST.AD: unsupported flags"));

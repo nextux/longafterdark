@@ -65,6 +65,21 @@ void audio_pump(Runtime& rt);
 // DSOUND.DLL (dsound.cc): registers DirectSoundCreate and the IDirectSound /
 // IDirectSoundBuffer method thunks. attach_audio() calls it when enabled.
 void register_dsound(Runtime& rt);
+// A program that imports DSOUND.DLL statically (pe32/program.cc) runs on a
+// machine without a sound card while the engine is disabled: DirectSoundCreate
+// exists and answers DSERR_NODRIVER (0x88780078), *lplpDS = NULL.
+void register_dsound_absent(Runtime& rt);
+
+// A whole program's process ends while the engine lives on (pe32/program.cc:
+// Caps Lock starts the program again): every sound it made stops and goes,
+// as Windows freed a dead process's sound — its DirectSound buffers
+// (dsound.cc), sndPlaySoundA's voice (mmio.cc), its waveOut streams and MCI
+// songs (winmm.cc), no callbacks. Call before the runtime goes. A no-op
+// while the engine is disabled.
+void audio_end_process(Runtime& rt);
+void dsound_end_process(Runtime& rt);
+void mmio_end_process(Runtime& rt);
+void winmm_end_process(Runtime& rt);
 
 // A WAVEFORMAT/PCMWAVEFORMAT/WAVEFORMATEX in guest memory: 16 bytes for PCM,
 // 18 + cbSize (at most 18 + 256) for anything else, parsed with

@@ -666,6 +666,37 @@ TEST(audio_dsound_position_and_status_follow_virtual_time) {
 }
 
 // Every engine call made by the shims carries the clock's current value.
+// A whole program's process ends (pe32 program.cc, Caps Lock): its
+// DirectSound voices and buffers and its waveOut streams go, playing or
+// not, released or not; nothing is called twice.
+TEST(audio_end_process_stops_every_sound) {
+  Rt t;
+  FakeEngine e;
+  t.attach(e);
+  uint32_t ds = create_ds(t);
+  uint32_t a = make_buffer(t, ds, audio::pcm_format(11025, 1, 8), 400);
+  uint32_t b = make_buffer(t, ds, audio::pcm_format(22050, 1, 8), 800);
+  CHECK(a && b);
+  CHECK_EQ(t.com(a, B_Play, {0, 0, 1}), 0u);  // looping
+  uint32_t ph = t.buf + 0x380, fmt = t.wfx(0x3C0, audio::pcm_format(11025, 1, 8));
+  CHECK_EQ(t.mm("waveOutOpen", {ph, 0, fmt, 0, 0, 0}), 0u);
+  CHECK_EQ(e.voices.size(), size_t(2));
+  CHECK_EQ(e.streams.size(), size_t(1));
+  audio_end_process(*t.rt);
+  for (auto& [id, v] : e.voices) CHECK(v.destroyed);
+  for (auto& [id, buf] : e.bufs) CHECK(buf.released);
+  CHECK(e.streams.begin()->second.closed);
+  size_t calls = e.calls.size();
+  audio_end_process(*t.rt);
+  CHECK_EQ(e.calls.size(), calls);
+  // Sound off: nothing to do.
+  Rt off;
+  FakeEngine silent(false);
+  off.attach(silent);
+  audio_end_process(*off.rt);
+  CHECK(silent.calls.empty());
+}
+
 TEST(audio_guest_time_is_the_clock_peeked) {
   Rt t;
   FakeEngine e;

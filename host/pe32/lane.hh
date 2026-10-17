@@ -10,6 +10,20 @@
 //          frame one PAINT (9) — the saver window's initial expose.
 //   close: CLOSE (5), DESELECTED (1), DLL_PROCESS_DETACH, census.
 //
+// Whole programs (program.cc, ABI.md §2.15, the "desktoptoys" ABI): a PE32
+// EXE — every After Dark module is a DLL — is run as the emulated machine's
+// one Win32 process: Cyclops' Desktop Toys engine (Screen Wreckers'
+// DTTY3203.EXE, MFC 4.2) with the command line TOYSAV32.SCR gave it,
+// "C:\DTToys\dtty3203.exe /s /t<ADTOY-1>", in its ghost mode. The program
+// owns its message loop; every frame ends inside it (an API call or a slice
+// of code past the frame's share of the modelled machine, or its
+// GetMessageA's wait) and the next one resumes it. Its registry, disk and
+// window manager: program.cc. Caps Lock (not with ADWALLPAPER=1) starts the
+// program again for play, "C:\DTToys\dtty3203.exe /t<ADTOY-1>" as the toy
+// selector started it, with the saver's keys and mouse as its window
+// messages (interactive, cursor); Caps Lock off, or play ending by itself,
+// starts it again in ghost mode (program.cc "Caps Lock").
+//
 // Return values (ABI.md §2.5): 0 = ok; 3 = restart (the host re-sends 2 then
 // 3 and uses that result); anything else is fatal, with the module's error
 // text at block +0x50. The same code runs the MSVC-built STARRYNI.AD
@@ -147,6 +161,8 @@
 //   ADMAXDRAWS=<n>     DRAWFRAME calls per presented frame, at most (default 64)
 //   ADPE32SCALE=auto|<k>  the guest display is k times the output (default auto;
 //                      see Small screens; 1 = off)
+//   ADTOY=1..9         a Desktop Toys program's toy (program.cc; the catalog
+//                      sets it per module); unset = the registry's ScrToy, 3
 //   ADSEEDIMG=<spec>   what the screen holds before the first message
 //                      (win32/display.hh "desktop seed"): ":win95"
 //                      (teal) or a raw/P6/BMP file of any size (the .scr's
@@ -202,7 +218,9 @@ class Pe32Lane : public Lane {
   ~Pe32Lane() override;
 
   const char* name() const override { return "pe32"; }
-  std::vector<std::string> abis() const override { return {"afterdark"}; }  // --capabilities (core lane.h)
+  // --capabilities (core lane.h): After Dark 4's modules, and a toy of
+  // Cyclops' Desktop Toys engine (a whole Win32 program: program.cc).
+  std::vector<std::string> abis() const override { return {"afterdark", "desktoptoys"}; }
   bool init(const std::string& module_path, LaneContext& ctx) override;
   uint32_t frame_interval_us() const override { return 16667; }
   void on_command(const Command& c) override;
@@ -218,6 +236,19 @@ class Pe32Lane : public Lane {
   uint32_t block_address() const { return block_; }
   uint64_t frames() const { return frames_; }
   int guest_scale() const { return guest_scale_; }
+  bool program() const { return program_; }
+
+  // Whether the file is a PE32 program (an EXE: IMAGE_FILE_DLL clear), which
+  // this lane runs as a whole process (program.cc), not as a module DLL.
+  static bool is_program_file(const std::string& path);
+  // The Desktop Toys command line for toy n (1..9): the screen saver's, as
+  // TOYSAV32.SCR built it ("<dir>\dtty3203.exe /s /t<n-1>"), or, for play,
+  // the toy selector's (TOYSEL32.EXE: "<dir>\dtty3203.exe /t<n-1>");
+  // program.cc "Command line", "Caps Lock".
+  static std::string desktop_toys_command_line(const std::string& install_dir, int volume, int toy,
+                                               bool screen_saver = true);
+  // Whether the running program was started for play (Caps Lock; program.cc).
+  bool playing() const { return playing_; }
 
   // The whole-number factor between the guest display and a w×h output
   // ("Small screens"): the smallest k with k*w >= 640 and k*h >= 480, at most 8.
@@ -328,6 +359,48 @@ class Pe32Lane : public Lane {
   std::unique_ptr<Screen> guest_screen_;
   InputState guest_input_;
   NearCache near_;
+
+  // ---- a whole program (program.cc, ABI.md §2.15) ----
+  bool init_program(const std::string& path, LaneContext& ctx);
+  // The guest fiber's body: the program's entry point, run to its end.
+  void program_body();
+  StepResult step_program();
+  void shutdown_program();
+  // The runtime's slice and yield hooks (win32/runtime.hh): the frame ends
+  // inside the program's own code, or in its message loop's wait.
+  void on_slice();
+  bool on_yield();
+  // Ends the frame on the guest fiber (run_result_ = why) and returns when a
+  // later frame resumes the program (throws AbandonGuestCall at shutdown).
+  void suspend_frame(Run why);
+  bool program_ = false;
+  bool program_ended_ = false;
+  std::string stop_text_;      // how the program ended
+  uint32_t exe_entry_ = 0;     // the EXE's entry point (WinMainCRTStartup)
+  uint64_t api_mark_ = 0;      // API calls at the last slice (hang detection)
+  uint64_t quiet_insns_ = 0;   // instructions since an API call, by slices
+  uint64_t waits_ = 0;         // frames that ended in the message loop's wait
+  InputState ghost_input_;     // what the program sees in ghost mode: nothing
+  // Caps Lock (program.cc "Caps Lock"): the process starts in ghost mode or
+  // for play, and starts again when Caps Lock changes which.
+  bool start_process(bool play);
+  // Ends the running process as Windows ended a killed one: abandoned where
+  // it waits, its sound stopped, the runtime gone.
+  void end_process();
+  bool restart_process();
+  void program_command(const Command& c);
+  LaneStatus program_status() const;
+  // Caps Lock on, not the living wallpaper, and play has not ended by itself
+  // since Caps Lock went on.
+  bool wants_play() const;
+  std::string program_path_;
+  int toy_ = 0;
+  bool toy_chosen_ = false;    // ADTOY named it (else the registry's ScrToy)
+  bool wallpaper_ = false;     // ADWALLPAPER=1
+  bool playing_ = false;       // the running process was started for play
+  bool restart_ = false;       // the next step starts the program again (wants_play())
+  bool game_over_ = false;     // play ended by itself under this Caps Lock
+  uint32_t starts_ = 0;        // processes started
 };
 
 }  // namespace adw::pe32

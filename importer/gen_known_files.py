@@ -82,6 +82,9 @@ PACKAGES = {
                    ("INTERACT", "PYTHON")),
     # The floppy. Its two scenes are in the package root ("" below: no folder).
     "pythonle": (("5088f268077e88dacfd3aef0bb4e823b",), "packages/pythonle", ("",)),
+    # The CD. The program and its set's files in the package root, the rest of
+    # its data in DT03 below it.
+    "wreckers": (("4ab43ef0f47af1363dfa976b33dad474",), "packages/wreckers", ("", "DT03")),
 }
 
 # packages.cc: the build the package's own fields describe (Package::build),

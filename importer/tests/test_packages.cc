@@ -372,7 +372,7 @@ int main(int argc, char** argv) {
   {
     // Registry order: the first seven keep their places (the GUI's command
     // ids go by it), the five after them in the order the plan gives, then
-    // the two Delrina Intermission releases; Take Your Best Shot last.
+    // the two Delrina Intermission releases; Screen Wreckers last.
     std::vector<std::string> order;
     for (const Package& p : builtin_packages()) order.push_back(p.id);
     CHECK((std::vector<std::string>(order.begin(), order.begin() + std::min<size_t>(order.size(), 7)) ==
@@ -380,7 +380,7 @@ int main(int argc, char** argv) {
     CHECK((order == std::vector<std::string>{"deluxe", "ad10", "ad32", "tt", "simpsons", "swse", "startrek", "marvel",
                                              "snoopy", "looney", "screams", "disney", "farside", "dilbert", "tng",
                                              "castaway", "opus", "opusroad", "flintstones", "intermission",
-                                             "bestshot", "pythonizer", "pythonle"}));
+                                             "bestshot", "pythonizer", "pythonle", "wreckers"}));
     for (const char* id : {"looney", "screams", "disney"}) CHECK(std::find(order.begin(), order.end(), id) != order.end());
     CHECK(std::find(order.begin(), order.end(), "looney") < std::find(order.begin(), order.end(), "screams"));
     CHECK(std::find(order.begin(), order.end(), "screams") < std::find(order.begin(), order.end(), "disney"));
@@ -461,7 +461,9 @@ int main(int argc, char** argv) {
   {
     for (const Package& p : builtin_packages()) {
       if (p.recipe != Recipe::islib) {
-        CHECK(!p.tag_library && !p.tag_member && p.library_members.empty());
+        // is3's tag names a library by its file, and the member it must hold.
+        CHECK((p.recipe == Recipe::is3) == (p.tag_library && p.tag_member));
+        CHECK(p.library_members.empty());
         continue;
       }
       // The fingerprint: the tag member in the tag library, and disk 1's
@@ -3209,7 +3211,7 @@ int main(int argc, char** argv) {
     // the known images they are.
     std::vector<std::string> order;
     for (const Package& p : builtin_packages()) order.push_back(p.id);
-    CHECK(order.size() == 23 &&
+    CHECK(order.size() == 24 &&
           (std::vector<std::string>(order.begin() + 15, order.begin() + 20) ==
            std::vector<std::string>{"castaway", "opus", "opusroad", "flintstones", "intermission"}));
     struct Want {
@@ -3606,7 +3608,7 @@ int main(int argc, char** argv) {
     const Package* p = find_package("bestshot");
     CHECK(p != nullptr);
     if (p) {
-      CHECK(builtin_packages().size() == 23 && &builtin_packages()[20] == p);
+      CHECK(builtin_packages().size() == 24 && &builtin_packages()[20] == p);
       CHECK(p->recipe == Recipe::cdcopy && std::string(recipe_name(p->recipe)) == "cdcopy" &&
             std::string(p->root) == "packages/bestshot");
       CHECK(std::string(p->title) == "Take Your Best Shot" && std::string(p->short_title) == "Best Shot");
@@ -3756,7 +3758,7 @@ int main(int argc, char** argv) {
     const Package* e = find_package("pythonle");
     CHECK(p != nullptr && e != nullptr);
     if (p && e) {
-      CHECK(builtin_packages().size() == 23 && &builtin_packages()[21] == p && &builtin_packages()[22] == e);
+      CHECK(builtin_packages().size() == 24 && &builtin_packages()[21] == p && &builtin_packages()[22] == e);
       CHECK(p->recipe == Recipe::cdcopy && e->recipe == Recipe::cdcopy && std::string(p->root) == "packages/pythonizer" &&
             std::string(e->root) == "packages/pythonle");
       CHECK(std::string(p->title) == "Monty Python's Flying Circus Desktop Pythonizer" &&
@@ -3920,6 +3922,207 @@ int main(int argc, char** argv) {
     }
   }
 
+  // ---- Beavis and Butt-head Screen Wreckers: InstallShield 3's libraries, a Desktop Toys program ------
+  {
+    // The registry: after the first twenty-three (their GUI command ids); the
+    // CD its known image and its one download, the box front its cover;
+    // SETUP.INI's AppName, the release's script and its two libraries the
+    // fingerprint, the second holding the program; the program and its toy
+    // list, nine toys in their numbers' order.
+    const Package* p = find_package("wreckers");
+    CHECK(p != nullptr);
+    if (p) {
+      CHECK(builtin_packages().size() == 24 && &builtin_packages()[23] == p);
+      CHECK(p->recipe == Recipe::is3 && std::string(recipe_name(p->recipe)) == "is3" &&
+            std::string(p->root) == "packages/wreckers");
+      CHECK(std::string(p->title) == "Beavis and Butt-head Screen Wreckers" &&
+            std::string(p->short_title) == "Screen Wreckers" && std::string(p->released) == "1996-11" && p->screen &&
+            std::string(p->screen) == "640x480");
+      CHECK(std::string(p->module_dir).empty() && p->module_dirs.size() == 1 && std::string(p->module_dirs[0]).empty());
+      CHECK(p->setup_title && std::string(p->setup_title) == "Beavis and Butt-head Screen Wreckers" && p->marker &&
+            std::string(p->marker) == "BB03.INS");
+      CHECK((std::vector<std::string>(p->required_archives.begin(), p->required_archives.end()) ==
+             std::vector<std::string>{"DATA03.Z", "DATA0332.Z"}));
+      CHECK(std::string(p->tag_library) == "DATA0332.Z" && std::string(p->tag_member) == "DTTY3203.EXE");
+      CHECK(std::string(p->toys_program) == "DTTY3203.EXE" && std::string(p->toys_list) == "DTTS03.DTX");
+      CHECK((std::vector<std::string>(p->toys.begin(), p->toys.end()) ==
+             std::vector<std::string>{"Cornholio", "Tire Trouble", "Karate Beavis", "Painting Dudes", "Kick The Can",
+                                      "Chuckfest", "Soda Jerks", "Shoot 'Em", "Digger"}));
+      CHECK(p->images.size() == 1 && std::string(p->images[0].md5) == "4ab43ef0f47af1363dfa976b33dad474" &&
+            p->images[0].size == 48351232 && p->images[0].disk == 0 && std::string(p->images[0].volume_id) == "WRECKERS");
+      CHECK(p->downloads.size() == 1 && std::string(p->downloads[0].md5) == p->images[0].md5 &&
+            p->downloads[0].size == p->images[0].size && std::string(p->downloads[0].kind) == "image" &&
+            std::string(p->downloads[0].url) == "https://archive.org/download/screen-wreckers/Screen%20Wreckers.iso" &&
+            std::wstring(p->downloads[0].file_name) == L"Screen Wreckers.iso");
+      CHECK(p->covers.size() == 1 && p->covers[0].kind == CoverSource::Kind::download &&
+            std::string(p->covers[0].art) == "box" && p->covers[0].crop.w == 0);
+      CHECK_EQ(p->manifest.size(), size_t(457));
+      std::set<std::string> manifest;
+      for (const KnownFile& k : p->manifest) manifest.insert(k.path);
+      for (const char* r : p->required) CHECK(manifest.count("packages/wreckers/" + std::string(r)) == 1);
+      CHECK(manifest.count("packages/wreckers/DTTY3203.EXE") == 1 && manifest.count("packages/wreckers/DTTS03.DTX") == 1);
+      for (const KnownFile& k : p->manifest) CHECK(std::string_view(k.path).find("TOYSAV32") == std::string_view::npos);
+      CHECK(p->loose_files.empty() && p->library_members.empty() && p->name_overrides.empty() && p->fixups.empty() &&
+            p->never_opened.empty() && !p->install_name && p->speed_modules.empty() && p->builds.empty() &&
+            p->games.empty() && !p->requires_release);
+      for (const Package& q : builtin_packages()) CHECK_EQ(q.toys_program != nullptr, &q == p);
+      for (const Package& q : builtin_packages()) CHECK_EQ(q.recipe == Recipe::is3, &q == p);
+    }
+
+    const test::PkgFixture wr = test::wreckers_fixture();
+    test::TestRegistry rw = registry_for({{"wreckers", &wr}, {"castaway", &castaway}, {"marvel", &marvel}});
+    CHECK_EQ(wr.ids.size(), size_t(9));
+    test::write_tree(src / L"wreckers", wr.source);
+    test::write_bytes(src / L"wreckers.iso", test::iso_of(wr, false, "WRECKERS"));
+    // Decoys: another Desktop Toys set's CD (its own name, script and
+    // libraries), the CD without DATA0332.Z, the CD whose DATA0332.Z holds
+    // another set's program, and this CD with another set's SETUP.INI.
+    {
+      test::Tree other;
+      other["SETUP.INI"] = test::vec("[Startup]\r\nAppName=Made-Up Revenge of the Toys\r\n");
+      other["DT02.INS"] = test::blob("another set's script");
+      other["DATA02.Z"] = test::is3_library({{"DTTS02.DTX", test::toy_list({"A", "B"})}});
+      other["DATA0232.Z"] = test::is3_library({{"DTTY3202.EXE", test::toys_program("another set")}});
+      test::write_tree(src / L"toys-other", other);
+      test::Tree no_program = wr.source, renamed = wr.source;
+      no_program.erase("DATA0332.Z");
+      renamed["SETUP.INI"] = other["SETUP.INI"];
+      test::write_tree(src / L"wreckers-no-program", no_program);
+      test::write_tree(src / L"wreckers-other-name", renamed);
+      const test::PkgFixture wrong = test::wreckers_fixture([](auto&, auto& program) {
+        program = {{"DTTY3202.EXE", test::toys_program("another set's program")}};
+      });
+      test::write_tree(src / L"wreckers-wrong-program", wrong.source);
+    }
+    // Identified by SETUP.INI's AppName, the script and the first library
+    // side by side; the decoys are no release, or not this one; the other
+    // releases are still themselves.
+    CHECK(identify_folder(src / L"wreckers", nullptr, rw.span()) == &rw.get("wreckers"));
+    CHECK(identify_folder(src / L"wreckers") == find_package("wreckers"));
+    CHECK(identify_folder(src / L"toys-other", nullptr, rw.span()) == nullptr);
+    CHECK(identify_folder(src / L"wreckers-other-name", nullptr, rw.span()) == nullptr);
+    CHECK(identify_folder(src / L"castaway", nullptr, rw.span()) == &rw.get("castaway"));
+    CHECK(identify_folder(src / L"bestshot", nullptr, rw.span()) == &rw.get("bestshot"));
+    CHECK(identify_folder(src / L"pythonizer", nullptr, rw.span()) == &rw.get("pythonizer"));
+    // The folder, the decoys locked: they are never opened.
+    std::vector<HANDLE> held;
+    for (const std::string& decoy : test::wreckers_decoys()) {
+      const fs::path d = test::path_under(src / L"wreckers", decoy);
+      held.push_back(CreateFileW(d.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, 0, nullptr));
+    }
+    for (HANDLE h : held) CHECK(h != INVALID_HANDLE_VALUE);
+    ImportResult r = run("wreckers folder, decoys locked", folder(src / L"wreckers"),
+                         opts_for(dir / L"wreckers-locked", rw), Status::ok);
+    for (HANDLE h : held) CloseHandle(h);
+    CHECK_EQ(r.verified, std::string("files"));
+    CHECK_EQ(r.package_modules, size_t(9));
+    // Every member where its folder table puts it: DT03\TOYSPR\BEAVIS\..., and
+    // the two SPLAT.SPR each in its own folder.
+    check_installed(dir / L"wreckers-locked" / L"win", wr, "packages/wreckers");
+    CHECK(test::read_bytes(dir / L"wreckers-locked" / L"win" / L"packages" / L"wreckers" / L"DT03" / L"TOYSPR" /
+                           L"MISC" / L"SPLAT.SPR") != test::read_bytes(dir / L"wreckers-locked" / L"win" / L"packages" /
+                                                                       L"wreckers" / L"DT03" / L"TOYSPR" / L"TOYS" /
+                                                                       L"SPLAT.SPR"));
+    CHECK(!fs::exists(dir / L"wreckers-locked" / L"win" / L"packages" / L"wreckers" / L"TOYSAV32.SCR"));
+    // The CD: the same files; its import record names the recipe and where
+    // each file came from (its library and its path there).
+    fs::path root = dir / L"alone-wreckers";
+    r = run("wreckers CD", image(src / L"wreckers.iso"), opts_for(root, rw), Status::ok);
+    CHECK_EQ(r.package_id, std::string("wreckers"));
+    CHECK_EQ(r.verified, std::string("files"));
+    check_installed(root / L"win", wr, "packages/wreckers");
+    CHECK(catalog_ids(root / L"win") == wr.ids);
+    CHECK(no_leftovers(root / L"win"));
+    {
+      phosg::JSON j = json_at(root / L"win" / L"packages" / L"wreckers" / L"import.json");
+      CHECK_EQ(j.at("package").get_string("recipe"), std::string("is3"));
+      bool from = false;
+      for (auto& f : j.at("files").as_list())
+        if (f->get_string("path") == "packages/wreckers/DT03/TOYSPR/BEAVIS/BEAVIS1.SPR")
+          from = f->get_string("from").find("DATA03.Z!DT03\\TOYSPR\\BEAVIS\\BEAVIS1.SPR") != std::string::npos;
+      CHECK(from);
+    }
+    // Known by its md5, it verifies "image".
+    {
+      test::TestRegistry by_md5 = registry_for({{"wreckers", &wr}});
+      by_md5.image("wreckers", md5_file_hex(src / L"wreckers.iso"), fs::file_size(src / L"wreckers.iso"));
+      r = run("wreckers CD by its md5", image(src / L"wreckers.iso"), opts_for(dir / L"wreckers-md5", by_md5),
+              Status::ok);
+      CHECK_EQ(r.verified, std::string("image"));
+    }
+    // The catalog entries: one per toy, each the program, named by the toy
+    // list (the fixture's made-up names), its toy's number in hostEnv, every
+    // one a game; no sameAs among them.
+    phosg::JSON cat = json_at(root / L"win" / L"catalog-win.json");
+    const auto& mods = cat.at("modules").as_list();
+    CHECK_EQ(mods.size(), size_t(9));
+    const std::vector<std::string> names = test::wreckers_toy_names();
+    for (size_t i = 0; i < mods.size() && i < names.size(); i++) {
+      const phosg::JSON& m = *mods[i];
+      CHECK_EQ(m.get_string("id"), wr.ids[i]);
+      CHECK_EQ(m.get_string("displayName"), names[i]);
+      CHECK_EQ(m.get_string("moduleName"), names[i]);
+      CHECK_EQ(m.get_string("lane"), std::string("pe32"));
+      CHECK_EQ(m.get_string("abi"), std::string("desktoptoys"));
+      CHECK_EQ(m.get_string("path"), std::string("packages/wreckers/DTTY3203.EXE"));
+      CHECK_EQ(m.get_string("entry"), std::string());
+      CHECK(m.at("controls").as_list().empty() && m.at("needs").as_list().empty());
+      CHECK_EQ(m.at("system").as_list().size(), size_t(6));
+      CHECK(m.at("game").is_bool() && m.get_bool("game"));
+      CHECK(!m.contains("sameAs") && !m.contains("requires") && m.get_string("screen") == "640x480");
+      CHECK(m.at("hostEnv").is_dict() && m.at("hostEnv").as_dict().size() == 1 &&
+            m.at("hostEnv").get_string("ADTOY") == std::to_string(i + 1));
+    }
+    // Without its program's library it is not the whole release: refused by
+    // name, nothing installed; a library holding another set's program, or
+    // another set's CD, is not this release.
+    r = run("wreckers, no DATA0332.Z", folder(src / L"wreckers-no-program"), opts_for(dir / L"wreckers-no-program", rw),
+            Status::source_invalid);
+    CHECK(r.message.find("the source is missing DATA0332.Z, which the CD of Beavis and Butt-head Screen Wreckers holds") !=
+          std::string::npos);
+    CHECK(!fs::exists(dir / L"wreckers-no-program" / L"win" / L"packages" / L"wreckers"));
+    r = run("wreckers, another program", folder(src / L"wreckers-wrong-program"),
+            opts_for(dir / L"wreckers-wrong-program", rw), Status::source_invalid);
+    CHECK(r.message.find("DATA0332.Z holds no DTTY3203.EXE") != std::string::npos);
+    CHECK(!fs::exists(dir / L"wreckers-wrong-program" / L"win" / L"packages" / L"wreckers"));
+    for (const wchar_t* decoy : {L"toys-other", L"wreckers-other-name"}) {
+      r = run("a Desktop Toys decoy", folder(src / decoy), opts_for(dir / (std::wstring(decoy) + L"-out"), rw),
+              Status::source_invalid);
+      CHECK(r.message.find("not a known release") != std::string::npos);
+    }
+    // Asked for by name, another set's CD is not this one.
+    r = run("toys-other as wreckers", folder(src / L"toys-other", "wreckers"), opts_for(dir / L"toys-other-as", rw),
+            Status::source_invalid);
+    CHECK(r.message.find("the source is not Beavis and Butt-head Screen Wreckers") != std::string::npos);
+    // A damaged library is a corrupt source, never a verify failure.
+    {
+      test::Tree bad = wr.source;
+      std::vector<uint8_t>& lib = bad["DATA03.Z"];
+      lib[lib.size() - 30] ^= 0xFF;  // the last file entry's attributes (HEH.WAV's)
+      test::write_tree(src / L"wreckers-bad", bad);
+      r = run("wreckers, a damaged library", folder(src / L"wreckers-bad"), opts_for(dir / L"wreckers-bad", rw),
+              Status::source_invalid);
+      CHECK(r.message.find("DATA03.Z") != std::string::npos);
+    }
+    // The toy list is the program's set: without it the import lacks a
+    // required file, and (a registry requiring nothing) breaks I3.
+    {
+      const test::PkgFixture no_list = test::wreckers_fixture([](auto& data, auto&) {
+        data.erase(std::remove_if(data.begin(), data.end(), [](const auto& e) { return e.first == "DTTS03.DTX"; }),
+                   data.end());
+      });
+      test::TestRegistry rn = registry_for({{"wreckers", &no_list}});
+      test::write_tree(src / L"wreckers-no-list", no_list.source);
+      r = run("wreckers, no toy list", folder(src / L"wreckers-no-list"), opts_for(dir / L"wreckers-no-list", rn),
+              Status::source_invalid);
+      CHECK(r.message.find("packages/wreckers/DTTS03.DTX") != std::string::npos);
+      rn.get("wreckers").required = {};
+      r = run("wreckers, no toy list, nothing required", folder(src / L"wreckers-no-list"),
+              opts_for(dir / L"wreckers-no-list-i3", rn), Status::source_invalid);
+      CHECK(r.message.find("breaks I3: no DTTS03.DTX") != std::string::npos);
+    }
+  }
+
   // ---- --catalog-only without FILES, win_assets_dir, --remove, list --------------------------------------
   {
     fs::path root = dir / L"nofiles";
@@ -3939,7 +4142,7 @@ int main(int argc, char** argv) {
     CHECK_EQ(win_assets_dir(dir / L"fresh"), dir / L"fresh" / L"win");
 
     auto states = list_packages(root, reg.span());
-    CHECK_EQ(states.size(), size_t(23));
+    CHECK_EQ(states.size(), size_t(24));
     for (auto& s : states) {
       bool want = std::string(s.package->id) == "ad32" || std::string(s.package->id) == "simpsons";
       CHECK_EQ(s.installed, want);
@@ -4242,7 +4445,7 @@ int main(int argc, char** argv) {
         if (col != std::string::npos) cols.push_back(line.rfind("not ", col) == col - 4 ? col - 4 : col);
         pos += 3;
       }
-      CHECK_EQ(cols.size(), size_t(23));
+      CHECK_EQ(cols.size(), size_t(24));
       for (size_t c : cols) CHECK_EQ(c, cols.front());
       CHECK(out.find("  swse         Star Wars Screen Entertainment                  installed, ") != std::string::npos);
       CHECK(out.find("  startrek     Star Trek: The Screen Saver                     installed, ") != std::string::npos);
