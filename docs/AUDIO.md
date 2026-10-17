@@ -19,8 +19,8 @@ Entertainment's music (§10.6), Star Trek: The Screen Saver's AD_SND 1.0
 (§2.12, §10.7), and the five of the twelve-release registry, with the
 Looney Tunes' and the Disney Collection's music paths (§2.9), the host's
 own AD_SND for Snoopy's Screen Savers (§2.10) and their results (§10.8),
-Johnny Castaway's (§10.9), and the Opus 'n Bill, Flintstones and
-Intermission 4.0 releases' (§10.10).
+Johnny Castaway's (§10.9), the Opus 'n Bill, Flintstones and
+Intermission 4.0 releases' (§10.10), and Take Your Best Shot's (§10.11).
 Evidence is marked as in the
 other documents: **VERIFIED** (our disassembly, with addresses), **EMPIRICAL**
 (observed in runs or measured on the files) and **UNVERIFIED** (leads still
@@ -2201,6 +2201,36 @@ frames (15 s), twice, from a staged root (`research/five/lane/runs/snd1`,
 * Every capture is identical run to run.
 * Not exercised: live output (`ADAUDIOLIVE=1`, §12), and the modules not
   sampled.
+
+### 10.11 Take Your Best Shot's sound (2026-10-17)
+
+Take Your Best Shot's scenes sound through 7th Level's own Audio Library,
+`PLYMA001.DLL` ("Audio Library 2.2"), which the player loads: it streams
+wave sound through `waveOut` itself (§8.3), eight buffers at a time, and
+plays no MIDI. With sound on the lane plays them through the engine, as
+any `waveOut` caller's (the 7th Level protocol sets the Win16 runtime's
+`sound_device` from the engine; `waveOutGetID` was added for it).
+
+* **Sound off is a PC without a sound card** for this protocol alone. The
+  silent device (§3, invariant 4) never marks a `waveOutWrite` buffer done, and
+  `PLYMA001` waits for `WHDR_DONE` for ever (`1:1887`), so the scene would
+  hang; with no wave device the library goes silent and the scene runs as
+  it would. Every other protocol keeps the silent device of invariant 4.
+* All 17 scenes captured in the screen saver's mode with `ADSOUND=1`
+  (`ADAUDIOLIVE=0`) for 3,600 frames (60 s), three times
+  (`research/bestshot/finish/runs/snd`, gitignored): every capture
+  identical run to run, no MIDI event in any. Every scene makes sound in
+  that minute, most from their first seconds: High Voltage at 0.1 s, Head
+  Shot at 0.3 s, Line Shot and Screeech at 0.6 s, About Face, Heads Up and
+  Pug Nose at 1.4 s, Headbanger and Skeet at 2 s, Rebound (its bounces) at
+  2.6 s, B-flat at 2.8 s, Hot Shot at 3.2 s, A Shot In The Dark at 3.5 s
+  and Knock Off at 3.6 s; Face Off from 31 s, Bug-eyed from 33 s and Get A
+  Head from 34 s. Peaks reach 0 dBFS (Bug-eyed's −7.2 dBFS is the
+  quietest).
+* Line Shot's sound across a Caps Lock game (screen saver, game, screen
+  saver again, the player started anew each time): sound in every second.
+* Not exercised: live output, the other games' and the living wallpaper's
+  sound, and the volume keys (+ and −) the CD's readme names.
 
 ---
 

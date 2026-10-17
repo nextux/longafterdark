@@ -3,29 +3,30 @@
 The original After Dark screen savers, Flying Toasters and all, running on
 today's Windows (and on Linux, through Wine), along with LucasArts' Star
 Wars Screen Entertainment, Delrina's Intermission and its Opus 'n Bill,
-Flintstones, Far Side and Dilbert screen savers, and Sierra's Johnny
-Castaway.
+Flintstones, Far Side and Dilbert screen savers, Sierra's Johnny Castaway,
+and 7th Level's Take Your Best Shot.
 
 ![The Long After Dark settings window in dark mode: box covers of four After Dark releases across the top, the module list on the left, and Flying Toasters! in the live preview](docs/images/settings.png)
 
 ## What it is
 
 Long After Dark brings back Berkeley Systems' After Dark screen savers from
-the 1990s, and eight of their contemporaries: seven that ran on Delrina's
+the 1990s, and nine of their contemporaries: seven that ran on Delrina's
 Intermission, which are Intermission 4.0 itself (1993), LucasArts' Star
 Wars Screen Entertainment (1994) and Delrina's own Opus 'n Bill Screen
 Saver (1993), Opus 'n Bill: On the Road Again!, The Flintstones Screen
 Saver Collection, The Far Side Screen Saver Collection and Scott Adams'
-Dilbert Screen Saver Collection (all four from 1994), and Sierra On-Line's
-Screen Antics: Johnny Castaway (1992), a screen saver program of its own.
-It doesn't remake them. It runs the original modules, unchanged, on an
+Dilbert Screen Saver Collection (all four from 1994), Sierra On-Line's
+Screen Antics: Johnny Castaway (1992), a screen saver program of its own,
+and 7th Level's Take Your Best Shot (1995), scenes of Bill Plympton's
+animation played by 7th Level's own player. It doesn't remake them. It runs the original modules, unchanged, on an
 emulated PC of the time: the x86 processor and the parts of Windows 95
 they talk to. So they look, move and sound the way they did.
 
-It works with twenty releases for Windows, 429 modules in all: ten of
+It works with twenty-one releases for Windows, 446 modules in all: ten of
 Berkeley Systems' After Dark, two of other companies' modules for After
-Dark, the seven Intermission releases, and Johnny Castaway. Import one or
-all of them; each works on its own.
+Dark, the seven Intermission releases, Johnny Castaway, and Take Your Best
+Shot. Import one or all of them; each works on its own.
 
 | Release | Year | Modules |
 |---|---|---|
@@ -42,6 +43,7 @@ all of them; each works on its own.
 | Snoopy's Screen Savers (Image Smith) | 1994 | 8 |
 | Scott Adams' Dilbert Screen Saver Collection (Delrina) | 1994 | 16 |
 | Star Trek: The Next Generation Screen Saver | 1994 | 13 |
+| Take Your Best Shot (7th Level) | 1995 | 17 |
 | The Looney Tunes Screen Saver | 1995 | 12 |
 | ScreamSavers (Binary Software) | 1995 | 15 |
 | After Dark 3.2 | 1995 | 44 |
@@ -121,12 +123,31 @@ saver program of its own, which Long After Dark runs unchanged, the way
 Windows 3.1 ran it, with its **Setup...** button for its sounds, background
 and start of day.
 
+Take Your Best Shot (1995) is 7th Level's "Twisted Arcade Games for
+Twisted Minds", made of Bill Plympton's animation (the program credits his
+films Push Comes to Shove and The Tune): 17 scenes that were at once its
+screen savers and its living wallpapers. In most of them Plympton's heads
+come in from the edges and bounce about the screen (About Face,
+Headbanger, Screeech, A Shot In The Dark and more); in Rebound they drop in
+and bounce on the floor, in Skeet a gunner shoots them as clays, and in
+Bug-eyed and Face Off a man in a brown suit walks in, rubs his eyes and
+pulls faces. Three are arcade games too: Head Shot (knock the heads out of
+a wall), Hot Shot (paddles, with a head for the ball) and Line Shot
+(baseball). As a screen saver each plays a demonstration of itself, and
+Caps Lock starts the game; in the other scenes Caps Lock lets your clicks
+reach the heads, as Best Shot's interactive screen saver did. They are neither After Dark nor Intermission
+modules but scenes of 7th Level's own Runtime Player, which Long After Dark
+runs unchanged, standing in for the Best Shot program that started them.
+
 - **Every monitor.** It runs on all your monitors, or only the main one.
 - **Sound.** The modules' sound effects and music, and the Simpsons'
   voices, with one volume setting for all of it (or off).
 - **Games.** Caps Lock starts the games built into some modules, such as
-  Rodger Dodger, You Bet Your Head and Pinocchio, and Num Lock Star Trek's
-  Final Exam, without closing the screen saver.
+  Rodger Dodger, You Bet Your Head, Pinocchio and Best Shot's Head Shot,
+  and Num Lock Star Trek's Final Exam, without closing the screen saver.
+- **Living wallpaper.** The modules can also play on your desktop, behind
+  its icons, in place of your wallpaper: see
+  [Living wallpaper](#living-wallpaper).
 - **The modules' own options.** Each module's sliders and choices, and
   buttons such as Fish World's **Select Fish…**, Marvel's **Posters...**,
   the **Configure...** of an Intermission module (Star Wars, Opus 'n Bill,
@@ -141,8 +162,8 @@ and start of day.
   black. Each is off unless you choose it: see [Looks](#looks).
 
 On Linux you get the modules, their sound and their games, but not the
-settings window, the looks or the modules' own options (see
-[On Linux](#on-linux)).
+settings window, the looks, the living wallpaper or the modules' own
+options (see [On Linux](#on-linux)).
 
 ![Flying Toasters! from After Dark 4.0 Deluxe, running in Long After Dark](docs/images/flying-toasters.png)
 
@@ -168,8 +189,9 @@ settings window, the looks or the modules' own options (see
     does, or a folder unzipped from one;
   - the Internet Archive. The importer can download each release for you:
     a CD image of 381.7 MB (4.0 Deluxe), 143.3 MB (10th Anniversary),
-    58.8 MB (3.2), 37.9 MB (Totally Twisted), 6.9 MB (Star Wars Screen
-    Entertainment) or 5.8 MB (Star Trek: The Next Generation), Star Trek's
+    89.1 MB (Take Your Best Shot), 58.8 MB (3.2), 37.9 MB (Totally
+    Twisted), 6.9 MB (Star Wars Screen Entertainment) or 5.8 MB (Star
+    Trek: The Next Generation), Star Trek's
     two floppy images (2.8 MB), Johnny Castaway's floppy image in a ZIP
     (1.3 MB), Intermission 4.0's three floppy images in a ZIP (3.3 MB), or
     a ZIP of the install files: the Simpsons' (2.6 MB), Marvel's (1.9 MB),
@@ -207,6 +229,11 @@ the May 1994 build most copies online hold: its Prehistoric Vehicles
 animation is damaged in every one of those copies, so that build imports
 without it, with nine modules.
 
+Take Your Best Shot imports from its CD, its ISO image (the download) or a
+folder copied from the CD. The importer copies 7th Level's player and its
+17 scenes, which stayed on the CD when the program was installed, and
+never runs the CD's setup or the Best Shot program.
+
 ## Getting started
 
 1. **Get the programs.** Download `LongAfterDark-<version>-x64.zip` from the
@@ -218,7 +245,8 @@ without it, with nine modules.
    three programs, which must stay together in one folder:
    - `LongAfterDark.scr`: the screen saver and its settings window (and
      `LongAfterDark.exe`, the same program, to show it
-     [in a window](#use-it-as-a-be-right-back-screen-in-obs));
+     [in a window](#use-it-as-a-be-right-back-screen-in-obs) or as
+     [living wallpaper](#living-wallpaper));
    - `adhostwin.exe`: the emulator that runs the modules;
    - `adimport.exe`: the importer.
 2. **Import your releases.** Double-click `adimport.exe` (or click **Import…**
@@ -285,8 +313,8 @@ one in Windows' Screen Saver Settings, always show the plain picture;
 
 - **Caps Lock never closes the screen saver.** In some modules it does
   something, like scaring the fish, or starts a game (Rodger Dodger, Lunatic
-  Fringe, You Bet Your Head, Simpsons Trivia, Officer's Review and
-  others). While a game is on, the keys and the mouse belong to it. Press
+  Fringe, You Bet Your Head, Simpsons Trivia, Officer's Review, Best Shot's
+  Head Shot, Hot Shot and Line Shot, and others). While a game is on, the keys and the mouse belong to it. Press
   Caps Lock again to stop playing, or Alt to close the screen saver at
   once. Otherwise most keys, a click or moving the mouse close it.
 - **Num Lock never closes it either.** In Star Trek's Final Exam it starts
@@ -317,7 +345,8 @@ one in Windows' Screen Saver Settings, always show the plain picture;
   shows only when two or more monitors are connected).
 - **Intermission modules (Star Wars, Opus 'n Bill, Flintstones, Far Side,
   Dilbert and Intermission's own), Star Trek (both releases), ScreamSavers
-  and Marvel modules, and Johnny Castaway,** always get 640×480, scaled up
+  and Marvel modules, Johnny Castaway, and Best Shot's scenes,** always get
+  640×480, scaled up
   to fit the screen in its 4:3 shape (with bars at the
   sides on a widescreen monitor). The Resolution setting applies to the
   rest. To have them fill the screen instead, stretched, with no bars,
@@ -369,6 +398,49 @@ Long After Dark too, but only this window is of its type). Untick
 on the stream whenever it rests over the window. For the modules' sound,
 add an **Application Audio Capture** source for the same window.
 
+## Living wallpaper
+
+`LongAfterDark.exe` can also play the modules on your Windows desktop
+itself, behind its icons and under every window, in place of your
+wallpaper, as Take Your Best Shot's living wallpapers did. It is off
+unless you start it. From PowerShell, in the folder you unzipped:
+
+```powershell
+.\LongAfterDark.exe /wallpaper /module "Skeet"
+.\LongAfterDark.exe /wallpaper /stop
+```
+
+- `/wallpaper` starts it, on each monitor the **Monitors** setting gives
+  the screen saver. `/module` and `/random` mean what they do with
+  `/window`; with neither it shows what the screen saver would. A second
+  `/wallpaper` takes the place of the one running.
+- `/wallpaper /stop` ends it, and your own wallpaper shows again.
+- Any module works. Each one starts on a picture of your own wallpaper, as
+  the screen saver's modules start on a picture of your desktop, so the
+  modules that do something to the desktop do it to your wallpaper. Best
+  Shot's scenes play the living-wallpaper form Take Your Best Shot gave
+  them, on their own black (or dark brown) backdrop over the whole
+  desktop, as the original did; its three games show their menu.
+- Your desktop works as before: keys and the mouse never reach the
+  modules, and Caps Lock starts no game. Sound plays as the screen
+  saver's does (**Sound** and **Volume** in the settings window).
+- It doesn't keep the display on: the screen saver, the lock and display
+  sleep come as usual. While the screen saver runs, the computer is locked
+  or the display is off, the modules pause.
+- It keeps an emulated PC running for each monitor all the time the
+  desktop is shown, at below-normal priority so that your programs come
+  first. That costs processor time and power all day, as a screen saver
+  that never ends would, and so battery life on a laptop: stop it when
+  that matters.
+- If Explorer restarts, it comes back with it. Without Explorer's desktop
+  (another shell, say) it shows nothing and exits.
+
+To start it with Windows, press Win+R, type `shell:startup` and press
+Enter; in the folder that opens, right-click → **New** → **Shortcut**, and
+give it the full path of `LongAfterDark.exe` followed by the switches, such
+as `"C:\Programs\LongAfterDark\LongAfterDark.exe" /wallpaper /random`.
+Like `/window`, it works only with the `.exe`, and only on Windows.
+
 ## On Linux
 
 On Linux the emulator and the importer are the same Windows programs, run
@@ -390,9 +462,9 @@ unzip LongAfterDark-<version>-linux-x64.zip && cd LongAfterDark
 ```
 
 What differs from Windows: there is no settings window (you choose with
-`longafterdark`'s options, or in XScreenSaver's settings), and the modules'
+`longafterdark`'s options, or in XScreenSaver's settings), the modules'
 own options and buttons aren't there, so each module runs with its
-defaults. On its own it plays on the primary monitor and keeps the others
+defaults, and there is no living wallpaper. On its own it plays on the primary monitor and keeps the others
 black. XScreenSaver runs it on every monitor, all showing the same module
 unless you check **A different module on each monitor** in its settings,
 but ends it on any key or mouse move, so no game can be played there. The
@@ -463,8 +535,8 @@ screen saver.
 - [docs/BUILDING.md](docs/BUILDING.md): building, testing and the source
   tree.
 - [docs/DESIGN.md](docs/DESIGN.md): how the emulation works.
-- [docs/PACKAGES.md](docs/PACKAGES.md): the twenty releases and how each one
-  is imported.
+- [docs/PACKAGES.md](docs/PACKAGES.md): the twenty-one releases and how
+  each one is imported.
 
 ## License
 
@@ -486,7 +558,8 @@ IMPart (ScreamSavers), Delrina and Anthony Andersen (Intermission), Delrina
 (the Opus 'n Bill, Flintstones, Far Side and Dilbert collections), Berkeley
 Breathed (Opus 'n Bill), Hanna-Barbera (The Flintstones), Gary Larson,
 FarWorks and Universal Press Syndicate (The Far Side), Scott Adams and
-United Feature Syndicate / United Media (Dilbert), and Sierra On-Line and
-Dynamix (Johnny Castaway).
+United Feature Syndicate / United Media (Dilbert), Sierra On-Line and
+Dynamix (Johnny Castaway), and 7th Level and Bill Plympton (Take Your Best
+Shot).
 None of their files are in this repository or in the programs it builds:
 you import your own copies.

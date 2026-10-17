@@ -7,7 +7,7 @@ x86 code under emulation: it loads the *real*
 engine and the module into one emulated address space, traps every call
 they make into the operating system, and supplies that OS surface from the
 host. A Windows screen saver (`LongAfterDark.scr`) presents the frames.
-Twenty releases are supported (§7): After Dark 4.0 Deluxe, After Dark 10th
+Twenty-one releases are supported (§7): After Dark 4.0 Deluxe, After Dark 10th
 Anniversary, After Dark 3.2, Totally Twisted After Dark, The Simpsons
 Screen Saver, Star Trek: The Screen Saver (After Dark 2.0b), Star Trek: The
 Next Generation Screen Saver, Marvel Comics Screen Posters, The Looney Tunes
@@ -16,8 +16,9 @@ modules for After Dark (Binary Software's ScreamSavers and Image Smith's
 Snoopy's Screen Savers), Star Wars Screen Entertainment, Intermission 4.0,
 the Opus 'n Bill Screen Saver, Opus 'n Bill: On the Road Again!, The
 Flintstones Screen Saver Collection, The Far Side Screen Saver Collection,
-Scott Adams' Dilbert Screen Saver Collection and Sierra On-Line's Screen
-Antics: Johnny Castaway, 429 modules in all. The seven from Star Wars
+Scott Adams' Dilbert Screen Saver Collection, Sierra On-Line's Screen
+Antics: Johnny Castaway and 7th Level's Take Your Best Shot, 446 modules
+in all. The seven from Star Wars
 Screen Entertainment to Dilbert are not After Dark releases: their modules
 were written for Delrina's Intermission screen saver engine (Intermission
 4.0 is the engine's own release), and speak its own protocol (ABI.md
@@ -25,7 +26,11 @@ were written for Delrina's Intermission screen saver engine (Intermission
 no module of any engine: it is a Windows 3.1 screen-saver program, a `.SCR`
 built on Microsoft's `SCRNSAVE.LIB` with its own message loop, which the
 host runs whole, as Windows 3.1 ran it, through a third protocol
-(`PACKAGES.md` §7.6).
+(`PACKAGES.md` §7.6). Take Your Best Shot's 17 scenes are data files of
+7th Level's own Runtime Player, a Windows 3.1 program, which the host runs
+whole with a scene on its command line, standing in for the desktop
+program that started it, through a fourth (`PACKAGES.md` §7.7, ABI.md
+§3.16).
 
 Nothing here is a reimplementation of After Dark. The engine DLLs
 (`ADXPL510.DLL`, `ADXPL300.DLL`) and Berkeley's own classic-module bridge
@@ -44,7 +49,7 @@ engine application, `INTERMIS.EXE`, as it stands in for After Dark's
 
 ## The corpus
 
-The work started from one release; the other nineteen came later (§7,
+The work started from one release; the other twenty came later (§7,
 `PACKAGES.md`), and the same host runs them all. The first corpus, the PC
 side of a hybrid Mac/PC CD,
 `After Dark 4.0 Deluxe (1996)(Berkeley Systems)[Mac-PC].iso`
@@ -82,6 +87,7 @@ LongAfterDark.scr (x64)     ── spawns ──►  adhostwin.exe (x64)   one p
                                     module.AD + AD_MOD.DLL + AD_RSRC.DLL + AD_SND.DLL 1.0 (16-bit lane, After Dark 2.0)
                                     module.IMX + SWSE.DLL + INTRMLIB.DLL + IMIMXPLY.IMQ + helpers (16-bit lane, Intermission)
                                     SCRANTIC.SCR, a whole program (16-bit lane, a Windows 3.1 screen saver)
+                                    PLYMPTON.EXE + PLYM*001.DLL + DISPDIB.DLL, playing a scene .BIN (16-bit lane, 7th Level)
 ```
 
 * **One CPU core for both lanes.** `adw::cpu` is resource_dasm's `X86Emulator`
@@ -113,7 +119,7 @@ LongAfterDark.scr (x64)     ── spawns ──►  adhostwin.exe (x64)   one p
   docs/DESIGN.md          this file
   docs/ABI.md             module/engine ABI as we verify it (our own findings)
   docs/API_SURFACE.md     every function the Deluxe disc's binaries import, counted and classified
-  docs/PACKAGES.md        the twenty releases: registry, import, catalog merge, lane rules (§7)
+  docs/PACKAGES.md        the twenty-one releases: registry, import, catalog merge, lane rules (§7)
   docs/INTERACTION.md     input, module buttons, per-user state, desktop seed (§8)
   docs/COVERS.md          the box-cover strip, the cover pipeline, the shared UI library (§9)
   docs/AUDIO.md           sound: census, engine, lane mappings, saver settings (§10)
@@ -161,7 +167,8 @@ explain *why*.
   (never sleep) · `AD_ASSETS_DIR` (asset root override) · `ADTRACE=<cats>`
   (comma-separated log categories to stderr). Sound: `ADSOUND`,
   `ADAUDIOOUT`, `ADVOLUME` and the rest (§10, AUDIO.md §4); interaction:
-  `ADCAPS`, `ADNUMLOCK`, `ADSTATE`, `ADSTATUSHANDLE`, `ADSEEDIMG` (§8); the
+  `ADCAPS`, `ADNUMLOCK`, `ADSTATE`, `ADSTATUSHANDLE`, `ADSEEDIMG`,
+  `ADWALLPAPER` (§8); the
   data folder: `AD_LOCALAPPDATA` (§6); each lane's own knobs: §5a and its
   `lane.hh`. The full list is in `host/core/README.md`.
 * **Pacing**: in `ADSTREAM` mode the host advances one frame per `GO` when the
@@ -294,7 +301,7 @@ drives the whole protocol with a synthetic animated, palette-cycling image
 (with `ADTESTAUDIO=1`, sound too), so front-ends can be built and tested
 without a module. `adhostwin.exe --capabilities` prints one line naming
 what the build has (`lanes=pe32,ne16 configure=pe32,ne16
-abis=afterdark,intermission,scrnsave status=1 state=1 seed=1 audio=1 numlock=1`,
+abis=afterdark,intermission,scrnsave,7thlevel status=1 state=1 seed=1 audio=1 numlock=1`,
 where `abis` lists the module ABIs its lanes run and `numlock=1` says it
 takes the `NUMLOCK` line and `ADNUMLOCK`), which the settings dialog reads
 instead of probing a module.
@@ -486,7 +493,13 @@ reader's dialog or the IMQ module's own. Since the seventh round `abi` may also
 be `"scrnsave"`: a Windows 3.1 screen-saver program (Johnny Castaway's
 `SCRANTIC.SCR`), lane `ne16`, `entry` `SCREENSAVERPROC` (the export that
 makes it one), `screen` `"640x480"`, and one button, **Setup...**, the
-program's own settings dialog (PACKAGES.md §6).
+program's own settings dialog (PACKAGES.md §6). Since the ninth round `abi`
+may be `"7thlevel"`: a scene of 7th Level's Runtime Player (Take Your Best
+Shot's `BESTACT\*.BIN`), lane `ne16`, `entry` `""` (data: the package's
+player plays it), `screen` `"640x480"`, no buttons, and on the three that
+are games too a last field, `"game": true` (PACKAGES.md §6). A front-end
+leaves out, as "Coming soon", an entry whose `abi` the host's
+`--capabilities` doesn't name.
 
 `screen` (optional, since the seventh release, under the same `adimport
 1.3`) is a fixed screen, `"WxH"`, that the module gets whatever the display:
@@ -538,7 +551,7 @@ Each `packages[]` entry also carries `cover` (COVERS.md §2.7):
 chosen, `-` = nothing checked; the saver ignores it), `DurationMin=<n>|0` (0 = forever),
 `Scale=1.0|1.5` (the Resolution setting, 480 or 720 lines, for the other
 modules; an Intermission module, and one whose catalog entry gives a
-`screen` — Star Trek, ScreamSavers, Marvel, Johnny Castaway —, always gets 640×480, scaled
+`screen` — Star Trek, ScreamSavers, Marvel, Johnny Castaway, Best Shot —, always gets 640×480, scaled
 to fit the monitor in its 4:3 shape: `scr/README.md`), `Monitors=all|primary`,
 `DifferentPerMonitor=1|0` (default 0: a rotation plays the same module on
 every monitor and switches them together; 1: each monitor has a rotation of
@@ -547,7 +560,7 @@ its own, the settings window's "A different module on each monitor"),
 bars; 1: its frame fills each monitor, the settings window's "Stretch to fit
 the screen"; never in `/p`), `Look=sharp|crt|crt-curved|smooth|preset` and
 `AmbientBars=1|0` (default `sharp` and 0, the frames drawn as they always
-were; the settings window's Look menu; `/s` and `/window` only,
+were; the settings window's Look menu; `/s`, `/window` and `/wallpaper` only,
 below), `ShaderPreset=<path of a .slangp>` (no UI; `Look=preset`'s
 RetroArch preset), `StartFromDesktop=1|0` (no UI;
 INTERACTION.md §8), `Collections=<package id>,…` (the box-strip filter;
@@ -572,7 +585,7 @@ it stretches with `HALFTONE` and switches to `COLORONCOLOR` when a host's
 (`scr/README.md`).
 
 The looks, each off until the user turns it on (`Look` other than `sharp`,
-or `AmbientBars=1`), draw the `/s` and `/window` windows through Direct3D 11
+or `AmbientBars=1`), draw the `/s`, `/window` and `/wallpaper` windows through Direct3D 11
 instead (`scr/src/present_d3d.h`): the frame goes up as it comes (an 8-bit
 one as its indices and its palette), a first pass resolves it to colour,
 and the look's pixel shaders, HLSL compiled at run time by
@@ -658,14 +671,15 @@ is, and for every user the three programs are copied together to
 
 ### 7. Packages
 
-The host runs modules from twenty releases: ten of Berkeley Systems'
+The host runs modules from twenty-one releases: ten of Berkeley Systems'
 After Dark, two of other companies' modules for After Dark (ScreamSavers,
 Snoopy's Screen Savers), seven for Delrina's Intermission (Intermission
 4.0 itself, LucasArts' Star Wars Screen Entertainment, and Delrina's own
 Opus 'n Bill Screen Saver, Opus 'n Bill: On the Road Again!, The
 Flintstones Screen Saver Collection, The Far Side Screen Saver Collection
-and Scott Adams' Dilbert Screen Saver Collection), and Sierra On-Line's
-Screen Antics: Johnny Castaway, a Windows 3.1 screen-saver program.
+and Scott Adams' Dilbert Screen Saver Collection), Sierra On-Line's
+Screen Antics: Johnny Castaway, a Windows 3.1 screen-saver program, and
+7th Level's Take Your Best Shot, scenes of 7th Level's Runtime Player.
 The full specification is `docs/PACKAGES.md`: registry,
 identification, extraction formats, per-package layouts, the catalog merge,
 the lane contract, and the three work packages that implement it. The
@@ -811,13 +825,26 @@ contract in brief:
   **Setup...** button starts it with `/c`, its own settings dialog. It
   paints a fixed 640×480 scene, so its catalog entry carries that `screen`.
   (`PACKAGES.md` §3, §4.3, §7.6, §8.11.)
-* **Status: implemented.** All twenty releases import (from a disc, an
+* **7th Level scenes (Take Your Best Shot).** 7th Level's Take Your Best
+  Shot came on one CD; its setup copied the player and its libraries and
+  left the 17 scenes on the CD, and the importer copies both as they are
+  (the `cdcopy` recipe), never the desktop program that started them.
+  A scene (`BESTACT\*.BIN`) is a 7th Level resource file, data: the ne16
+  lane knows it by its magic, `7L`, and runs the package's player,
+  `BESTSHOT\PLYMPTON.EXE`, whole, with its own libraries, the scene on its
+  command line and the block that says the mode, as Take Your Best Shot's
+  desktop program started it, through a fourth protocol; the host stands in
+  for that program. The mode is the screen saver's; after Caps Lock a
+  game's in one of the three games, and the interactive screen saver's in
+  the others; or the living wallpaper's with `ADWALLPAPER=1` (§8). (`PACKAGES.md` §3, §4.3, §6, §7.7; ABI.md §3.16.)
+* **Status: implemented.** All twenty-one releases import (from a disc, an
   image, a ZIP or a 7z, a folder or the Internet Archive) into
-  self-contained package roots (429 catalog modules, 73 of them `sameAs` an
+  self-contained package roots (446 catalog modules, 73 of them `sameAs` an
   earlier one). The 283 modules of the twelve After Dark releases run
   headless and deterministically, each release on its own; the 145 of the
   seven Intermission releases run through the Intermission protocol above,
-  and Johnny Castaway through the screen-saver protocol. The
+  Johnny Castaway through the screen-saver protocol, and Take Your Best
+  Shot's 17 scenes through the 7th Level protocol. The
   survey-time numbers (before this work, with every AD 3.x module leaning on
   Deluxe's `ENGINE` files, and before each later release) are in
   `PACKAGES.md` §1.
@@ -886,8 +913,19 @@ modules in our host. In brief:
   module whose screen got none starts on black): the whole monitor for an After Dark module,
   the part its 640×480 frame covers for one with a screen of its own, an
   Intermission module or one whose catalog entry gives a screen (Star
-  Trek, ScreamSavers, Marvel, Johnny Castaway) (INTERACTION.md §8). Respawns,
+  Trek, ScreamSavers, Marvel, Johnny Castaway, Best Shot) (INTERACTION.md §8). Respawns,
   rotations, `/p` and headless runs start black.
+* **Living wallpaper** (since the ninth round, opt-in).
+  `LongAfterDark.exe /wallpaper [/module …] [/random]` plays the modules on
+  the Windows desktop, in a window per monitor that is a child of
+  Explorer's desktop window, behind the icons; `/wallpaper /stop` ends it.
+  No input reaches the hosts or ends the mode, and no game starts; there is
+  no power request, and the hosts pause while a screen saver runs, the
+  session is locked or the display is off. Every host gets `ADWALLPAPER=1`,
+  which a 7th Level scene takes for its living-wallpaper form, and the
+  user's wallpaper (never a screen capture) as its seed, the first host,
+  each rotation's and each respawn's alike (INTERACTION.md §4.7, §8;
+  `scr/README.md`, "Wallpaper mode").
 * **Also.** DOS Shell's early end does not reproduce on the current build;
   the saver has an always-on last-exit log (`logs\saver-last.log`) and a
   5-minute regression. The pe32 lane renders screens under 640×480 on a k×

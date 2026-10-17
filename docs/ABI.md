@@ -2027,6 +2027,249 @@ that is not open. `AddFontResource("WILLY.FON")` — a font its floppy never
 had — returns 0, as Windows did, and its `CreateFont("Willy Beamish
 Dialog")` gets the font mapper's choice.
 
+### 3.16 7th Level's Runtime Player (Take Your Best Shot) — VERIFIED
+
+Take Your Best Shot (7th Level, 1995; Bill Plympton's animation) has no
+modules either. Its scenes are **7th Level resource files**
+(`BESTACT\*.BIN` on the CD: `"7L"` 02 00, a length byte, the product
+`BestShot` NUL-terminated, the scene's title ending at a NUL or at 0xFB
+and a library name), which 7th Level's **Runtime Player** plays:
+`PLYMPTON.EXE` ("Runtime Player 1.2", an NE application, MULTIPLEDATA,
+three segments, CS:IP 2:001A, stack 0x2000, heap 0x1000; window class
+`VIEW_CLASS`) with four libraries of its own — `PLYMU001.DLL` (Utils 1.2:
+memory, huge copies), `PLYMA001.DLL` (Audio 2.2: `waveOut*`, `aux*`),
+`PLYMS001.DLL` (Sprites 1.2: `SetDIBitsToDevice`, `StretchDIBits`,
+`AnimatePalette`; imports `DISPDIB`) and `PLYMR001.DLL` (Resources 1.2: the
+scene file through `mmio*`) — and Microsoft's `DISPDIB.DLL` 3.50 (Video for
+Windows' full-screen DIB display). Its installer put the player and its
+libraries in `c:\7thLevel\BestShot` (its script's `0:`; the default is a
+string in `SETUP.EXE`) and left the scenes on the CD (`1:bestact`). The
+desktop program `BESTSHOT.EXE` started every scene, whatever the role
+(6:00E6). The host does the same (ABI `7thlevel`, the ne16 lane's 7thlevel
+protocol, `host/ne16/lane.hh` "7th Level scenes"): a catalog module is a
+scene, which the lane knows by its first four bytes, and the package's
+`BESTSHOT\PLYMPTON.EXE` (beside the scenes' `BESTACT` folder) runs
+unchanged as the Win16 runtime's task, the host standing in for
+`BESTSHOT.EXE` as the AD3 protocol stands in for After Dark's engine. It is
+the first program the runtime runs that brings DLLs of its own and is
+started by another program.
+
+**How `BESTSHOT.EXE` started a scene** (6:00E6; its callers give the mode):
+
+1. `GlobalAlloc(GMEM_SHARE | GMEM_MOVEABLE | GMEM_ZEROINIT, 0x6C)`, filled:
+
+   | offset | value |
+   |---|---|
+   | +0 WORD | 0x6C, the block's size |
+   | +2 WORD | the mode: 3 the screen saver (its `/s`, 6:068A), 4 the screen saver's preview in its dialog (10:30B8: `cmp [bp+16],1; sbb; add 4`), 1 the living wallpaper and 2 its preview in the dialog (7:04E9: `cmp [bp+14],1; sbb; add 2`), 6 a game (2:06CA), 0 another 7th Level program (its samplers); the player takes 0..6 |
+   | +4..+0x11 | zero (the player reads +4..+0x10 as a rectangle, used only when > 0) |
+   | +0x12 WORD | `[BestShotControls] ScreenSaverMute` is `YES` (a game's `GamesMute`, the living wallpaper's `LivingWallpaperMute`) |
+   | +0x14 WORD | its caller's flag is 0: for the screen saver `ScreenSaverInteractive` is not `YES`; 0 for a game and the living wallpaper |
+   | +0x16 WORD | (mode 3 only) a password is set (`ScreenSaverPasswordOn` and `ScreenSaverPassword`) |
+   | +0x1A | the scene's title, at most 0x4F characters |
+   | +0x6A WORD | `BESTSHOT.EXE`'s UI window (class `"Take Your Best Shot "`, the trailing blank its own; `WS_POPUP \| WS_CLIPCHILDREN`) |
+
+2. `WinExec(<7THLEVEL.INI [Apps] BestShot> + wsprintf(" %s /p%lX", the
+   scene's path, MAKELONG(hBlock, 0)), SW_SHOWMAXIMIZED)`: the player's
+   command tail is ` D:\BESTACT\HEADBANG.BIN /p26`, the handle in upper-case
+   hex. The player (1:72B8, 1:7348) copies its command line with
+   `lstrcpyn`, lower-cases it and reads its switches (`/p<hex>`, `/s` and
+   `/s1`, `/w`, `/e<hex>`); for `/p` (1:6EB0) it `GlobalLock`s the handle, checks
+   `GlobalSize` ≥ 0x6C, +0 ≥ 0x6C and the mode ≤ 6, and copies the block
+   to its DGROUP (DS:2464).
+3. `EnumWindows` for the player's window (its `GWW_HINSTANCE` is
+   `WinExec`'s result), `SendMessage(player, 0x783, BESTSHOT's main window,
+   0)`, and the block freed (6:046F).
+4. To stop it (6:005E): `SendMessage(player, 0x783, 0, 0)`, then
+   `PostMessage(player, WM_CLOSE)`.
+
+**The stand-in.** The protocol allocates the block in guest memory with
+those flags and fills it for mode 3 with the controls the installer left
+(no `[BestShotControls]` keys: sound on, not interactive, no password),
+the title from the scene's header, and at +0x6A one of two windows it makes
+for `BESTSHOT.EXE` (`user16_host_window`: the main one, class and title
+"Take Your Best Shot", and the UI; no instance, no window procedure — what
+is sent to them returns 0). The player is loaded as the task with the tail
+above and `nCmdShow` `SW_SHOWMAXIMIZED` (it shows its window with
+`SW_SHOW` whatever it gets). `WinExec` returned once the new task first
+yielded, at the player's first message call, and the 0x783 send is made
+there (`user16_set_receive_hook`: another task's send, received inside
+`PeekMessage`/`GetMessage`/`WaitMessage` as Win16 delivered it). Measured:
+the player's window exists by then, and the send returns 0. One task,
+never a second. `protocol.hh` `seventh_run_block` is the one place a run's
+mode is decided.
+
+**The player and its libraries.** The loader resolves the player's
+implicit imports from its folder (the guest's `C:\7THLEVEL\BESTSHOT`, the
+current directory): `PLYMU001`, `PLYMA001`, `DISPDIB`, `PLYMS001`,
+`PLYMR001`, each LibEntry run in that order before the task starts
+(`DISPDIB`'s returns 0x1A00, the others 1). After the task exits each
+library's `WEP(WEP_FREE_DLL)` runs as its last reference goes (`PLYMS001`,
+`DISPDIB`, `PLYMR001`, `PLYMA001`, `PLYMU001`; each returns 1) — Windows
+3.1's loader did; the runtime does it only when the protocol asks
+(`ModuleTable16::set_call_wep`), so every other module runs as before.
+**DISPDIB is loaded but never called**: `PLYMS001` calls
+`DISPLAYDIB`/`DISPLAYDIBEX` only in its full-screen mode, which its export
+65 switches on (DS:26), and `PLYMPTON.EXE` does not import export 65; so
+DISPDIB's `Death`/`Resurrection`, `__A000H`, `InterruptRegister` and
+`LockCurrentTask` are never reached, and the sprite library draws through
+GDI.
+
+**The task's start** is Johnny Castaway's (§3.15): Microsoft C's start at
+2:001A, SS:SP 0047:4670 (stack 8192, heap 4096), `InitTask` with the
+command line at PSP:0082, `WaitEvent`, `InitApp`. That command line must be
+a C string, as Windows 3.1's `InitTask` handed it: the runtime's `InitTask`
+turns the tail's closing CR into its NUL. With the CR there the hex after
+`/p` ended on a character that is no digit, `1:6BF8` returned 0 and the
+player never read its block — every run used the player's own defaults. The player and its
+libraries read `7THLEVEL.INI` `[utils] DebugStr, Pentium`, `[audio]
+WaveFormatMask, ProfileCD, DisableWaveVolume, MaxWaveBuffers`, `[Take Your
+Best Shot] AltTab, MaxJoySticks, Mode640, LoMem` and a game's own section
+(Skeet's `[BestShot.Skeet] SKILL`); none is set, so each takes its default.
+It weighs memory (1:73B2): `MemManInfo`'s free pages × page size and
+`GetFreeSpace(0)` (less 1 MB with a swap file) against 2.3 MB (1.5 MB in
+other modes) — below that "Not enough memory to run program." and the end —
+and below 3.4 MB plays in its low-memory mode. Here `MemManInfo` describes
+the arena (physical memory, no swap file) and both are far above.
+`OpenDriver("joystick")` finds no driver (with one it would read
+`SYSTEM.INI [joystick.drv] joycal0/1` and send the calibration), and
+`joySetCapture` answers `JOYERR_UNPLUGGED` for sticks 0 and 1, so it plays
+without a joystick.
+
+**The window and frames.** `CreateWindow("VIEW_CLASS", …, WS_POPUP |
+WS_CLIPCHILDREN | WS_MAXIMIZE, CW_USEDEFAULT…)` — hidden, the class without
+a background brush —, the scene loaded, then `ShowWindow(SW_SHOW)` and
+`UpdateWindow`: Windows invalidated a window that appears, so `WM_PAINT`
+came, and `VIEW_PROC`'s handler (`BeginPaint`, `EndPaint`, the sprite
+library's full redraw) paints the whole screen with the scene's backdrop by
+frame 2. The runtime's USER does the same for an application task's window
+(`ShowWindow`). Its loop is `PeekMessage(PM_REMOVE)`,
+`TranslateMessage`/`DispatchMessage` and `timeGetTime` (about 520 a frame;
+never a wait): every frame ends at its deadline inside an API call.
+Drawing is `SetDIBitsToDevice` to its window and `AnimatePalette`. The
+screen is 640×480: `Mode640`'s default is `SM_CXSCREEN` ≤ 640 (1:751C),
+and at 800×600 or 1024×768 the scenes draw their sprites at the same size,
+the games' menus in the middle of a black screen. Nothing reads the screen
+back in this mode: the screen-capture routine (1:01EE → 1:08BC:
+`GetDC(NULL)`, `BitBlt` into a compatible bitmap, `GetDIBits`) is not
+reached, and the games' `GetDIBits` are `DrawText` into memory bitmaps
+(1:8E37). The desktop seed (`ADSEEDIMG`) is painted over at that first
+`WM_PAINT`.
+
+**Input.** In the saver's mode none reaches the player (the host's saver
+ends the run on input itself); under Caps Lock see below. `SetCursorPos`, `ShowCursor`, `SetCapture`
+and `ClipCursor` are emulated state only; the host's cursor never moves.
+
+**The end.** At shutdown the protocol does what 6:005E did: 0x783 with 0
+(received at the player's next message call), `WM_CLOSE` posted; the task
+resumes until it exits — measured: one resumption, INT 21h AH=4Ch with
+code 0, then the five `WEP`s. A player that ends itself during the run
+stops it with its message box's text (exit 1): before `mmioOpen` existed,
+"Can't open file 'rebound.bin'." and then "Not enough memory to run
+program." did, at frame 0.
+
+**Sound.** `PLYMA001` asks `aux*` and `waveOutGetDevCaps` at its
+LibEntry, opens `waveOut` when a scene first plays, asks `waveOutGetID`
+and streams eight buffers. With sound on it plays through the engine:
+captured in the saver's mode (60 s, three times byte-identical), every
+scene makes sound within the minute, most from its first seconds, Face
+Off, Bug-eyed and Get A Head after about half a minute (`AUDIO.md` §10.11). With
+sound off the machine has **no wave device** (the protocol sets
+`Runtime16Options::sound_device` from the engine): the silent device the
+other protocols keep never completes a `waveOutWrite`, and `PLYMA001`
+waits for its first buffer's `WHDR_DONE` in a loop without an API call
+(1:1887), which stopped the run as hung. No MIDI, CD audio or MCI.
+
+**The disk and its INI.** `C:\7THLEVEL\BESTSHOT` is the package's
+`BESTSHOT` folder (the current directory) under a copy-on-write layer;
+`D:\BESTACT` is the scene's folder, read-only as a CD; `C:\WINDOWS` holds
+`7THLEVEL.INI` as `SETUP.EXE` wrote it (its script, resource type 258 id
+257; `0:` is `C:\7THLEVEL\BESTSHOT\`, `1:` `D:\`, `2:` the Windows
+directory): `[BestShot] Path`, `[Apps] BestShot=…\plympton.exe`, `[Icons]`,
+`[BestShotPaths]` (`DeadWallpaperPath`, `NoisyBitsPath`,
+`KeyboardSoundsPath`, `BestShotPath`, `BestShotBigPath`), `[Games]` and
+`[Living Wallpapers]`/`[Screen Savers]` (`D:\bestact\<scene>.bin=1`), and
+`WIN.INI [Desktop] WallPaper=(None)`. The player opens the scene by the
+path on its command line, lower-cased (`D:\bestact\…`), through `mmioOpen`.
+In the saver's mode it writes nothing (with `ADSTATE` the state folder
+stays empty).
+
+**The scenes in the saver's mode** (block read, mode 3): the head scenes
+(About Face, B-flat, Get A Head, Headbanger, Heads Up, High Voltage, Knock
+Off, Pug Nose, Rebound, Screeech, A Shot In The Dark) bounce Plympton's
+heads over a black screen, each with gags of its own (Heads Up's and High
+Voltage's bursts, A Shot In The Dark's sparks), Rebound's falling and
+bouncing; Bug-eyed and Face Off show a man in a suit walking about a dark
+brown backdrop and pulling faces; Skeet plays its skeet shoot by itself,
+the score counting; the three games (Head Shot, Hot Shot, Line Shot) play
+their demonstration from the first second (a wall of heads to knock out, a
+two-paddle game with a head, a baseball diamond). Every scene: 900 frames
+twice identical, exit 0, no unimplemented call, no fault. (Before the
+`InitTask` fix above the block was never read and the games sat on their
+menu for a minute first.)
+
+**The games, the interactive saver and the living wallpaper.**
+`seventh_run_block` decides a run's block from the environment and Caps
+Lock:
+
+| the run | mode | +0x14 | what the player does |
+|---|---|---|---|
+| the saver (`/s`, `/p`, `/window`), Caps Lock off | 3 | 1 | its saver window procedure (1:76E6) closes on a mouse move, a key or a click and hides the cursor; it gets no input here |
+| Caps Lock on, a game (`HEADSHOT`, `HOTSHOT`, `LINESHOT`: the installer's `[Games]`, by file name) | 6 | 0 | the game's menu; "play" starts it; the mouse plays (no joystick) |
+| Caps Lock on, another scene | 3 | 0 | the interactive screen saver (`ScreenSaverInteractive=YES`): nothing closes it but a system key, the cursor shows, clicks reach the scene |
+| `ADWALLPAPER=1` (the saver's `/wallpaper`), whatever Caps Lock says | 1 | 0 | the living wallpaper |
+
+Mode 4 is not used: it is only the dialog's preview (the same window
+procedure as mode 3). Mode 2 is the living wallpaper's preview (topmost,
+closed by a system key).
+
+*Caps Lock.* From the `CAPS 1` line on (or `ADCAPS=1` at the start) the
+lane reports the run interactive (`ADWS_INTERACTIVE`, source 2;
+`Protocol16::plays`) and eats every input line, so the saver neither ends
+nor rotates; `ADWS_CURSOR` while the player's `ShowCursor` count is not
+negative (it calls `ShowCursor(TRUE)`). The player running is then
+stopped as 6:005E stopped one — at its next message call 0x783 with 0 is
+sent and `WM_CLOSE` posted; it destroys its window and exits — and the
+host frees what the task left as Windows did when a task ended
+(`user16_end_task`: its windows, classes, timers, hooks and queued
+messages; the player and its libraries with their `WEP`s; every guest
+block made since it started, the old block among them), then starts it
+again with the new block (one frame or so of black). `CAPS 0` does the
+same back to mode 3, the status not interactive at once. Keys and the
+mouse go to the player's window while it plays
+(`user16_set_app_input`: a key to the focus window, else the active one,
+else its shown top-level window; a mouse message to the capture window,
+else the window under the cursor, in its client coordinates); the
+cursor calls stay emulated (`SetCursorPos`, `ClipCursor` never touch the
+host's cursor). Measured: in Head Shot, Hot Shot and Line Shot a click on
+the menu's "play" starts the game and clicks and moves play it (Head
+Shot's score counts, Line Shot's visitors score); 10 of the 14 other
+scenes visibly answer clicks in the interactive saver (Skeet shoots at
+once), while B-flat, Knock Off, Pug Nose and A Shot In The Dark showed and
+sounded no different for 30 random clicks.
+
+*A game's end.* In modes 0 and 6 the player at its end (Shift+Esc, its
+menu's "exit") posts `WM_CLOSE` to +0x6A's window and `WinExec`s that
+window's module (1:267A; the stand-in has no instance, so nothing runs:
+"refused", 2). `BESTSHOT.EXE` had its window back; here the run goes back
+to the screen saver (mode 3), not interactive and not a wake, until Caps
+Lock goes off and on again, which starts a new game.
+
+*The living wallpaper* (mode 1): the window's title becomes "7th Level
+Living Wall Paper" (1:6D79), its procedure 1:ADE2 keeps it at the bottom
+of the z-order (`SetWindowPos(HWND_BOTTOM)` at each `WM_PAINT` and
+`WM_WINDOWPOSCHANGED`), a double click asks the desktop for the task list,
+and it closes another living wallpaper (`EnumWindows`, 1:AD52). The player
+does not read `WIN.INI`'s `WallPaper` (those strings are
+`BESTSHOT.EXE`'s, which deleted the key after starting one), and no scene
+reached its screen capture in 600 frames: its first `WM_PAINT` covers the
+whole screen with the scene's backdrop, so the desktop seed
+(`ADSEEDIMG`, the user's wallpaper) is seen at frame 0 only and the
+characters run on the scene's black (Bug-eyed's and Face Off's dark brown)
+— the wallpaper the user saw under Windows 3.1 too. No input ever reaches
+it. All 17 scenes: 900 frames twice identical, exit 0, no unimplemented
+call, no fault.
+
 ## 4. Surprises (all VERIFIED unless marked)
 
 * **Two clocks, no pacing.** The 1996 host hammers DRAWFRAME at idle

@@ -3,7 +3,7 @@
 Puts the original Windows screen saver modules where the hosts read them
 (DESIGN.md §6, §7; the full specification is `docs/PACKAGES.md`), and keeps
 each release's box cover (DESIGN.md §9, `docs/COVERS.md` §2). It is Long
-After Dark's importer, and it knows twenty releases, the *packages* of its
+After Dark's importer, and it knows twenty-one releases, the *packages* of its
 built-in registry (`packages.h`): ten of Berkeley Systems' After Dark, the
 oldest being Star Trek: The Screen Saver (1992, After Dark 2.0b) and the
 latest added Star Trek: The Next Generation Screen Saver (1994, After Dark
@@ -15,9 +15,10 @@ Entertainment (1994), Delrina's Intermission 4.0 itself (1993), and
 Delrina's own collections for it, the Opus 'n Bill Screen Saver (1993),
 Opus 'n Bill: On the Road Again! (1994), The Flintstones Screen Saver
 Collection, The Far Side Screen Saver Collection and Scott Adams' Dilbert
-Screen Saver Collection (all three 1994); and Sierra On-Line's Screen
+Screen Saver Collection (all three 1994); Sierra On-Line's Screen
 Antics: Johnny Castaway (1992), a Windows 3.1 screen-saver program of its
-own.
+own; and 7th Level's Take Your Best Shot (1995), 17 scenes of 7th Level's
+Runtime Player, which the importer installs beside them.
 
 | id | Release | Medium | Recipe | Installs to (`<win>` = `<assets root>\win`) | Modules | Internet Archive copy |
 |---|---|---|---|---|---|---|
@@ -41,6 +42,7 @@ own.
 | `opusroad` | Opus 'n Bill: On the Road Again! | four 1.44 MB floppies, Delrina's Intermission Installer | `intermission` | `packages\opusroad\{SAVER,ENGINE}` | 16 | a ZIP of the install files, in one folder, 4.4 MB |
 | `flintstones` | The Flintstones Screen Saver Collection | three 1.44 MB floppies, Delrina's Intermission Installer; two builds (June and May 1994) | `intermission` | `packages\flintstones\{SAVER,ENGINE}` | 15 (the May build: 9) | a ZIP of each install disk's files, inside a shareware collection's tar of 129.3 MB |
 | `intermission` | Intermission 4.0 | three 1.44 MB floppies (FAT12), Delrina's Intermission Installer | `intermission` | `packages\intermission\{SAVER,ENGINE}` | 54 | a ZIP of the three floppy images, 3.3 MB |
+| `bestshot` | Take Your Best Shot | CD (ISO-9660), 7th Level's Setup: plain files, the scenes left on the CD | `cdcopy` | `packages\bestshot\{BESTACT,BESTSHOT}` (no `ENGINE`) | 17 | the CD image, 89.1 MB |
 
 ```
 adimport --image <image> [--image <image2> …] | --iso <image> | --from <drive or folder>
@@ -192,6 +194,7 @@ another ZIP fetched whole, as below; the twenty releases' last four on
 | `opusroad` | `OpusNBill_OnTheRoadAgain/Opus n Bill - On the Road Again.zip` (the four floppies' files, all in one folder; the user's copy) | the same name | 4621603 | `ad6023ba…` | zip (a known image) |
 | `flintstones` | `ibm-wgam-wbiz-collection/ibm-wgam-wbiz-collection%2Fwgam0210-0219.zip/wgam0219.tar` (a 1994 shareware collection's tar, served from inside the item's ZIP), and out of it `wgam0219/FLINTST1.ZIP` … `FLINTST3.ZIP` (a bulletin-board copy of the June 1994 build's three floppies, one ZIP per disk; the only intact copy online) | `wgam0219.tar`, then `FLINTST1.ZIP` … `FLINTST3.ZIP` beside it | 135624192, holding 1253065 + 1218632 + 949191 | `2f8764b9…`, holding `a53599e3…` + `71a588d1…` + `d43fa04c…` | zip, three members of a tar (known images) |
 | `intermission` | `intermission4.0/Intermission 4.0.zip` (the three floppy images, all in one folder) | the same name | 3419502 | `983b8d35…` | image (a known ZIP of the floppy images, read as those images) |
+| `bestshot` | `takeyourbestshot/BESTSHOT.iso` (the CD) | the same name | 93456384 | `e0df0601…` | image |
 
 * **Disc images** (`kind` image): the md5 is one of the package's known
   images, so the import is exactly an `--image` import of that file:
@@ -516,6 +519,15 @@ same way, from memory (`FatImage` over the member's bytes).
      (`is1_fingerprint`). No AD 3.x install has an `INSTALL.EX$`, and the
      floppy has none of the `ad3zip` archives, so neither is taken for the
      other.
+   * `cdcopy` packages (Take Your Best Shot): the release's own files side
+     by side, by their paths from the source's root
+     (`Package::required_archives`: `BESTSHOT\BESTSAVR.SCR`,
+     `BESTSHOT\BESTSHOT.EXE`, `BESTSHOT\PLYMPTON.EXE`,
+     `BESTACT\HEADSHOT.BIN`), on the CD, its image, or a folder or ZIP of
+     its files. Nothing is read (`cdcopy_fingerprint`): 7th Level's setup
+     and its player are on its other CDs too, never these programs and
+     scenes together. Best Shot without its scenes, or another 7th Level
+     disc, matches nothing.
 3. `--package <id>` restricts step 2 to that package and refuses a source
    that is something else.
 
@@ -797,6 +809,23 @@ opened (I5): never the installer (`SETUP.EXE`, `INSTALL.EX$`,
 `SLOGO.BMP`), or the floppy's own `RESOURCE.001`, a 35-byte placeholder
 for the file `RESOURCE.00$` expands to.
 
+**`cdcopy`** reproduces the file part of what 7th Level's Setup did for
+Take Your Best Shot: its script (`setup.inf`, a resource of `SETUP.EXE`)
+copied the player `PLYMPTON.EXE` and its libraries `PLYMA001.DLL`,
+`PLYMR001.DLL`, `PLYMS001.DLL`, `PLYMU001.DLL` and `DISPDIB.DLL` from the
+CD's `BESTSHOT` folder to `C:\7thLevel\BestShot`, and left the scenes in
+the CD's `BESTACT` for the program to play from there. The recipe is one
+table of loose files (`Package::loose_files`), each copied as it is under
+its path on the CD: the six of `BESTSHOT` and the 17 scenes of `BESTACT`.
+Every file the table reads must be there, else 2. It installs 23 files,
+3,549,786 bytes, and nothing else: `7THLEVEL.INI`, which the setup wrote
+in the Windows folder, is the lane's to give the player. Only the table's
+files are ever opened (I5): never the setup, the desktop program
+`BESTSHOT.EXE` or its saver stub `BESTSAVR.SCR` (whose presence names the
+release), the program's UI scene `BESTACT\BESTSHOT.BIN` and its big edition
+in `BESTBIG`, its sound hook `BESTSFX.DLL`, or the CD's samplers, icons,
+joystick driver, sounds and wallpapers.
+
 **The archive password** is never stored: it is derived from `INSTALL.INS`
 at import time (§8.4). Candidates are the script's strings of 4–32 printable
 bytes — its own length-prefixed strings (a 16-bit length, then the bytes:
@@ -870,7 +899,12 @@ program and its data) has only its module folder: I3 instead refuses any
 the 16-bit lane take it for an After Dark package, and the program's
 `SCRANTIC.INI` is its own to write). Johnny Castaway's `required` files are
 `SCRANTIC\SCRANTIC.SCR`, `RESOURCE.MAP` and `RESOURCE.001` (its string
-1001: it "can not locate the necessary data files" without them).
+1001: it "can not locate the necessary data files" without them). A
+`cdcopy` package (7th Level scenes and their player) has its scenes'
+folder and the player's: I3 instead wants `BESTSHOT\PLYMPTON.EXE`, where
+the 16-bit lane finds the player, and refuses any `ENGINE` or `WINDOWS`
+folder. Take Your Best Shot's `required` files are the player, its five
+libraries and every one of the 17 scenes.
 
 ## Destination and atomicity
 
@@ -1138,6 +1172,23 @@ are all Windows' own), and `screen` is the registry's (`"640x480"`). A
 library that exports `SCREENSAVERPROC` is left out, logged ("a library
 that exports SCREENSAVERPROC, not a screen-saver program").
 
+**7th Level scenes** (Take Your Best Shot's `BESTACT\*.BIN`; the module
+folders of a `cdcopy` package list `*.BIN`, no other package's do): a file
+that starts with 7th Level's resource magic `37 4C 02 00` ("7L", the
+ne16 lane's rule), data that the package's Runtime Player
+(`BESTSHOT\PLYMPTON.EXE`) plays. Lane `ne16`, `abi` `"7thlevel"`, `entry`
+`""` (the player is a program, run with the scene on its command line),
+`about` `""`, no controls, no `needs`, and `screen` the registry's
+(`"640x480"`). Its name is the title in its header, read strictly (byte 4
+the header's length, then the product's name, a NUL, the title, and a NUL
+or `0xFB` with a library's name and a NUL), else the registry's name for
+the file (a name override, which never replaces a title), else the file
+stem. A file named for the product its header names (`BESTSHOT.BIN`,
+product `BestShot`: the desktop program's own UI) is no scene: it is left
+out, logged. A scene the registry lists as a game (`Package::games`, the
+installer's `[Games]`: Head Shot, Hot Shot, Line Shot) gets `"game": true`
+as its last field, after `screen`; no other entry has the field.
+
 An NE file is told apart exactly as the ne16 lane's `detect_kind` tells it
 (`host/ne16/package.cc`), so the catalog lists it as the lane will run it:
 by its exports' names (without case; a name needs no entry-table entry, as
@@ -1175,7 +1226,9 @@ Flintstones - " prefixes, `SAVER/DTOAST.ASA` → "Death Toasters",
 `SAVER/FM-MOBIL.IMQ` → "The Flintmobile", `SAVER/MACHINE.MSV` → "The
 Machine (Palette)", and Intermission 4.0's FLI animations by their file names,
 "Einstein" and "Flying"; every On the Road Again module, as its installer's
-`PACKING.LST` names it, `SAVER/BUTTWIPE.IMQ` → "The Butt Boys"): that is
+`PACKING.LST` names it, `SAVER/BUTTWIPE.IMQ` → "The Butt Boys"; every
+`bestshot` scene, its header's own title, for a header that can't be read,
+`BESTACT/SHOTINDR.BIN` → "A Shot In The Dark"): that is
 `moduleName`.
 `displayName` is unique within a lane, case-insensitively: the first module
 with a name keeps it, a later one becomes `name (<short title>)`, and if
@@ -1237,7 +1290,7 @@ too. Every catalog write checks the covers: a missing, damaged or stale tile
 whose picture is sound is rendered again, and a damaged `cover.json` lists as
 generated (logged) until `--refresh-covers` repairs it. The generator is
 `adimport 1.3` (1.2 was the covers; 1.3 adds `abi`, `screen`, the
-controls' `host` and the `intermission` and `ad2kwaj` recipes; the catalog
+controls' `host`, `game` and the `intermission` and `ad2kwaj` recipes; the catalog
 `version` stays 1, and every entry of the releases before them is as it
 was);
 the layout matches Python's
@@ -1269,16 +1322,20 @@ November 1993 build's own 16), `opusroad` 16 (12 ASA, 3 IMQ, 1 IMX),
 `flintstones` 15 (3 ASA, 8 IMQ, 4 IMX; the May 1994 build 9) and
 `intermission` 54 (43 IMX, 6 ASA, 1 IMQ, 2 FLI, 1 MRF, 1 MSV), all `ne16`,
 Intermission, one button each (and 36 of Intermission 4.0's the Speed
-control after it): 429 with all twenty installed, 232 over the
-first seven, 73 of them `sameAs` an earlier entry (swse, startrek and the
-thirteen after them add none). Four of the twenty releases' new names meet
-older ones in the `ne16` lane and take the short title: "Rat Race (On the
-Road Again)", "Logo (Flintstones)", "Einstein (Intermission)" and "Tunnel
-(Intermission)". The `packages` list, oldest first, reads `startrek`
+control after it), and `bestshot` 17 (all `ne16`, 7th Level scenes, `abi`
+`"7thlevel"`, each with `screen`, no controls, 3 with `game`): 446 with
+all twenty-one installed, 232 over the first seven, 73 of them `sameAs` an
+earlier entry (swse, startrek and the fourteen after them add none). Four
+of the twenty releases' new names meet older ones in the `ne16` lane and
+take the short title: "Rat Race (On the Road Again)", "Logo
+(Flintstones)", "Einstein (Intermission)" and "Tunnel (Intermission)";
+and so does Best Shot's Rebound, "Rebound (Best Shot)", after After
+Dark's own. The `packages` list, oldest first, reads `startrek`
 (1992-11), `castaway` (1992-12), `opus` (1993-09), `intermission`
 (1993-11), `marvel`, `flintstones` (1994-05), `farside`, `simpsons`,
-`swse`, `opusroad` (1994-09), `snoopy`, `dilbert`, `tng`, `looney`,
-`screams`, `ad32`, `tt`, `disney`, `deluxe`, `ad10`.
+`swse`, `opusroad` (1994-09), `snoopy`, `dilbert`, `tng`, `bestshot`
+(1995-02), `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`,
+`ad10`.
 
 ## Covers
 
@@ -1313,6 +1370,7 @@ dialog's release strip shows them). The tile shows the first of:
 | `opusroad` | the Internet Archive's scan of the box front, in the item of the release's ZIP (`OpusNBill_OnTheRoadAgain/OnB-OtRA-Box.jpg`, no crop); nothing on the disks (the installer's picture is SZDD-compressed), so an offline import shows the generated cover | 1256×1593 |
 | `flintstones` | none: no box, label or manual scan was found online, and the installer's picture is SZDD-compressed in both builds, so the cover is the generated one | — |
 | `intermission` | the installer's picture beside its pages on disk 1 (`INSTALL.BMP`, Intermission's logo, art `panel`, "Setup art"); no box scan was found online (the item of the floppy images holds a screenshot) | 100×150 |
+| `bestshot` | the box front in the Internet Archive's item of the CD (`takeyourbestshot/bestshot.jpg`); nothing on the CD (its pictures are the desktop program's wallpapers and icons) | 432×547 |
 
 The box fronts are small (a tile is never shown larger than 160×200 px),
 but they are the retail boxes; a disc label or an installer splash is what
@@ -1332,7 +1390,8 @@ Entertainment's to Lucasfilm and both Star Trek releases' to Paramount; the Loon
 Tunes' to Warner Bros., the Disney Collection's to Disney and Marvel's to
 Marvel (with Berkeley's), Johnny Castaway's to Sierra On-Line and
 Dynamix, and the Opus 'n Bill releases' to Berkeley Breathed and Delrina,
-Intermission's to Delrina: each is fetched onto the user's machine at
+Intermission's to Delrina, Take Your Best Shot's to 7th Level and Bill
+Plympton: each is fetched onto the user's machine at
 import time, or read from the user's own disks, and never bundled.
 
 **During an import** a `cover` phase comes between `verify` and `finalize`
@@ -1610,7 +1669,12 @@ board's ZIP whose notes differ from disk to disk (never compared, as they
 are never read), Intermission 4.0's images in a folder of a ZIP, the
 catalog's ASA, IMQ, IMX and data-file entries, the May 1994 Flintstones'
 damaged `CARS.ASA` among the decoys, two of the four in one folder
-(ambiguous) and an `*.FLI` without Autodesk's magic left out; a
+(ambiguous) and an `*.FLI` without Autodesk's magic left out; Take Your
+Best Shot as a made-up CD, with another 7th Level disc, Best Shot without
+its scenes and Best Shot missing a scene as decoys, its desktop program,
+saver stub and UI scene locked and never opened, and its scenes' 7L
+headers read strictly (the title, the registry's name for a header without
+one, `BESTSHOT.BIN` left out, `game` last); a
 ScreamSavers source never taken for After Dark 3.2 nor 3.2 for it, disk 1
 alone (ScreamSavers': "needs every install disk"), I4 over `*_SOUND.DLL`,
 the Disney names and ScreamSavers' `screen`; Marvel Comics Screen Posters
@@ -1784,10 +1848,11 @@ or copied in first, so what can be verified locally is not fetched again
 (`AD_E2E_NO_SEED=1` fetches everything); the importer still checks its md5.
 Each import must exit 0 with kind `download`, the expected `verified`,
 nothing missing, every file a manifest match and 84/46/44/13/15/14/16/1/8/12/15/16/14/16
-modules (and 13/1/16/16/15/54 for the Next Generation, Johnny Castaway and
-the twenty releases' last four: the Opus 'n Bill Screen Saver's disk ZIPs,
-the Flintstones' taken out of a tar, On the Road Again's ZIP of one folder
-and Intermission 4.0's ZIP of its images, each verified `image`). Every copy with other bytes than a package's first (another file
+modules (and 13/1/16/16/15/54/17 for the Next Generation, Johnny Castaway,
+the twenty releases' last four and Take Your Best Shot: the Opus 'n Bill
+Screen Saver's disk ZIPs, the Flintstones' taken out of a tar, On the Road
+Again's ZIP of one folder, Intermission 4.0's ZIP of its images and Best
+Shot's CD image, each verified `image`). Every copy with other bytes than a package's first (another file
 name: the Simpsons' second ZIP, swse's Redump BIN and flat ZIP, Star Trek's
 second pair of images, Marvel's second ZIP, Dilbert's four disk ZIPs) is fetched with `--url`/`--md5` — a floppy set's images,
 or a set of disk ZIPs,
@@ -1881,7 +1946,12 @@ Intermission 4.0's `SAVER` too; no reader, `AD_SND`, bulletin-board note
 or program installed; ASA, IMQ, IMX and data-file entries as the catalog
 writes them, the four repeated names with their short titles) and checks
 the merged catalog of all twenty: 429 modules, 73 `sameAs`, the releases
-oldest first.
+oldest first. With Take Your Best Shot it also finds `BESTSHOT.iso` (put
+`research/bestshot/dl` in `AD_SOURCE_ISO_DIR`), imports it (23 files,
+`BESTACT` 17 and `BESTSHOT` 6; every entry a 7th Level scene named by its
+own title, `abi` `"7thlevel"`, `screen` `"640x480"`, no controls, `game`
+on Head Shot, Hot Shot and Line Shot alone) and checks the merged catalog
+of all twenty-one: 446 modules, still 73 `sameAs`.
 
 **Before a release** (these stay opt-in: they need the real images, the
 network or both, and take minutes), in a Release build directory:

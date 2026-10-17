@@ -587,6 +587,83 @@ Measured on `SCRANTIC.SCR`: 900 and 6,000 frames twice identical, exit 0,
 baselines (202 After Dark modules × A/C/S, Star Wars 28/28, Star Trek
 32/32) at 0 differences with these changes.
 
+## Tasks with libraries of their own: 7th Level's Runtime Player (Take Your Best Shot)
+
+Take Your Best Shot's scenes are data that 7th Level's Runtime Player plays:
+`PLYMPTON.EXE`, a Microsoft C application, with four libraries of its own
+(`PLYMU001`, `PLYMA001`, `PLYMS001`, `PLYMR001`) and Microsoft's
+`DISPDIB.DLL` (`docs/ABI.md` §3.16; the ne16 lane's 7thlevel protocol,
+`ne16/lane.hh` "7th Level scenes"). The task above runs it unchanged; what
+it took beyond Johnny Castaway:
+
+* **Its own libraries**: `load_task` resolves the application's implicit
+  imports like a DLL's, from the guest's directories and then the lane's
+  search directory (the player's folder); each library's LibEntry runs
+  before the task starts. `ModuleTable16::set_call_wep(true)` (off by
+  default, so every other module runs as it did) calls a library's
+  exported `WEP(WEP_FREE_DLL)` with DS its DGROUP when its last reference
+  goes, before its segments are freed, as Windows 3.1's KERNEL did.
+* **Started by another program**: `set_task_cmd_show` (WinExec's
+  `nCmdShow`); `user16_host_window` (a top-level window of a program the
+  host stands in for: class, title, style, no instance, no window
+  procedure — a send to it returns 0, a post waits in the queue);
+  `user16_send_message` (SendMessage from the host: the window procedure
+  runs now) and `user16_set_receive_hook` (another task's sends, which a
+  Win16 task received inside its next `GetMessage`, `PeekMessage` or
+  `WaitMessage`: the hook runs there, before the queue is looked at, never
+  re-entered).
+* **USER**: `ShowWindow` makes an application task's window that appears
+  all invalid (Windows did, for any window; the task mode only, so the
+  module protocols are unchanged), so `UpdateWindow` or `GetMessage` brings
+  its `WM_PAINT` — the player creates its window hidden and paints its
+  scene at that `WM_PAINT`. `SetCursorPos` (USER.70: the emulated cursor,
+  kept inside `ClipCursor`'s rectangle or the screen; `GetCursorPos`
+  reports it until the next input line; the host's cursor never moves),
+  `SetClassWord` (USER.130), `OpenDriver` (USER.252: NULL — no installable
+  driver loads; Windows 3.1 answered NULL for a name `SYSTEM.INI [drivers]`
+  did not list, and the player then skips its joystick calibration),
+  `SendDriverMessage` and `CloseDriver` (0).
+* **MMSYSTEM**: multimedia file I/O over DOS files (`mmioOpen`, `mmioClose`,
+  `mmioRead`, `mmioWrite`, `mmioSeek`: a bare name found as `OpenFile`
+  finds it, `MMIO_CREATE`, `MMIO_EXIST`, `MMIO_DELETE`, `MMIOERR_CANNOTOPEN`
+  in `wErrorRet`); no joystick (`joySetCapture`, `joyGetPos`:
+  `JOYERR_UNPLUGGED`; `joyReleaseCapture` 0; `joyGetNumDevs` 0);
+  `waveOutGetID` (sound on, with the engine's other `waveOut` calls).
+* **TOOLHELP**: `MemManInfo` (the arena in 4 KB pages: its size the total,
+  its free bytes the free pages, its largest free block, no swap file).
+* **GDI**: `GetViewportOrg`, `DPtoLP`. **Not reached** (imported by
+  `DISPDIB`, which the player loads and never calls): `Death`,
+  `Resurrection`, `LockCurrentTask`, `InterruptRegister`/`UnRegister`,
+  `OpenClipboard`/`CloseClipboard`; by `PLYMU001`: `GlobalDOSAlloc`/`Free`.
+* **Seeds** (`seed_seventh_level`): `7THLEVEL.INI` as `SETUP.EXE` wrote it,
+  its `0:`/`1:`/`2:` prefixes resolved (the install folder, the CD, the
+  Windows directory), the scenes listed under `[Screen Savers]` and
+  `[Living Wallpapers]`, `[Games]` the script's three; `WIN.INI [Desktop]
+  WallPaper=(None)`.
+* **The command line** (all tasks): `InitTask` hands it as a C string, the
+  tail's closing CR made its NUL, as Windows 3.1's did; the player parses
+  `/p<hex>` up to a NUL or a blank, and with the CR it never read its block.
+* **Its games and its living wallpaper** (Caps Lock and `ADWALLPAPER=1`,
+  `docs/ABI.md` §3.16): for an application task only, `CreateWindow` places
+  a top-level window with Win16's `CW_USEDEFAULT` (0x8000) at 0,0 with the
+  screen's size, and a `WS_MAXIMIZE` one over the whole screen;
+  `user16_set_app_input` sends the input messages to the task's windows
+  instead of the saver window (a key to the focus window, else the active
+  one, else its shown top-level window; a mouse message to the capture
+  window, else the window under the cursor, in its client coordinates);
+  `user16_end_task` removes what an ended task left — the windows and
+  classes the caller claims (by instance or procedure), their timers and
+  queued messages, its hooks and its posted messages — so the protocol can
+  free every module (`free_all`, with the WEPs) and the guest blocks made
+  since the player started (`GlobalHeap16::guest_handles`), and start it
+  again; `user16_cursor_shown` (`ShowCursor`'s count) gives the status's
+  cursor.
+
+Measured on the 17 scenes: 900 frames twice identical and 7,200 frames,
+exit 0, 0 unimplemented calls, 0 faults; the census 78–106 functions (sound
+on and off); Johnny Castaway's streams unchanged; the frozen baselines at 0
+differences with these changes.
+
 ## Sound (AUDIO.md §8)
 
 `attach_audio16(rt, engine)` (the lane passes `LaneContext::audio`) decides

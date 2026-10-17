@@ -213,8 +213,9 @@ Long After Dark for Linux
 Long After Dark is a screen saver that runs the original modules of After
 Dark, of LucasArts' Star Wars Screen Entertainment, of Delrina's
 Intermission and its Opus 'n Bill, Flintstones, Far Side and Dilbert
-collections and of Sierra's Johnny Castaway, unchanged, under x86
-emulation. It knows twenty releases, 429 modules:
+collections, of Sierra's Johnny Castaway and of 7th Level's Take Your
+Best Shot, unchanged, under x86 emulation. It knows twenty-one releases,
+446 modules:
 
 id        Release                                      Internet Archive download
 deluxe    After Dark 4.0 Deluxe (1996)                 CD image, 381.7 MB
@@ -242,6 +243,7 @@ flintstones
             Collection (1994)
 intermission
           Intermission 4.0 (1993)                      three floppy images (ZIP), 3.3 MB
+bestshot  Take Your Best Shot (1995)                   CD image, 89.1 MB
 
 Star Trek: The Screen Saver is After Dark 2.0 (version 2.0b) with 16 Star
 Trek modules, and Star Trek: The Next Generation Screen Saver After Dark
@@ -259,7 +261,11 @@ Dark; Snoopy's were made to run in an After Dark already installed, so Long
 After Dark supplies the sound library they found there. Screen Antics:
 Johnny Castaway (Sierra On-Line) is no module of either: it is a Windows 3.1
 screen saver program of its own, which runs unchanged, as Windows 3.1 ran
-it.
+it. Take Your Best Shot (7th Level, with Bill Plympton's animation) is 17
+scenes that were its screen savers and living wallpapers, three of them
+(Head Shot, Hot Shot, Line Shot) arcade games too: they are scenes of 7th
+Level's own Runtime Player, which runs unchanged, standing in for the Best
+Shot program that started them.
 
 No file of any of these releases is included: you import them from your
 own copies (and are responsible for sourcing them legally).
@@ -323,7 +329,7 @@ What you need
        floppies, one folder of every disk's files, or one holding nothing
        but DISK1, DISK2, ... folders).
      - --download: a release's Internet Archive copy, by its id; "all"
-       imports all twenty, one after another (804 MB, those imported
+       imports all twenty-one, one after another (893 MB, those imported
        already too). Downloads resume if interrupted, and each one is
        checked against its published MD5 before it is used.
    The importer works out which release it was given, checks every file
@@ -420,9 +426,11 @@ Updating
 
 Status
 
-   The 429 modules of the twenty releases, with their sound, their Caps
-   Lock games and Final Exam's Num Lock exam. Still being finished, as on
-   Windows:
+   The 446 modules of the twenty-one releases, with their sound, their
+   Caps Lock games and Final Exam's Num Lock exam (Take Your Best Shot's
+   scenes have been run only on Windows so far). The living wallpaper
+   (LongAfterDark.exe /wallpaper) is for Windows only. Still being
+   finished, as on Windows:
      - Speed: each module's pace follows a model of a mid-1990s PC; not
        every module has been compared with the original yet. Marvel's
        poster transitions show at once where the original swept them.
@@ -454,8 +462,9 @@ Long After Dark
 Long After Dark is a screen saver for Windows that runs the original modules
 of After Dark, of LucasArts' Star Wars Screen Entertainment, of Delrina's
 Intermission and its Opus 'n Bill, Flintstones, Far Side and Dilbert
-collections and of Sierra's Johnny Castaway, unchanged, under x86
-emulation. It knows twenty releases, 429 modules:
+collections, of Sierra's Johnny Castaway and of 7th Level's Take Your
+Best Shot, unchanged, under x86 emulation. It knows twenty-one releases,
+446 modules:
 
 id        Release                                      Internet Archive download
 deluxe    After Dark 4.0 Deluxe (1996)                 CD image, 381.7 MB
@@ -483,6 +492,7 @@ flintstones
             Collection (1994)
 intermission
           Intermission 4.0 (1993)                      three floppy images (ZIP), 3.3 MB
+bestshot  Take Your Best Shot (1995)                   CD image, 89.1 MB
 
 Star Trek: The Screen Saver is After Dark 2.0 (version 2.0b) with 16 Star
 Trek modules, and Star Trek: The Next Generation Screen Saver After Dark
@@ -500,7 +510,11 @@ Dark; Snoopy's were made to run in an After Dark already installed, so Long
 After Dark supplies the sound library they found there. Screen Antics:
 Johnny Castaway (Sierra On-Line) is no module of either: it is a Windows 3.1
 screen saver program of its own, which runs unchanged, as Windows 3.1 ran
-it.
+it. Take Your Best Shot (7th Level, with Bill Plympton's animation) is 17
+scenes that were its screen savers and living wallpapers, three of them
+(Head Shot, Hot Shot, Line Shot) arcade games too: they are scenes of 7th
+Level's own Runtime Player, which runs unchanged, standing in for the Best
+Shot program that started them.
 
 No file of any of these releases is included: you import them from your
 own copies (and are responsible for sourcing them legally). Requires 64-bit
@@ -511,7 +525,8 @@ twice). Keep them together: the screen saver, under either name, looks for
 adhostwin.exe and adimport.exe next to itself.
 
   LongAfterDark.scr   the screen saver and its settings window
-  LongAfterDark.exe   the same program, to run it in a window (see 5)
+  LongAfterDark.exe   the same program, to run it in a window or on your
+                      desktop (see 5 and 6)
   adhostwin.exe       the emulator; the screen saver starts one per monitor
   adimport.exe        copies the modules from your discs
 
@@ -530,7 +545,7 @@ adhostwin.exe and adimport.exe next to itself.
      - A drive or folder: the CD itself, or a folder copied from it (for
        floppies, one folder of every disk's files, or one holding nothing
        but DISK1, DISK2, ... folders).
-     - A download from the Internet Archive: the twenty releases with their
+     - A download from the Internet Archive: the twenty-one releases with their
        sizes, plus one entry that fetches every release not imported yet.
        Downloads resume if interrupted, and each one is checked against its
        published MD5 before it is used.
@@ -580,6 +595,12 @@ adhostwin.exe and adimport.exe next to itself.
    bulletin boards' notes and programs beside the files are never opened
    or run.
 
+   Take Your Best Shot verifies as its CD, its ISO image (BESTSHOT.iso,
+   which the download fetches) or a folder copied from the CD. The
+   importer copies 7th Level's player and the 17 scenes, which the CD's
+   setup left on the CD, and never runs the setup or the Best Shot
+   program.
+
    From a command prompt, with the ids above:
      adimport --image "C:\Images\After Dark 3.2.iso"
      adimport --image disk1.img --image disk2.img
@@ -592,7 +613,7 @@ adhostwin.exe and adimport.exe next to itself.
      adimport --download all
      adimport --list-packages
      adimport --remove tt
-   "adimport --download all" imports all twenty, one after another (those
+   "adimport --download all" imports all twenty-one, one after another (those
    imported already too). adimport --help lists every option.
 
 2. Covers
@@ -636,8 +657,9 @@ adhostwin.exe and adimport.exe next to itself.
    choose its posters and "Posters..." to make one a wallpaper, which stays
    inside the emulated PC: your own desktop never changes. The resolution
    applies to the other modules: the Intermission modules, both Star Trek
-   releases', ScreamSavers and Marvel modules, and Johnny Castaway, always
-   get 640x480, scaled up to fit the screen, with bars at the sides on a
+   releases', ScreamSavers and Marvel modules, Johnny Castaway and Best
+   Shot's scenes always get 640x480, scaled up to fit the screen, with bars
+   at the sides on a
    widescreen monitor unless "Stretch to fit the screen" is checked.
 
    "Look: Sharp pixels", at the end of the "Stretch to fit the screen"
@@ -666,9 +688,10 @@ adhostwin.exe and adimport.exe next to itself.
    wheel or moving the mouse ends the screen saver. Caps Lock never does:
    in some modules it changes something or starts a game. While a game is
    playing, press Caps Lock again to stop playing, or Alt to end the screen
-   saver at once. Num Lock starts Star Trek's Final Exam: type the number
-   of your answer; moving the mouse ends the exam and the screen saver.
-   Locking the computer (Win+L) always ends it.
+   saver at once. In Take Your Best Shot's Head Shot, Hot Shot and Line
+   Shot, Caps Lock starts the arcade game. Num Lock starts Star Trek's
+   Final Exam: type the number of your answer; moving the mouse ends the
+   exam and the screen saver. Locking the computer (Win+L) always ends it.
 
 5. Show it in a window (a "be right back" screen in OBS)
 
@@ -702,6 +725,30 @@ adhostwin.exe and adimport.exe next to itself.
    settings); an Application Audio Capture source for the same window puts
    it in the stream.
 
+6. Living wallpaper
+
+   With /wallpaper, LongAfterDark.exe plays the modules on your desktop
+   itself, behind its icons and under every window, in place of your
+   wallpaper, as Take Your Best Shot's living wallpapers did. It is off
+   unless you start it. From PowerShell, in this folder:
+     .\LongAfterDark.exe /wallpaper /random
+     .\LongAfterDark.exe /wallpaper /stop
+   /module and /random mean what they do with /window; with neither it
+   shows what the screen saver would, on each monitor the Monitors setting
+   gives it. /wallpaper /stop ends it, and your wallpaper shows again.
+   Every module starts on a picture of your own wallpaper; Best Shot's
+   scenes play their living-wallpaper form.
+
+   Keys and the mouse never reach the modules, and Caps Lock starts no
+   game. It doesn't keep the display on: the screen saver, the lock and
+   display sleep come as usual, and the modules pause while the screen
+   saver runs, the computer is locked or the display is off. It runs an
+   emulated PC for each monitor all the time, at below-normal priority:
+   that costs processor time and battery life all day, so stop it when
+   that matters. To start it with Windows, put a shortcut to
+   "LongAfterDark.exe" /wallpaper in the folder that Win+R ->
+   shell:startup opens.
+
 Where your files are
 
    Everything is in %LOCALAPPDATA%\LongAfterDark (paste that into Explorer's
@@ -719,7 +766,7 @@ Updating
 
 Status
 
-   429 modules from the twenty releases, with their sound, their Caps Lock
+   446 modules from the twenty-one releases, with their sound, their Caps Lock
    games, Final Exam's Num Lock exam and their own option buttons. Still
    being finished:
      - Speed: each module's pace follows a model of a mid-1990s PC; not

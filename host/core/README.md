@@ -81,12 +81,14 @@ refused stream target · **3** a valid module whose lane is not built into
 this `adhostwin` yet.
 
 **`--capabilities`** prints one line on stdout and exits 0: what this build
-has, e.g. `lanes=pe32,ne16 configure=pe32,ne16 abis=afterdark,intermission,scrnsave
+has, e.g. `lanes=pe32,ne16 configure=pe32,ne16 abis=afterdark,intermission,scrnsave,7thlevel
 status=1 state=1 seed=1 audio=1 numlock=1` (`lanes=` lists the linked lanes,
 `configure=` those whose `Lane::can_configure()` is true, `abis=` the union
 of their `Lane::abis()` in lane order — the module ABIs this build runs:
-`afterdark` (pe32 and ne16), `intermission` and `scrnsave` (ne16: a Windows
-3.1 screen saver's .SCR program, `docs/ABI.md` §3.15), the catalog's
+`afterdark` (pe32 and ne16), `intermission`, `scrnsave` (ne16: a Windows
+3.1 screen saver's .SCR program, `docs/ABI.md` §3.15) and `7thlevel` (ne16:
+a scene of 7th Level's Runtime Player, a 7th Level resource file the probe
+knows by its first bytes, `docs/ABI.md` §3.16), the catalog's
 `"abi"`, absent meaning `afterdark`; `status`, `state`, `seed`, `audio` are
 the core features below; `numlock=1`: the `NUMLOCK` line and `ADNUMLOCK`
 are understood, so a front-end sends Num Lock's toggle as it sends Caps

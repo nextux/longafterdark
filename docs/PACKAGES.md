@@ -1,6 +1,6 @@
 # Long After Dark — packages
 
-How the host imports and runs modules from twenty releases, not just the
+How the host imports and runs modules from twenty-one releases, not just the
 After Dark 4.0 Deluxe CD: ten of Berkeley Systems' After Dark, the oldest
 being Star Trek: The Screen Saver (1992, After Dark 2.0b) and the latest
 added Star Trek: The Next Generation Screen Saver (1994, After Dark 3.0);
@@ -14,21 +14,25 @@ Delrina's Intermission 4.0 itself (1993), and Delrina's own collections
 for it, the Opus 'n Bill Screen Saver (1993), Opus 'n Bill: On the Road
 Again! (1994), The Flintstones Screen Saver Collection, The Far Side Screen
 Saver Collection and Scott Adams' Dilbert Screen Saver Collection (all
-three 1994); and Sierra On-Line's Screen Antics:
+three 1994); Sierra On-Line's Screen Antics:
 Johnny Castaway (1992, made by Dynamix), which is no module of any engine
 but a Windows 3.1 screen-saver program of its own, a `.SCR` built on
-Microsoft's `SCRNSAVE.LIB`. DESIGN.md
+Microsoft's `SCRNSAVE.LIB`; and 7th Level's Take Your Best Shot (1995,
+Bill Plympton's animation), whose 17 scenes are data files of 7th Level's
+own Runtime Player, a Windows 3.1 program that played each one as a
+screen saver, a living wallpaper or a game. DESIGN.md
 §6, §6a and §7 give the contract in brief; this file is the full
 specification and the plan that implements it.
 
-**Status: implemented.** The importer reads all twenty releases (429
+**Status: implemented.** The importer reads all twenty-one releases (446
 catalog modules, 73 of them `sameAs` an earlier entry). The 283 modules of
 the twelve After Dark releases run headless, deterministically, and each
 release also runs on its own; the 145 of the seven Intermission releases
 (Star Wars Screen Entertainment's 14, The Far Side's 14, Dilbert's 16, the
 Opus 'n Bill Screen Saver's 16, On the Road Again's 16, the Flintstones'
 15, Intermission 4.0's 54) are driven by the Intermission protocol of §7.5,
-and Johnny Castaway's one program by the screen-saver protocol of §7.6.
+Johnny Castaway's one program by the screen-saver protocol of §7.6, and
+Take Your Best Shot's 17 scenes by the 7th Level protocol of §7.7.
 This file keeps the
 specification and the plan as they were written, so tables that say
 "today" or "current" describe the host before this work. Star Wars Screen
@@ -66,7 +70,11 @@ and paragraphs, the builds of §2, §3 and §4.3, the one-folder sources,
 the disk sets' notes and the tar download of §5.2 and §8.12, and
 Intermission 4.0's FLI, MRF and MSV forms and its **Speed** control of §6
 and §7.5); there, "before this release" means the sixteen-release host
-(1.4.4).
+(1.4.4). 7th Level's Take Your Best Shot, on one CD installed by 7th
+Level's Setup, was added in a ninth round (the `bestshot` rows and
+paragraphs, the `cdcopy` recipe of §3 and §4.3, the 7th Level scenes and
+the `game` field of §6, and §7.7); there, "before this release" means the
+twenty-release host (1.5.2).
 Where the implementation went further, the component
 READMEs are authoritative: `importer/README.md` (every release can also be
 downloaded from the Internet Archive, and a ZIP of install files, or of a
@@ -91,15 +99,19 @@ installer and its compressed files, the program and its runs;
 `research/jc/`), and about the eighth round's four from one survey of them
 together (Oct 2026: the online copies, among them DiscMaster's index of old
 CDs, the disks and their builds, the modules and their runs, the importer;
-`research/five/`).
-Their artifacts are in `research/win/pkg/<id>/`, `research/jc/` and
-`research/five/`, which
+`research/five/`), and about the ninth round's Take Your Best Shot from a
+survey of its CD (Oct 2026: the online copy, the installer, the program
+that started the scenes and the player that plays them, the scenes and
+their runs; `research/bestshot/`).
+Their artifacts are in `research/win/pkg/<id>/`, `research/jc/`,
+`research/five/` and `research/bestshot/`, which
 are gitignored: extraction scripts, inventories, trial runs, contact
 sheets and disassembly. **No After Dark (Berkeley Systems), LucasArts,
 Paramount, Disney, Warner Bros., Marvel, Image Smith, United Feature
 Syndicate (Peanuts, Dilbert), Binary Software, IMPart, Delrina, Gary
 Larson, FarWorks, Universal Press Syndicate, Scott Adams, United Media,
-Sierra On-Line, Dynamix, Berkeley Breathed or Hanna-Barbera bytes,
+Sierra On-Line, Dynamix, Berkeley Breathed, Hanna-Barbera, 7th Level or
+Bill Plympton bytes,
 pictures, extracted files or disassembly are ever committed.** Manifests
 hold only path, size
 and md5. The ZIP password is derived at import time, never stored (§8.4).
@@ -138,6 +150,8 @@ run.
 | Sources in one folder; disk sets with notes (eighth round) | A ZIP or 7z may hold its install files, or only its `DISK<n>` folders, in one folder that holds everything, which is then read as its root, and a ZIP's floppy images may sit in any folder, as a 7z's could: the Internet Archive's copies of On the Road Again and Intermission 4.0 are so (§5.2). A name on two disks of a set must be one file when it is read, never when it is only listed, so the bulletin boards' notes, other on every disk, no longer refuse a set no recipe reads them from |
 | A download from inside a tar (eighth round) | The Flintstones' June 1994 disks are online only as three ZIPs in a shareware collection's tar, which the Internet Archive serves whole: the download fetches the tar and takes out those three members by name, size and md5; nothing else in it is ever read (§5.2, §8.12) |
 | Speed (`intermission`; eighth round) | Intermission ran its modules as fast as the PC allowed, and 36 of Intermission 4.0's own move one step per call, so their speed was the machine's. Those 36 entries get a catalog control of the host's, **Speed:**, whose `host` field names `ADNE16IMXSPEED`: the front end starts the host with it, and the lane runs its model of the machine at that percent for the module: Normal (25) is an estimate of a 1993 486, Fastest (100) the model's full pace and the host's own default. Each module's slider starts where its motion is calm: most at Normal, Dragon Kites, Ping and Bricks at Slowest (6), Wriggly and Snow Flakes at Slow (12), Space Shark at Fast (50). The other 18 pace themselves by the clock and have none (§6, §7.5) |
+| 7th Level's Setup (`bestshot`; ninth round) | A new recipe, `cdcopy`: the installer copied the player and its libraries from the CD's `BESTSHOT` folder as they were and left the scenes on the CD for the player to read there; the recipe is that placement baked into one table of 23 plain files under their paths on the CD (the player, its five libraries, the 17 scenes). Its script and the setup are never run. The release is named by file names alone: the desktop program `BESTSHOT.EXE`, its saver stub `BESTSAVR.SCR`, the player `PLYMPTON.EXE` and a scene, `BESTACT\HEADSHOT.BIN`, side by side (§3, §4.3) |
+| 7th Level scenes (`bestshot`; ninth round) | Not modules of any engine: 7th Level resource files, data that 7th Level's Runtime Player, `PLYMPTON.EXE`, an NE application, plays. The ne16 lane runs the package's player unchanged with the scene on its command line and the 0x6C-byte block that says its mode, as Take Your Best Shot's desktop program `BESTSHOT.EXE` started it; the host stands in for that program. A fourth module protocol, chosen by the file's magic (`7L`); catalog `abi` `"7thlevel"`, `screen` `"640x480"`, and `"game": true` on the three scenes that are games too (§6, §7.7) |
 | Work split | A: importer (`importer/**`). B: pe32 lane + core. C: ne16 lane + win16 + cpu. File ownership is disjoint (§10) |
 
 ## 1. Scope and starting point
@@ -167,14 +181,16 @@ hybrid discs hold is noted in §12; the importer skips them.
 | `opusroad` | 16 ne16, on Intermission 5.0's engine: 12 ASA animations, three IMQ modules (`BUTTWIPE`, `OB-SKATE`, `OB-SPACE`) and one IMX module (`OPUSTREK`), on four floppies | all 16, as `opus`'s | the importer refused the Internet Archive's ZIP, whose files sit in one folder: `member "Opus n Bill - On the Road Again/" is not a bare file name or a file in a DISK<n> folder` |
 | `flintstones` | 15 ne16 in the release's June 1994 build (every product file dated 1994-06-16): three ASA animations (`CARS`, `DINORDS`, `LOGO`), eight IMQ modules (`DICTABRD`, `DRIVEIN`, `PAPERBOY`, `FM-BIRDY`, `FM-BOWL`, `FM-CLOCK`, `FM-CRANE`, `FM-MOBIL`) and four IMX modules (`FM-BOULD`, `FM-CRITT`, `FM-FEET`, `FMPADROK`), on three floppies. Most copies online are of a May 1994 build (`FLINT1`–`FLINT3`): 10 modules, `THEME.ASA` and `FM-PHOTO.IMX` among them, with older `INTRMLIB.DLL`, `ANTSW.DLL` and `IMASAPLY.IMQ`, and the same damaged `CARS.ASA` in every copy | the May build: 9 of 10; `CARS` stopped at frame 13, a #GP in `ANTSW.DLL` (`5:03D1`, `mov es:[bx],al` past its block). The file is damaged, not the host: its SZDD stream decodes to 443,231 bytes where its header declares 477,345 (Windows' own `EXPAND.EXE`: "Error in compressed input file format"), so ANTSW's frame decoder reads garbage from the 13th frame and runs 1,700 bytes past the block it allocated, as it would have under Windows 3.1. The June build's `CARS.ASA` expands whole and runs (900 frames, 142 pictures, no fault) | the importer refused the May build's three bulletin-board ZIPs: "H3LLO2U.NFO differs between the images (size); they are not the disks of one release" (the board's notes, other bytes on each disk, broke the disk-set check) |
 | `intermission` | 54 candidates on three floppies: 43 IMX modules, 6 ASA animations, one IMQ module (`IMSHARK`), and four files of other forms, each played by an Intermission reader of its own: two FLI animations (`EINSTEIN`, `FLYING`), `PARADISE.MRF` and `MACHINE.MSV` | 43 exit 0 with a changing picture; the four of other forms exit 2 ("not a module this host can run (not an MZ executable)"); `FADE` calls the display driver's palette entries, `DISPLAY.22` and `DISPLAY.23`, and `PLANT` `GDI.100 LineDDA` (12,636 calls), unimplemented; `CONUND`, `DISSOLVE`, `FLASH`, `MELT` and `IM_PICTU` show one picture over 300 frames (effects on the desktop's picture, which a headless run gives black, and a picture show) | the importer refused the Internet Archive's ZIP of the three floppy images, which sit in one folder: `member "Intermission 4.0/" is not a bare file name or a file in a DISK<n> folder` |
+| `bestshot` | 17 ne16 scenes, `BESTACT\*.BIN`: 7th Level resource files (magic `37 4C 02 00`) that 7th Level's Runtime Player, `BESTSHOT\PLYMPTON.EXE` (an NE application, "Runtime Player 1.2"), plays with its libraries `PLYMU001`, `PLYMA001`, `PLYMS001`, `PLYMR001` and Microsoft's `DISPDIB`; the desktop program `BESTSHOT.EXE` started each one with a block that says its mode, and its UI is a scene of its own, `BESTACT\BESTSHOT.BIN`, never a module (surveyed alone, against the twenty-release host, 1.5.2) | none: the host had no protocol for a 7th Level scene | the importer refused the CD, its image and a copy of its files ("not a known release": no registry entry); no protocol for a program started with a scene and a block; `mmio*`, `joyGetPos` and the rest of the joystick, `MemManInfo`, the installable-driver calls (`OpenDriver`, `SendDriverMessage`, `CloseDriver`), `SetCursorPos`, `SetClassWord`, `GetViewportOrg`, `DPtoLP` and `waveOutGetID` unimplemented |
 
-In total, 429 catalog entries over the twenty packages: 232 over the first
-seven (218 over their six After Dark releases, and Star Wars Screen
+In total, 446 catalog entries over the twenty-one packages: 232 over the
+first seven (218 over their six After Dark releases, and Star Wars Screen
 Entertainment's 14), 52 over the fourth round's five (1 + 8 + 12 + 15 +
 16), 30 over the fifth round's two (14 + 16), 13 over the sixth round's
-`tng`, 1 over the seventh round's `castaway` and 101 over the eighth
-round's four (16 + 16 + 15 + 54), so 283 over the twelve After Dark ones,
-145 over the seven Intermission ones and Johnny Castaway's one program.
+`tng`, 1 over the seventh round's `castaway`, 101 over the eighth round's
+four (16 + 16 + 15 + 54) and 17 over the ninth round's `bestshot`, so 283
+over the twelve After Dark ones, 145 over the seven Intermission ones,
+Johnny Castaway's one program and Take Your Best Shot's 17 scenes.
 
 ## 2. The package registry
 
@@ -203,6 +219,7 @@ the catalog order and the precedence order for name disambiguation:
 | `opusroad` | Opus 'n Bill: On the Road Again! | On the Road Again | `intermission` (Delrina's installer) | `packages/opusroad` | `SAVER` |
 | `flintstones` | The Flintstones Screen Saver Collection | Flintstones | `intermission` (Delrina's installer) | `packages/flintstones` | `SAVER` |
 | `intermission` | Intermission 4.0 | Intermission | `intermission` (Delrina's installer) | `packages/intermission` | `SAVER` |
+| `bestshot` | Take Your Best Shot | Best Shot | `cdcopy` | `packages/bestshot` | `BESTACT` |
 
 Ids match `[a-z0-9]+`. `ad40` and `classic` are reserved: they are Deluxe's
 legacy id prefixes. `swse` is the product's own short name (its installer's
@@ -249,7 +266,14 @@ list it (its own readme heads itself "Opus 'n Bill"); "Opus 'n Bill: On the
 Road Again!", the box's (its readme: "Opus 'n Bill On The Road Again"); and
 "The Flintstones Screen Saver Collection" and "Intermission 4.0", the first
 lines of their readmes. The short titles are "Opus 'n Bill", "On the Road
-Again", "Flintstones" and "Intermission".
+Again", "Flintstones" and "Intermission". The ninth round's `bestshot`
+follows them, last, so the first twenty keep their places and command ids.
+Its id is the CD's volume id and the program's own name (`BESTSHOT`), its
+module dir the CD's folder of scenes, `BESTACT`, which the installer left on
+the CD for the player to read there (`7THLEVEL.INI [BestShotPaths]
+BestShotPath=1:bestact`), its title the program's and the box's, "Take Your
+Best Shot", and its short title "Best Shot". The player is in the package's
+`BESTSHOT` folder, beside the scenes', which is no module dir (§4.1, §7.7).
 
 Known images (identification + `verified: image`):
 
@@ -309,6 +333,7 @@ Known images (identification + `verified: image`):
 | `intermission` | `f1fedb8dbd9fdde088b617cc2e543740` | 1,474,560 | FAT12, 1.44 MB: install disk 2 of 3 (`ITM4W-D2.IMA`) | — |
 | `intermission` | `a56edc671fe824830c4b6aa08ad5c57d` | 1,474,560 | FAT12, 1.44 MB: install disk 3 of 3 (`ITM4W-D3.IMA`) | — |
 | `intermission` | `983b8d35861eccfcd683205670a1fb89` | 3,419,502 | ZIP of the three images, all in one folder, `Intermission 4.0/` (`Intermission 4.0.zip`): the download, read as the images inside (§5.2) | — |
+| `bestshot` | `e0df0601cfc552ebafded6cce695928a` | 93,456,384 | ISO-9660 CD (279 files in 8 folders, every one dated 1995-02-08; publisher "7TH LEVEL, INC."; the Internet Archive item `takeyourbestshot`, `BESTSHOT.iso`): the download | `BESTSHOT` |
 
 A known image is the whole release, or, since the seventh release, one
 install disk of a release on several (`KnownImage::disk` n of N):
@@ -358,16 +383,18 @@ Other registry fields:
   * `opusroad`: the same and `SAVER/DIBDLL.DLL` (the IMQ modules') and `ENGINE/IMIMXPLY.IMQ` (Opus Trek's reader), plus `DISK1`–`DISK4`
   * `flintstones`: as `opusroad`, plus `DISK1`–`DISK3`; its May 1994 build's only copy has no tag file on disks 2 and 3, so there `DISK1`, `DRIVEIN.IMQ` and `THEME.ASA` stand for its three disks (`Build::disk_files`)
   * `intermission`: `SAVER/INTRMLIB.DLL`, `SAVER/ANTSW.DLL`, `SAVER/DECO.DLL` (Photo Shoot's picture decoder), `SAVER/MEMMIDI.DLL`, and the readers of its modules' forms, `ENGINE/IMASAPLY.IMQ`, `IMIMXPLY.IMQ`, `IMFLIPLY.IMQ`, `IMMRFPLY.IMQ` and `IMMSVPLY.IMQ`, plus `DISK1`–`DISK3`
+  * `bestshot` (ninth round): `BESTSHOT/PLYMPTON.EXE` (the player), `BESTSHOT/PLYMA001.DLL`, `PLYMR001.DLL`, `PLYMS001.DLL`, `PLYMU001.DLL` and `DISPDIB.DLL` (the libraries it loads), and every one of the 17 scenes (`BESTACT/ABOUTFAC.BIN` … `BESTACT/SKEET.BIN`): a scene is nothing without the player, the player nothing without its libraries
 * `ad3zip` parameters: `moduleDir` (`AD32` / `TWISTED` / `SIMPSONS` / `LNYTUNES` / `SCREAMS` / `DISNEY` / `ST-TNG`); `engineDll`, the member of `MODMISC.ZIP` that identifies the package (`ADXPL300.DLL` / `ADXPL40.DLL` / `ADXPL310.DLL` / `ADXPL41.DLL` / `ADXPL300.DLL` / `ADXPL100.DLL` / `ADXPL320.DLL`); `folderAfi`, the `AFI.ZIP` member that becomes `FOLDER.AFI` and identifies the package too (`AD3.AFI` / `PHLEM.AFI` / `SAX.AFI` / `LNYTUNES.AFI` / `SCREAMS.AFI` / `DISNEY.AFI` / `ST-TNG.AFI`); since the fourth round `marker`, a second `MODMISC.ZIP` member the fingerprint wants (`ad32`: `AD30RSDB.DLL`, §3), and `never_opened`, archives of the install dir the recipe skips by name, unread (`disney`: `BEAUTYOL.ZIP`, §4.3).
 * `islib` parameters (`marvel`, `snoopy`; fourth round): `moduleDir` (`AFTERDRK` for both); the library volumes the recipe reads, every install disk's, disk 1's first (`required_archives`, above); the tag, `SETUP.PKG`'s logical library name and the member it must list there (`tag_library` `modules.lib` and `tag_member` `MARVEL.AD`; `AD_MODS.z` and `IS_FLY.AD`); and the placement table (`LibraryMember`: a library, by its file or a split set's first volume, a member, and where it goes: 64 rows for `marvel`, 8 for `snoopy`).
 * `intermission` parameters (`swse`): `moduleDir` (`SAVER`); `installName`, the `[data] shortname` of the installer's `INSTALL.DAT` that identifies the package (`SWSE`); the archives (`SWSE1.ARJ`, `SWSE2.ARJ`, `SWSE2.A01`, `SWSE2.A02`, `SWSE2.A03`: disk 1, then one archive over disks 2–5); `looseFiles`, what the recipe takes from outside the archives, with the name the installer gave it and whether it is SZDD (§4.3).
 * `intermission` parameters with Delrina's installer (`farside`, `dilbert`; fifth round; `Package::delrina_installer()`, true when `installName` is null): `moduleDir` (`SAVER`); every install disk's tag file in place of the archives (`DISK1`–`DISK5`, `DISK1`–`DISK4`: two-byte files the installer checks for; disk 1's is the fingerprint's); `marker`, a file of the release's own on disk 1 that the fingerprint wants beside the tag and the installer (`PTERY.IMQ`, `DB-CLOCK.IMQ`); `looseFiles`, every file the recipe installs, under its own name, plain or SZDD (20 rows for `farside`, 23 for `dilbert`, §4.3). Since the eighth round also `opus` (marker `OPUSCLOK.IMQ`, 21 rows), `opusroad` (`OPUSTREK.IMX`, 23), `flintstones` (`DRIVEIN.IMQ`, 22) and `intermission` (`IMSHARK.IMQ`, 73).
 * `build` and `builds` (eighth round; `opus` and `flintstones`): the id of the build the package's own fields describe (`1993-09`, `1994-06`) and its other builds (`Build`: an id, a label for people, a marker, its own known images, loose files and manifest, an optional note, and the files that stand for the disk tags when its copy lacks them). `opus`'s `1993-11` ("the November 1993 build"): marker `VELOC2.ASA`, 21 rows. `flintstones`' `1994-05` ("the May 1994 build"): marker `FM-PHOTO.IMX`, 17 rows (no `CARS.ASA`), the note "its CARS.ASA (Prehistoric Vehicles) is damaged in every known copy and is never installed; the June 1994 build's is whole", and `DISK1`, `DRIVEIN.IMQ` and `THEME.ASA` for its disks. The root, module folders, required files, name overrides (keyed by path), downloads and covers serve every build. A release of one build has neither (`import.json` then records no build).
 * `is1` parameters (`castaway`; seventh round): `moduleDir` (`SCRANTIC`); every file the recipe reads (`required_archives`: `SCRANTIC.SC$` first, the fingerprint's, then `RESOURCE.00$` and `RESOURCE.MAP`); `looseFiles`, each file it installs with the name `INSTALL.INS` gave it and its codec (`SCRANTIC.SC$` → `SCRANTIC/SCRANTIC.SCR` and `RESOURCE.00$` → `SCRANTIC/RESOURCE.001`, InstallShield 1 "$" files, §8.11; `RESOURCE.MAP` plain); one name override (§6) and `screen` (`640x480`).
+* `cdcopy` parameters (`bestshot`; ninth round): `moduleDir` (`BESTACT`); the fingerprint's files, paths from the disc's root (`required_archives`: `BESTSHOT/BESTSAVR.SCR`, `BESTSHOT/BESTSHOT.EXE`, `BESTSHOT/PLYMPTON.EXE`, `BESTACT/HEADSHOT.BIN`); `looseFiles`, every file it installs, under its path on the disc, all plain (23 rows: the setup script's copies of the player and its libraries, and the scenes it left on the CD); 17 name overrides, the scenes' own titles for a scene whose header can't be read (§6); `screen` (`640x480`); and `games` (`Package::games`), the scenes the installer's script lists under `[Games]` (`BESTACT/HEADSHOT.BIN`, `HOTSHOT.BIN`, `LINESHOT.BIN`), which the catalog marks `"game": true` (§6). Every other package's `games` is empty.
 * `ad2kwaj` parameters (`startrek`): `moduleDir` (`AFTERDRK`); `setupTitle`, the `[Params] WndTitle` of Microsoft Setup's `SETUP.LST` that identifies the package (`Star Trek\xAE: The Screen Saver`, 0xAE being Windows-1252's ®); the install disks' tag files, from `ST_NSTLL.INF [Source Media Descriptions]` (`MISSION.AD_` on disk 1, which the fingerprint wants beside `SETUP.LST`, and `ST_SND.DL_` on disk 2); `looseFiles`, every file the recipe installs, each KWAJ-compressed (§4.3); `screen` (`640x480`) and the About rules (`ad20`), for the catalog (§6).
-* `fixups` (§4.3), `nameOverrides` (§6), `manifest` (`known_files_<id>.inc`, generated like today's `known_files.inc`; `swse` 29 files, `startrek` 27, `marvel` 64, `snoopy` 8, `looney` 34, `screams` 23, `disney` 31, `farside` 20, `dilbert` 23, `tng` 31, `castaway` 3, `opus` 21 (and 21 in `known_files_opus_1993-11.inc`, its November 1993 build's), `opusroad` 23, `flintstones` 22 (17 in `known_files_flintstones_1994-05.inc`), `intermission` 73), `downloadUrl` (Deluxe only, as planned; the importer now lists Internet Archive copies for every package, `importer/README.md` "Downloads"; `swse` has three: the ISO, the Redump BIN and a flat ZIP of the disc's 40 files, 6.9, 8.6 and 6.7 MB; `startrek` two, each the images of both disks, 2.8 MB: a copy is used only when both of its images are fetched and verify, §5.2; `marvel` two, the flat ZIP of item `afterdarkmarvelscreenposters` first, then the `after-dark-collection` ZIP, 1.9 and 2.0 MB; `snoopy`, `looney`, `screams` and `disney` the `after-dark-collection` ZIPs, 1.9, 2.8, 3.3 and 3.4 MB; each of the six is a known image, so a download verifies `image`; neither the items' serial-number files nor any URL that carries a serial is ever fetched; `farside` one, the five ZIPs `PNX-FSC1.ZIP`–`PNX-FSC5.ZIP` fetched from inside item `prog47_55`'s ZIP, 5.5 MB; `dilbert` two, the flat `DilbertS.zip` of item `dilbert_screensaver_collection`, 4.3 MB, then `DILBERT1.ZIP`–`DILBERT4.ZIP` from inside item `prog70_75`'s ZIP, 4.4 MB; every one of these files is a known image, so these downloads verify `image` too; `tng` one, the CD image of item `star-trek-the-next-generation-screensaver`, 5.8 MB, a known image, saved as `Star Trek - The Next Generation - screensaver.iso` because no Windows file name can hold the published name's colon; `castaway` one, the ZIP of the Internet Archive's KryoFlux dump of the floppy, item `screen-antics-johnny-castaway-16-color-v1.01-int.-1.4.93-win3.1-1.44m`, 1.3 MB, saved under its published name, a known image read as the floppy image it holds, so it verifies `image`; of the eighth round, `opus` three, each the three disks' ZIPs from inside a larger ZIP, `OPUS1NTA.ZIP`–`OPUS3NTA.ZIP` and then `ONBSBS-1.ZIP`–`ONBSBS-3.ZIP` from item `prog21-29`'s and `OPUS-1.ZIP`–`OPUS-3.ZIP` from `prog39_46`'s, 2.8 MB each; `opusroad` one, the ZIP of item `OpusNBill_OnTheRoadAgain`, 4.4 MB; `flintstones` one, the tar `wgam0219.tar` from inside item `ibm-wgam-wbiz-collection`'s ZIP `wgam0210-0219.zip`, 135,624,192 bytes (129.3 MB) for the three ZIPs it holds among some 160 other files, which are taken out of it by name, size and md5 (`Download::members`, §5.2), nothing else in it ever read; `intermission` one, the ZIP of item `intermission4.0`, 3.3 MB, read as the three floppy images in it; every one of these is a known image (the tar's three members are), so each verifies `image`; the November 1993 Opus 'n Bill and the May 1994 Flintstones are not downloaded).
-* `released` (`YYYY-MM[-DD]`, §6): `swse` is `1994-08`. Every Windows build of it found dates from 1994-08-20 at the earliest (`INTERMIS.EXE`), LucasArts announced it for July 1994 on both platforms, and this CD is a later build (its files are from October 1994). It ties with the Simpsons (`1994-08`) and sorts after it by registry order. `startrek` is `1992-11`: its newest files are dated 1992-11-16 (15 of the 16 modules, all but Sounder, with `AD_MOD.DL_`, `ST_NSTLL.IN_`, `AD_NSTLL.DL_` and `AD_NSTLL.MS_`), so it is the oldest release and comes first in the catalog's `packages` list. Of the fourth round: `marvel` is `1993-12` (the libraries and `MARVEL.AD` are dated 1993-12-13, its readme December 15, 1993); `snoopy` `1994-10` (its library is dated 1994-10-19, the newest modules 1994-10-13); `looney` `1995-04` (every file of the April build is dated 1995-04-11/12; Berkeley announced it on 1995-04-25); `screams` `1995-04` (the newest file on its disks is `ENGINE.ZIP`, 1995-04-11); `disney` `1995-09` (its script, package list and `AFI.ZIP` are dated 1995-09-13). `looney` and `screams` tie and sort by registry order, so the catalog's `packages` list reads `startrek`, `marvel`, `simpsons`, `swse`, `snoopy`, `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`, `ad10`. Of the fifth round: `farside` is `1994-06` (every file of its disks is dated 1994-06-19, the bulletin-board copy 1994-06-30); `dilbert` `1994-10` (its files are dated 1994-10-06; its readme names The Far Side's collection as an earlier release). `dilbert` ties with `snoopy` and follows it, so the list reads `startrek`, `marvel`, `farside`, `simpsons`, `swse`, `snoopy`, `dilbert`, `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`, `ad10`. Of the sixth round: `tng` is `1994-10` (its modules are dated 1994-10-06/07 and `ST-TNG.AFI` 1994-10-13; every file on the CD is dated 1995-04-09, the CD's own build), so it ties with `snoopy` and `dilbert` and follows them: `startrek`, `marvel`, `farside`, `simpsons`, `swse`, `snoopy`, `dilbert`, `tng`, `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`, `ad10`. Of the seventh round: `castaway` is `1992-12` (the program in `SCRANTIC.SC$` is dated 1992-12-09, its data `RESOURCE.001` the same day; every file on the floppy is dated 1993-01-04, the version 1.01 international build), so it comes second, after `startrek`: `startrek`, `castaway`, `marvel`, `farside`, `simpsons`, `swse`, `snoopy`, `dilbert`, `tng`, `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`, `ad10`. Of the eighth round: `opus` is `1993-09` (every file of its disks is dated 1993-09-21; its November build's 1993-11-03); `intermission` `1993-11` (its files are dated 1993-11-03); `flintstones` `1994-05` (its May build's readme is dated 1994-05-25; the June build, which the registry's fields describe, 1994-06-16); `opusroad` `1994-09` (its newest file, `INTERMIS.EXE`, is dated 1994-09-16). So the list reads `startrek`, `castaway`, `opus`, `intermission`, `marvel`, `flintstones`, `farside`, `simpsons`, `swse`, `opusroad`, `snoopy`, `dilbert`, `tng`, `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`, `ad10`.
-* `screen` (§6): `"640x480"` on `startrek`, `marvel` (each poster is a fixed 640×480 picture, drawn in the middle of a larger screen with its caption at the bottom of the whole screen) and `screams` (four modules paint a 640×480 scene and Belcho composes one 640 wide, drawn small in the middle of a larger screen); none elsewhere: the Disney, Looney Tunes and Snoopy modules lay out for any screen, and `farside`'s and `dilbert`'s are Intermission modules, which the front-ends give 640×480 by their ABI. Since the sixth round also on `tng`: several of its modules compose a fixed 640×480 scene (Science Stations' panel in the top-left corner of a larger screen; Encounters, Personnel Files, Officer's Review and Starfleet Messages small in the middle; Counselor Troi and Data Dances pinned top-left), while Warp Effect, Tachyon Particle Field, Nanites, The Borg, Worf's Weapons and Starbase fill any screen. Since the seventh round also on `castaway`: the program paints a fixed 640×480 scene, centred on whatever screen it gets (on a 1024×768 one, in the middle of black; at 640×480 it fills the screen, as on the VGA it was made for; §7.6). None on the eighth round's four: Intermission modules, which the front-ends give 640×480 by their ABI.
+* `fixups` (§4.3), `nameOverrides` (§6), `manifest` (`known_files_<id>.inc`, generated like today's `known_files.inc`; `swse` 29 files, `startrek` 27, `marvel` 64, `snoopy` 8, `looney` 34, `screams` 23, `disney` 31, `farside` 20, `dilbert` 23, `tng` 31, `castaway` 3, `opus` 21 (and 21 in `known_files_opus_1993-11.inc`, its November 1993 build's), `opusroad` 23, `flintstones` 22 (17 in `known_files_flintstones_1994-05.inc`), `intermission` 73, `bestshot` 23), `downloadUrl` (Deluxe only, as planned; the importer now lists Internet Archive copies for every package, `importer/README.md` "Downloads"; `swse` has three: the ISO, the Redump BIN and a flat ZIP of the disc's 40 files, 6.9, 8.6 and 6.7 MB; `startrek` two, each the images of both disks, 2.8 MB: a copy is used only when both of its images are fetched and verify, §5.2; `marvel` two, the flat ZIP of item `afterdarkmarvelscreenposters` first, then the `after-dark-collection` ZIP, 1.9 and 2.0 MB; `snoopy`, `looney`, `screams` and `disney` the `after-dark-collection` ZIPs, 1.9, 2.8, 3.3 and 3.4 MB; each of the six is a known image, so a download verifies `image`; neither the items' serial-number files nor any URL that carries a serial is ever fetched; `farside` one, the five ZIPs `PNX-FSC1.ZIP`–`PNX-FSC5.ZIP` fetched from inside item `prog47_55`'s ZIP, 5.5 MB; `dilbert` two, the flat `DilbertS.zip` of item `dilbert_screensaver_collection`, 4.3 MB, then `DILBERT1.ZIP`–`DILBERT4.ZIP` from inside item `prog70_75`'s ZIP, 4.4 MB; every one of these files is a known image, so these downloads verify `image` too; `tng` one, the CD image of item `star-trek-the-next-generation-screensaver`, 5.8 MB, a known image, saved as `Star Trek - The Next Generation - screensaver.iso` because no Windows file name can hold the published name's colon; `castaway` one, the ZIP of the Internet Archive's KryoFlux dump of the floppy, item `screen-antics-johnny-castaway-16-color-v1.01-int.-1.4.93-win3.1-1.44m`, 1.3 MB, saved under its published name, a known image read as the floppy image it holds, so it verifies `image`; of the eighth round, `opus` three, each the three disks' ZIPs from inside a larger ZIP, `OPUS1NTA.ZIP`–`OPUS3NTA.ZIP` and then `ONBSBS-1.ZIP`–`ONBSBS-3.ZIP` from item `prog21-29`'s and `OPUS-1.ZIP`–`OPUS-3.ZIP` from `prog39_46`'s, 2.8 MB each; `opusroad` one, the ZIP of item `OpusNBill_OnTheRoadAgain`, 4.4 MB; `flintstones` one, the tar `wgam0219.tar` from inside item `ibm-wgam-wbiz-collection`'s ZIP `wgam0210-0219.zip`, 135,624,192 bytes (129.3 MB) for the three ZIPs it holds among some 160 other files, which are taken out of it by name, size and md5 (`Download::members`, §5.2), nothing else in it ever read; `intermission` one, the ZIP of item `intermission4.0`, 3.3 MB, read as the three floppy images in it; every one of these is a known image (the tar's three members are), so each verifies `image`; the November 1993 Opus 'n Bill and the May 1994 Flintstones are not downloaded; of the ninth round, `bestshot` one, the CD image of item `takeyourbestshot`, `BESTSHOT.iso`, 89.1 MB, a known image, so it verifies `image`).
+* `released` (`YYYY-MM[-DD]`, §6): `swse` is `1994-08`. Every Windows build of it found dates from 1994-08-20 at the earliest (`INTERMIS.EXE`), LucasArts announced it for July 1994 on both platforms, and this CD is a later build (its files are from October 1994). It ties with the Simpsons (`1994-08`) and sorts after it by registry order. `startrek` is `1992-11`: its newest files are dated 1992-11-16 (15 of the 16 modules, all but Sounder, with `AD_MOD.DL_`, `ST_NSTLL.IN_`, `AD_NSTLL.DL_` and `AD_NSTLL.MS_`), so it is the oldest release and comes first in the catalog's `packages` list. Of the fourth round: `marvel` is `1993-12` (the libraries and `MARVEL.AD` are dated 1993-12-13, its readme December 15, 1993); `snoopy` `1994-10` (its library is dated 1994-10-19, the newest modules 1994-10-13); `looney` `1995-04` (every file of the April build is dated 1995-04-11/12; Berkeley announced it on 1995-04-25); `screams` `1995-04` (the newest file on its disks is `ENGINE.ZIP`, 1995-04-11); `disney` `1995-09` (its script, package list and `AFI.ZIP` are dated 1995-09-13). `looney` and `screams` tie and sort by registry order, so the catalog's `packages` list reads `startrek`, `marvel`, `simpsons`, `swse`, `snoopy`, `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`, `ad10`. Of the fifth round: `farside` is `1994-06` (every file of its disks is dated 1994-06-19, the bulletin-board copy 1994-06-30); `dilbert` `1994-10` (its files are dated 1994-10-06; its readme names The Far Side's collection as an earlier release). `dilbert` ties with `snoopy` and follows it, so the list reads `startrek`, `marvel`, `farside`, `simpsons`, `swse`, `snoopy`, `dilbert`, `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`, `ad10`. Of the sixth round: `tng` is `1994-10` (its modules are dated 1994-10-06/07 and `ST-TNG.AFI` 1994-10-13; every file on the CD is dated 1995-04-09, the CD's own build), so it ties with `snoopy` and `dilbert` and follows them: `startrek`, `marvel`, `farside`, `simpsons`, `swse`, `snoopy`, `dilbert`, `tng`, `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`, `ad10`. Of the seventh round: `castaway` is `1992-12` (the program in `SCRANTIC.SC$` is dated 1992-12-09, its data `RESOURCE.001` the same day; every file on the floppy is dated 1993-01-04, the version 1.01 international build), so it comes second, after `startrek`: `startrek`, `castaway`, `marvel`, `farside`, `simpsons`, `swse`, `snoopy`, `dilbert`, `tng`, `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`, `ad10`. Of the eighth round: `opus` is `1993-09` (every file of its disks is dated 1993-09-21; its November build's 1993-11-03); `intermission` `1993-11` (its files are dated 1993-11-03); `flintstones` `1994-05` (its May build's readme is dated 1994-05-25; the June build, which the registry's fields describe, 1994-06-16); `opusroad` `1994-09` (its newest file, `INTERMIS.EXE`, is dated 1994-09-16). So the list reads `startrek`, `castaway`, `opus`, `intermission`, `marvel`, `flintstones`, `farside`, `simpsons`, `swse`, `opusroad`, `snoopy`, `dilbert`, `tng`, `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`, `ad10`. Of the ninth round: `bestshot` is `1995-02` (every file on the CD is dated 1995-02-08, the day it was mastered), so it follows `tng`: `startrek`, `castaway`, `opus`, `intermission`, `marvel`, `flintstones`, `farside`, `simpsons`, `swse`, `opusroad`, `snoopy`, `dilbert`, `tng`, `bestshot`, `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`, `ad10`.
+* `screen` (§6): `"640x480"` on `startrek`, `marvel` (each poster is a fixed 640×480 picture, drawn in the middle of a larger screen with its caption at the bottom of the whole screen) and `screams` (four modules paint a 640×480 scene and Belcho composes one 640 wide, drawn small in the middle of a larger screen); none elsewhere: the Disney, Looney Tunes and Snoopy modules lay out for any screen, and `farside`'s and `dilbert`'s are Intermission modules, which the front-ends give 640×480 by their ABI. Since the sixth round also on `tng`: several of its modules compose a fixed 640×480 scene (Science Stations' panel in the top-left corner of a larger screen; Encounters, Personnel Files, Officer's Review and Starfleet Messages small in the middle; Counselor Troi and Data Dances pinned top-left), while Warp Effect, Tachyon Particle Field, Nanites, The Borg, Worf's Weapons and Starbase fill any screen. Since the seventh round also on `castaway`: the program paints a fixed 640×480 scene, centred on whatever screen it gets (on a 1024×768 one, in the middle of black; at 640×480 it fills the screen, as on the VGA it was made for; §7.6). None on the eighth round's four: Intermission modules, which the front-ends give 640×480 by their ABI. Since the ninth round also on `bestshot`: 7th Level's player draws its scenes for a 640×480 screen (the CD's readme asks for 640×480 or 800×600); on a larger one the same sprites play in a larger black field (§7.7).
 * `speed_modules` (§6; eighth round): the modules whose catalog entries get the host control **Speed:** (`SpeedModule`: the path, `SAVER/<FILE>`, matched without case, and the stop its slider starts at, a `SpeedStop`, Normal unless named; `kIntermissionSpeed` in `packages.cc`). Only `intermission` has any, the 36 of §6 whose motion follows the lane's call rate (34 IMX modules, `IMSHARK.IMQ` and `MACHINE.MSV`): `DRAGON.IMX`, `PING.IMX` and `BRICKS.IMX` start at Slowest, `WORMS.IMX` and `SNOW.IMX` at Slow, `IMSHARK.IMQ` at Fast and the other 30 at Normal. Every other package's list is empty.
 
 ## 3. Identification
@@ -422,6 +449,7 @@ union of those folders (§5.2), so the steps below see one install folder.
    * `intermission` with Delrina's installer (`farside`, `dilbert`; fifth round): disk 1's tag file `DISK1`, the installer `IMINST2.EXE` and the release's `marker` (`PTERY.IMQ`, `DB-CLOCK.IMQ`), side by side at the source's root (disk 1, the disks together, or a flat folder or ZIP of their files). Nothing is read: the names alone name the release, as an AD 3.x install's archive members do; the installer has no script (it copies by wildcard), and `PACKING.LST`, Dilbert's list of its modules, is not needed. Disk 1 alone is identified, and then refused because every install disk is needed (§4.3); any other disk alone, or disk 1 without the installer or the marker, matches nothing. Star Wars Screen Entertainment is never taken for either release, nor either for it, and a folder holding both releases' files matches both (ambiguous: `--package` chooses). Since the eighth round the same for `opus` (`OPUSCLOK.IMQ`), `opusroad` (`OPUSTREK.IMX`), `flintstones` (`DRIVEIN.IMQ`) and `intermission` (`IMSHARK.IMQ`): no two of Delrina's six releases share a marker, so each source matches one. A release with builds is named by its own marker or by a build's (`Build::marker`), and a build's marker beside the installer makes the import that build's: `VELOC2.ASA` the November 1993 Opus 'n Bill's (the September build has none), `FM-PHOTO.IMX` the May 1994 Flintstones' (the June build has none). The markers are only looked for, never read.
    * `ad2kwaj` (`startrek`): Microsoft Setup's file list `SETUP.LST` at the source's root (disk 1, the disks together, or a flat folder, ZIP or ISO of their files), a plain file of at most 64 KiB (the real one is 654 bytes), whose `[Params] WndTitle` is the package's `setupTitle` ("Star Trek®: The Screen Saver", compared in Windows-1252 as the file holds it, without ASCII case, values trimmed), with disk 1's tag file, `MISSION.AD_`, beside it. `CmdLine` is not used: it is the same for every Berkeley After Dark 2.0 setup. The file is read for nothing else. Disk 1 alone is identified, and then refused because every install disk is needed (§4.3); disk 2 alone matches no fingerprint (its md5 names it, step 1). An installed `C:\AFTERDRK` is no source: it has no `SETUP.LST`, and the installer wrote the owner's name, company and serial number into its `AD.EXE` (resource type 3000, ids 1–3), so that file never matches the manifest.
    * `is1` (`castaway`; seventh round): InstallShield 1's own files, the launcher `SETUP.EXE`, the compiled script `INSTALL.INS` and the installer it expands, `INSTALL.EX$`, side by side at the source's root (the floppy, or a folder, ZIP or 7z of its files) with the release's first file (`required_archives[0]`: `SCRANTIC.SC$`). Nothing is read: the names alone name the release, as Delrina's floppies' do (another InstallShield 1 floppy has other files of its own). An AD 3.x install, whose `INSTALL.INS` belongs to InstallShield 2 or 3, has no `INSTALL.EX$` and no `SCRANTIC.SC$`, so it never matches, nor does this floppy match the `ad3zip` family (no `SETUP.PKG` or `ENGINE.ZIP`). An installed `\SIERRA\SCRANTIC` is no source: it has none of the installer's files.
+   * `cdcopy` (`bestshot`; ninth round): the release's own files side by side, by their paths from the source's root (the CD, its image, or a folder or ZIP of its files): the desktop program `BESTSHOT/BESTSHOT.EXE`, its saver stub `BESTSHOT/BESTSAVR.SCR`, the player `BESTSHOT/PLYMPTON.EXE` and a scene, `BESTACT/HEADSHOT.BIN`. Nothing is read: 7th Level's Setup, its `DUNZIP.DLL`, the player and its libraries are on 7th Level's other CDs too (Monty Python's Desktop Pythonizer runs on the same player), never these programs and scenes together. Best Shot without its scenes, or another 7th Level CD, matches nothing; a copy missing a scene other than Head Shot is identified and then refused for the missing file (§4.3). An installed `C:\7THLEVEL\BESTSHOT` is no source: it holds the player but neither the desktop program, which went to the Windows folder, nor the scenes, which stayed on the CD.
 3. `--package <id>` restricts step 2 to one package. It is an error if the
    source is not that package.
 
@@ -487,6 +515,9 @@ This is the contract between the importer (A) and the lanes (B, C).
                                                 PARADISE.MRF, MACHINE.MSV, the 8 pictures FACE.ASA opens, INTRMLIB, ANTSW,
                                                 DECO, MEMMIDI, IMIMXPLY.IMQ (for the MultiSaver group, §4.3) (67 files)
 <win>\packages\intermission\ENGINE\…          the readers IMASAPLY, IMIMXPLY, IMFLIPLY, IMMRFPLY and IMMSVPLY (.IMQ), INTERMIS.EXE
+<win>\packages\bestshot\BESTACT\…             the 17 scenes (.BIN; the guest's D:\BESTACT, the CD, §7.7)
+<win>\packages\bestshot\BESTSHOT\…            PLYMPTON.EXE (the player), PLYMA001, PLYMR001, PLYMS001, PLYMU001, DISPDIB
+                                                (6 files; the guest's C:\7THLEVEL\BESTSHOT); no ENGINE folder
 <win>\packages\<id>\import.json               record (v2, §5.3)
 <win>\catalog-win.json                        merged catalog (§6)
 ```
@@ -516,7 +547,12 @@ file; their modules write `ANTSW.INI`, whose engine keys the lane seeds
 release is eight modules its installer copied into the user's own After
 Dark folder, and the importer never creates an empty folder. The ne16 lane
 treats a missing engine dir as an empty one (§7.4). `castaway`'s holds
-only its module folder too: the program is its own host.
+only its module folder too: the program is its own host. `bestshot`'s
+holds its module folder, `BESTACT`, and the player's, `BESTSHOT`, which is
+no module folder: the catalog never scans it, and the lane finds the
+player there by path, `<package root>\BESTSHOT\PLYMPTON.EXE` (§7.7). The
+importer's I3 for it is that file, and neither an `ENGINE` nor a `WINDOWS`
+folder (the player's `7THLEVEL.INI` is the lane's own).
 
 ### 4.2 Invariants
 
@@ -1074,6 +1110,42 @@ manifest's.
 placeholder saying that the resource is compressed (the real one is
 `RESOURCE.00$`), whose name the installed file takes.
 
+**`cdcopy`** (`bestshot`; ninth round): the release came on one CD
+installed by 7th Level's Setup (`SETUP.EXE`, "7th Level Setup Program",
+with `DUNZIP.DLL`), whose script is a resource of its own (type 258, id
+257: `setup.inf`, read in `research/bestshot/`). It offers
+`C:\7thLevel\BestShot` as the folder (`0:`), copies the player and its
+libraries there from the CD's `BESTSHOT` folder, puts the desktop program
+`BESTSHOT.EXE`, its icons `BESTICON.DLL`, its saver stub `BESTSAVR.SCR`
+and its help in the Windows folder (`2:`), and writes `7THLEVEL.INI` there:
+the folder (`[BestShot] Path`), the paths on the CD (`1:`) the program
+plays from (`[BestShotPaths]`, the scenes' `BestShotPath=1:bestact`
+among them), and which scenes are games, living wallpapers and screen
+savers (`[Games]`, `[Living Wallpapers]`, `[Screen Savers]`). The scenes
+are never copied: the program played them from the CD. The recipe is the
+player's part of that, and the CD's folder of scenes, in one table of
+loose files, each copied as it is under its path on the CD:
+
+| Source | Becomes | How |
+|---|---|---|
+| `BESTSHOT\PLYMPTON.EXE`, `PLYMA001.DLL`, `PLYMR001.DLL`, `PLYMS001.DLL`, `PLYMU001.DLL`, `DISPDIB.DLL` | `BESTSHOT\…` | copied (the setup's copies to `0:`) |
+| `BESTACT\<scene>.BIN` (17) | `BESTACT\…` | copied (left on the CD by the setup) |
+
+Every file of the table must be there, else 2. The rest of what the
+installer did is not the importer's: `7THLEVEL.INI` is the lane's to
+write in the guest's Windows folder, as the installer wrote it (§7.7), and
+what the desktop program did with the scenes, Long After Dark's. I3 for
+the package is the player in its `BESTSHOT` folder, and no `ENGINE` or
+`WINDOWS` folder. Result: 23 files, 3,549,786 bytes, the manifest's.
+
+**Never opened** (I5) by the `cdcopy` import: the setup and its library
+(their names are not even looked for), the desktop program `BESTSHOT.EXE`
+and its saver stub `BESTSAVR.SCR` (the fingerprint's: their presence
+names the release), the program's own UI scene `BESTACT\BESTSHOT.BIN` and
+its big edition `BESTBIG\BESTSHOT.BIN`, its sound hook `BESTSFX.DLL`, and
+the CD's `BESTDEMO` (7th Level's samplers of its other products), `ICON`,
+`JOYSTICK`, `NOISYBIT` and `WALLPAPR` folders.
+
 ### 4.4 Interim test roots (for B and C before A lands)
 
 The lanes are built in parallel with the importer. Until A's `adimport` can
@@ -1376,7 +1448,10 @@ seventh round added its package, the `is1` recipe and the first
 before it is as 1.4.3 wrote it. The eighth round added four packages,
 Intermission's data files of three more forms and a control's `host` field
 (Intermission 4.0's **Speed:**) under it as well; every entry of the
-sixteen releases before them is as 1.4.4 wrote it.
+sixteen releases before them is as 1.4.4 wrote it. The ninth round added
+its package, the `cdcopy` recipe, the first `"7thlevel"` entries and a
+`game` field under it too; every entry of the twenty releases before it is
+as 1.5.2 wrote it.
 
 * **Order.** Installed packages in registry order. Within a package, its
   module dirs in registry order. Within a dir, `*.AD` sorted as today.
@@ -1394,6 +1469,9 @@ sixteen releases before them is as 1.4.4 wrote it.
   package (`is1`) list `*.SCR` too, for a Windows 3.1 screen-saver program
   (below); no other package's folders, and never `ENGINE` (where After
   Dark's own `AFTERDAR.SCR` is), list them.
+  Since the ninth round the module folders of a `cdcopy` package list
+  `*.BIN` too, for 7th Level's scenes (below); no other package's folders
+  list them.
 * **Lane** comes from the header (PE32 → `pe32`, NE → `ne16`), never the
   folder. `AD10TH` mixes 16 pe32 and 29 ne16 modules. An Intermission module
   is NE too, so `ne16`; its `abi` field (below) tells it apart. An ASA
@@ -1714,6 +1792,44 @@ sixteen releases before them is as 1.4.4 wrote it.
   `castaway`, `marvel`, `farside`, `simpsons`, `swse`, `snoopy`,
   `dilbert`, `tng`, `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`,
   `ad10`.
+* **7th Level scenes** (`bestshot`, since the ninth round). A file of a
+  `cdcopy` package's module folder that starts with 7th Level's resource
+  magic `37 4C 02 00` ("7L", the ne16 lane's rule too, §7.7) is a scene:
+  data that the package's Runtime Player, `BESTSHOT\PLYMPTON.EXE`, plays.
+  Its header names the product and the scene: byte 4 is the header's
+  length, then the product's name (`BestShot`), a NUL, the title, and a NUL
+  or `0xFB` and a library's name (`plymr001.dll`) and a NUL, read strictly.
+  A file named for the product its header names (`BESTSHOT.BIN`, product
+  `BestShot`: the desktop program's own UI) is no scene: it is left out,
+  its reason logged. A scene is
+  `ne16`, and differs from an After Dark entry in these fields:
+  * `moduleName`: the title in its header ("Head Shot", "A Shot In The
+    Dark"), else the registry's name for the file (`bestshot`'s 17 name
+    overrides are the same titles, for a header that can't be read; an
+    override never replaces a title), else the file stem.
+  * `about` is `""`, `controls` `[]`: no buttons (the desktop program's own
+    options are not the scenes').
+  * `entry` is `""`: the scene is data, and the player is a program, run
+    with the scene on its command line. `needs` and `system` are empty.
+  * `abi` is `"7thlevel"`, and `screen` `"640x480"` (§2).
+  * `game`: `true`, written last, after `screen`, on the scenes the
+    registry lists as games (`Package::games`, the installer's `[Games]`:
+    Head Shot, Hot Shot and Line Shot); absent on every other entry of
+    every release. A front end may show it; the host decides what a scene
+    does with Caps Lock (§7.7), so today's front ends read nothing of it.
+
+  The ids are `bestshot.<stem>` (`bestshot.headshot`, `bestshot.shotindr`),
+  the paths `packages/bestshot/BESTACT/<SCENE>.BIN`; none is byte-identical
+  to another release's module, so no `sameAs`. Rebound's name is another
+  ne16 module's (After Dark's own Rebound, `classic.rebound` and
+  `ad32.rebound`), so its display name is "Rebound (Best Shot)", its
+  `moduleName` "Rebound". With the ninth round's `bestshot`, all twenty-one
+  releases installed, the catalog lists 446 modules, still 73 of them
+  `sameAs`, no display name repeated within a lane, `screen` on 63 entries,
+  `game` on 3, and the `packages` list reads `startrek`, `castaway`,
+  `opus`, `intermission`, `marvel`, `flintstones`, `farside`, `simpsons`,
+  `swse`, `opusroad`, `snoopy`, `dilbert`, `tng`, `bestshot`, `looney`,
+  `screams`, `ad32`, `tt`, `disney`, `deluxe`, `ad10`.
 * **New per-module fields**, on every entry, Deluxe's too, appended after
   the existing ones:
   * `package`, `packageTitle`, `moduleName`
@@ -2392,6 +2508,81 @@ catalog ABI is `"scrnsave"`, and ABI.md has the program's side of it).
 * **`--capabilities`** names the ABI in `abis=` (`scrnsave`), and a front
   end leaves out an entry whose ABI the host does not name, as it does an
   Intermission one.
+
+### 7.7 7th Level scenes (ne16, `bestshot`; ninth round)
+
+Take Your Best Shot's scenes are no modules either: each `BESTACT\*.BIN` is
+a 7th Level resource file, data that 7th Level's Runtime Player,
+`PLYMPTON.EXE` ("Runtime Player 1.2", an NE application), plays. Take Your
+Best Shot's desktop program, `BESTSHOT.EXE`, started the player for every
+scene the same way, whether as the screen saver, a living wallpaper or a
+game: a block of 0x6C bytes that says the mode
+(`GlobalAlloc(GMEM_SHARE | GMEM_MOVEABLE | GMEM_ZEROINIT)`), then
+`WinExec("<player> <scene> /p<block>")`, then a message, `0x783`, to the
+player's window with its own. The scenes run in the ne16 lane through a
+fourth protocol beside `ad3`, `imx` and `scr`: `seventh`
+(`host/ne16/seventh_protocol.cc`; its catalog ABI is `"7thlevel"`, and
+ABI.md §3.16 has the player's side of it), which stands in for the desktop
+program.
+
+* **The kind comes from the file**: a module file that starts with the
+  magic `37 4C 02 00` is a scene, the rule by which the importer gives its
+  entry `abi` `"7thlevel"` (§6).
+* **The player is the package's**, found by path: `<package root>\BESTSHOT\
+  PLYMPTON.EXE`, the package root being the scene folder's parent (§7.1),
+  with its libraries `PLYMU001`, `PLYMA001`, `PLYMS001`, `PLYMR001` and
+  `DISPDIB` in the same folder (a rule by file name, never the package id).
+  Without it the run ends with exit 1.
+* **What runs.** The player itself, unchanged, as the Win16 runtime's task,
+  as a Windows 3.1 screen-saver program is (§7.6), with its own libraries,
+  each one's LibEntry run at load and its WEP when it goes. Its command
+  tail is the scene on the guest's CD and the block,
+  `D:\BESTACT\<SCENE>.BIN /p<block>`; the block holds the mode and the
+  scene's title, from its header. The protocol's one call is that task,
+  which lasts the whole run (long calls are needed, as for `scr`). At the
+  player's first message call, where `WinExec` had returned and
+  `BESTSHOT.EXE` found its window, the lane sends it `0x783` with the
+  stand-in's main window; at the end it stops it as `BESTSHOT.EXE` did,
+  `0x783` with 0 and then `WM_CLOSE`. A player that ends itself (its
+  message box, `WM_QUIT`) ends the run with its text (exit 1).
+* **The mode.** `protocol.hh` `seventh_run_block` is the one place a run's
+  mode is decided: the screen saver's, mode 3, for the saver, its preview,
+  thumbnails and `/window`, with the installer's defaults (sound on, not
+  interactive, no password); with Caps Lock on in the saver, a game
+  scene's game, mode 6, as the desktop program's Games page started it,
+  and any other scene's interactive screen saver (mode 3 with the
+  Interactive option's flag clear); and the living wallpaper, mode 1, with
+  `ADWALLPAPER=1` (INTERACTION.md §4.7). When Caps Lock changes what the
+  run is, the lane stops the player and starts it again in the other mode.
+  In mode 3 the player paints the scene's backdrop
+  over the whole screen at its first `WM_PAINT` (frame 2), and the three
+  games play their demonstration from the first second. In mode 1 it
+  paints the backdrop (black; dark brown in Bug-eyed and Face Off) over
+  the whole screen too, at frame 1, so the wallpaper seed shows only
+  until then, and the games show their menu.
+* **Its disk.** The player's folder is the guest's `C:\7THLEVEL\BESTSHOT`,
+  where `SETUP.EXE` put it, and the current directory; the scene's folder
+  is the guest's CD, `D:\BESTACT`, read-only, as the scenes stayed on the
+  CD; `C:\WINDOWS` holds `7THLEVEL.INI` as the installer wrote it (the
+  folders, the paths on the CD, the `[Games]`, `[Living Wallpapers]` and
+  `[Screen Savers]` lists). As the screen saver the player writes nothing.
+* **Input.** As the screen saver and the living wallpaper the player takes
+  no key or mouse message (INTERACTION.md §5.2): the saver ends the run on
+  input itself. In a game, and in the interactive screen saver, the keys
+  and the mouse are the player's, as any module's game's are, and the
+  cursor shows while the player's own is on.
+* **The screen.** The player draws for 640×480 (its `Mode640` follows the
+  screen's width); at 800×600 or 1024×768 the scenes play their same
+  sprites in a larger black field, so every entry has `screen` `"640x480"`
+  (§2).
+* **Sound.** The player's Audio Library, `PLYMA001`, streams its wave sound
+  through `waveOut`, eight buffers at a time, which the lane plays through
+  the engine (AUDIO.md §10.11). With sound off the lane gives the guest no
+  wave device at all, as on a PC without a sound card: the silent device
+  never finishes a buffer, and `PLYMA001` would wait for it for ever.
+* **Buttons.** None.
+* **`--capabilities`** names the ABI in `abis=` (`7thlevel`), and a front
+  end leaves out an entry whose ABI the host does not name ("Coming soon").
 
 ## 8. Extraction formats (importer)
 
@@ -3270,6 +3461,40 @@ most 1 MiB, checked against the size and md5 the registry gives it
     faithful behaviour, kept, and those two streams re-frozen; The Far
     Side's, Dilbert's, the Next Generation's and Johnny Castaway's 44
     streams identical to 1.4.4's.
+* **The ninth round** (`bestshot`), the same way:
+  * Importer, synthetic: `import.packages` gains a made-up Best Shot CD
+    (`tests/pkg_fixture.h`) with its decoys: another 7th Level disc (the
+    setup and the player without Best Shot's programs), Best Shot without
+    its scenes, Best Shot missing one scene; the desktop program, its saver
+    stub and its UI scene locked during the import, never opened; the
+    registry's shape (after Intermission 4.0, `cdcopy`, `BESTACT` and
+    `BESTSHOT`, the manifest exactly the table's files). `import.catalog`
+    reads the 7L header strictly (the title, the registry's name when there
+    is none, `BESTSHOT.BIN` left out, `game` last in the JSON);
+    `import.cli`, `import.pkg_download` and the GUI pins the new row.
+  * Importer, real sources: `--image BESTSHOT.iso` (verified `image`, 23
+    files, 17 modules), `--from` a copy of the CD's files (verified
+    `files`) and `--download bestshot` (89.1 MB, verified `image`) by hand,
+    and the opt-in real rows of `import.pkg_real`, `import.download_real`
+    and `import.covers_real`; the manifest regenerated from a verified
+    import byte-identical; the twenty-one releases' root against the
+    twenty's (every older entry, package row, package file and cover
+    unchanged), 446 modules; the other releases' real sources still each
+    import as themselves.
+  * Lanes: `ne16.unit` (487 checks) the protocol, the block in each role
+    and the player's rule; `win16.unit` (809) and `win16.sound` (284) the
+    new calls, `mmio*`, the joystick (`JOYERR_UNPLUGGED`: no joystick),
+    `MemManInfo`, the installable-driver calls, `SetCursorPos` (the guest's
+    cursor only), `SetClassWord`, `GetViewportOrg`, `DPtoLP` and
+    `waveOutGetID`, the command line as a C string, the window placement
+    and an ended task's clean-up; `ne16.interaction` Head Shot's game under
+    Caps Lock. Each of the 17 scenes ran 900 frames twice, identical, as
+    the screen saver and as the living wallpaper (on a made-up seed), and
+    7,200 frames, exit 0, no unimplemented call, no fault, contact sheets
+    looked at; each game was started and played by a Caps Lock script;
+    sound was captured three times, byte-identical (AUDIO.md §10.11). The frozen baselines (202 After Dark modules × A/C/S, Star
+    Wars 28/28, Star Trek 32/32) at 0 differences, and Johnny Castaway's
+    stream identical to 1.5.2's.
 
 Headless runs stay deterministic throughout. Nothing may write to the
 user's real data folder (`%LOCALAPPDATA%\LongAfterDark`) except the
@@ -3746,6 +3971,17 @@ Acceptance:
     (`MIDNITCC`, `PISTACH4`); the rest record 800×600.
   * *The Far Side's cover* is a WebP, shown only where Windows has the
     WebP codec (COVERS.md §2.3).
+* **The ninth round, open.**
+  * *The desktop program's options.* Take Your Best Shot's own saver
+    settings (Mute, Random, the password) are not offered: each scene runs
+    as its installer's defaults set it, and its Interactive option is what
+    Caps Lock turns on (§7.7). The program's
+    other parts, the icons, wallpapers and sounds it put on the Windows
+    desktop and the samplers of 7th Level's other products, are not
+    imported.
+  * *Other 7th Level releases.* Monty Python's Desktop Pythonizer, a later 7th
+    Level release on the same player, could reuse the `"7thlevel"` ABI; it
+    is not supported.
 * **The eighth round, open.**
   * *The Flintstones' download* fetches a 129.3 MB tar for the 3.3 MB of
     three ZIPs inside it, the only copy of the June 1994 build found

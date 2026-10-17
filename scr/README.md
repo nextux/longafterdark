@@ -21,7 +21,7 @@ files together in either of these places:
 Screen Saver Settings lists it as "Long After Dark": the `.scr`'s string
 resource 1 (`IDS_DESCRIPTION`), which Windows shows instead of the file name.
 
-The modules come from your own discs: any of the twenty releases (twelve of
+The modules come from your own discs: any of the twenty-one releases (twelve of
 After Dark modules: After Dark 4.0 Deluxe, After Dark 3.2, Totally Twisted
 After Dark, After Dark 10th Anniversary, The Simpsons Screen Saver, Star Trek:
 The Screen Saver, which is After Dark 2.0b on two floppies, Marvel Comics
@@ -32,8 +32,9 @@ run on Delrina's Intermission engine: Delrina's Intermission 4.0 itself,
 LucasArts' Star Wars Screen Entertainment, and Delrina's Opus 'n Bill
 Screen Saver, Opus 'n Bill: On the Road Again!, The Flintstones Screen
 Saver Collection, The Far Side Screen Saver Collection and Scott Adams'
-Dilbert Screen Saver Collection; and Sierra On-Line's Screen Antics:
-Johnny Castaway, a Windows 3.1 screen saver program of its own), from
+Dilbert Screen Saver Collection; Sierra On-Line's Screen Antics:
+Johnny Castaway, a Windows 3.1 screen saver program of its own; and 7th
+Level's Take Your Best Shot, 17 scenes of 7th Level's Runtime Player), from
 the disc (or the floppies), an image of it, a copy of its files, or the
 Internet Archive download. Click **Import…** in the settings dialog (or run `adimport.exe`) to
 copy them to `%LOCALAPPDATA%\LongAfterDark\assets\win`. Until then the saver
@@ -58,21 +59,25 @@ saver keeps nothing there.
 
 **Names.** The saver's windows are of class `LongAfterDarkSaver` (the `/s`
 and `/p` windows), `LongAfterDarkWindow` (the `/window` window, **Window
-mode**), `LongAfterDarkLivePreview` and
+mode**), `LongAfterDarkWallpaper` and `LongAfterDarkWallpaperControl` (the
+`/wallpaper` windows and the hidden one that hears for them, **Wallpaper
+mode**; one per session: the mutex `Local\LongAfterDarkWallpaper`),
+`LongAfterDarkLivePreview` and
 `LongAfterDarkThumbnailQueue`; its temporary files are
 `%TEMP%\LongAfterDark-preview-<pid>.ini` and the desktop captures,
 `%TEMP%\LongAfterDark-seed-<pid>-<window>.ppm` for a window that may start
 with a module that follows the display (an After Dark module) and
 `…-<window>-640x480.ppm` for one that may start with a module that has a
 640×480 screen of its own (an Intermission, Star Trek, ScreamSavers or
-Marvel module, or Johnny Castaway; the first
+Marvel module, Johnny Castaway or a Best Shot scene; the first
 file serves both where the two pictures are the same: **Starting from the
-desktop**).
+desktop**), and `/wallpaper`'s pictures of the wallpaper,
+`…-<window>-<W>x<H>-w<n>.ppm`.
 
 ## Command line
 
 The standard screen saver switches, and Long After Dark's own for **Window
-mode** (`src/args.h`). Case doesn't matter, `-` works like `/` (and `--`
+mode** and **Wallpaper mode** (`src/args.h`). Case doesn't matter, `-` works like `/` (and `--`
 for the long ones), and the window handle can be written as `/p 1234`,
 `/p:1234` or `/p1234`. The first of `/s`, `/p`, `/c` and `/a` decides; a
 word that merely starts with one of their letters (`/start`) is none of them.
@@ -87,12 +92,17 @@ word that merely starts with one of their letters (`/start`) is none of them.
 | `/size WxH` | With `/window`: its client area in physical pixels, 160×120 to 7680×4320 (default 1280×720). |
 | `/module <id or name>` | With `/window`: that module, by id or by name as the settings dialog lists it; a name several releases share needs the id, which the message box lists (**Window mode**). |
 | `/random` | With `/window`: the settings' Random rotation, after `/module`'s module if there is one. |
+| `/wallpaper` | **Wallpaper mode**: on the Windows desktop itself, behind its icons and under every window, until stopped. `/module` and `/random` as with `/window`. |
+| `/stop` | With `/wallpaper`: ends the one running (`LongAfterDark.exe /wallpaper /stop`). |
 | `/help`, `/?` | A message box with the usage of every switch; exits 0. |
 
 `/size` and `/module` take their value after a space, `:` or `=`;
-`/window` and `/random` take none. They go in any order. Without
-`/window`, `/size`, `/module` and `/random` are an error; with it, so are
-`/s`, `/p`, `/c` and `/a`, an unknown switch and a stray word. A command
+`/window`, `/wallpaper`, `/stop` and `/random` take none. They go in any
+order. Without `/window` or `/wallpaper`, `/size`, `/module` and `/random`
+are an error, and `/stop` is without `/wallpaper`; with `/window`, so are
+`/s`, `/p`, `/c` and `/a`, an unknown switch and a stray word; with
+`/wallpaper` those too, and `/window`, `/size`, and `/module` or `/random`
+after `/stop`. A command
 line in error, or a `/module` that names no module the saver can play,
 gets a message box saying what is wrong, with the switches in short
 (`usage_message`), and the saver exits 1 without a window or a host. Other
@@ -261,6 +271,95 @@ names and what the window plays) are in `src/window_mode.h`, the rest in
 * **Logs:** `AD_SCR_LOG` gets every line (`mode=window`, `start /window`,
   the spawns); there is no last-exit log, which is `/s`'s alone.
 
+## Wallpaper mode
+
+`LongAfterDark.exe /wallpaper` shows the modules on the Windows desktop
+itself, behind its icons and under every window, as Take Your Best Shot's
+living wallpapers did, until `LongAfterDark.exe /wallpaper /stop`. It is
+the command line's alone (**Command line**), like `/window`; nothing in
+the settings dialog starts it. The window-free parts (the classes, where in
+Explorer's windows its own go, what each way of running gives its hosts, the
+picture of the wallpaper) are in `src/wallpaper_mode.h`, the rest in
+`saver.cc` (`App::wallpaper`, `run_wallpaper`, `embed_wallpaper`,
+`wall_tick`, `control_message`, `wallpaper_seed`,
+`SaverWindow::create_wallpaper`).
+
+* **Where it goes:** it sends Progman `0x052C` (wParam `0xD`, lParam 1,
+  `SendMessageTimeout`, 1 s), which makes Explorer put a `WorkerW` behind
+  the icons, then looks at the windows (`find_wallpaper_host`, chosen by
+  what the tree shows, never by the Windows build). Windows 11 24H2 and
+  later: Progman holds the icons (`SHELLDLL_DefView`) and that `WorkerW` as
+  children, and each window goes into Progman just below the icons, above
+  the `WorkerW`; Progman there has no surface to draw a child into
+  (`WS_EX_NOREDIRECTIONBITMAP`, as the icons' own layered window shows), so
+  the window is layered at full opacity (`wallpaper_ex_style`;
+  `AD_SCR_WALL_LAYERED=0` or `1` overrides it). Before 24H2: the icons are
+  in a top-level `WorkerW`, and the window goes into the top-level
+  `WorkerW` next below it, at the top. One window per monitor the
+  `Monitors` setting gives a host (a monitor it leaves out keeps its
+  wallpaper), on its monitor in the parent's client coordinates (the
+  virtual screen's pixels mapped into the parent's, at the parent's DPI
+  awareness): class `LongAfterDarkWallpaper`, `WS_CHILD | WS_DISABLED`,
+  `WS_EX_NOACTIVATE`, never top-level, never topmost. The log says
+  `wallpaper: progman (24H2): in Progman 10a2c below SHELLDLL_DefView 10a30
+  (start)` and `wallpaper: window=0 on 1920x1080 at 0,0 (0,0 in its parent)
+  dpi=96 layered`.
+* **No desktop to go into** (no Progman: no Explorer, a hidden desktop,
+  another shell; or no `WorkerW` after `0x052C`): `wallpaper: no desktop
+  host (none: no Progman): nothing shown`, no window, no host, no message
+  box, exit 14. It never falls back to a full-screen or topmost window.
+* **What it plays:** the settings, as `/window` reads them, with `/module`
+  and `/random` over them (`window_settings`); `Monitors` and
+  `DifferentPerMonitor` as `/s`. A `/module` it can't play, nothing
+  imported or no host get `/window`'s message boxes and exit codes.
+* **The hosts:** as `/window`'s (`docs/INTERACTION.md` §4.6): no input
+  reaches them and none ends the mode (`ADCAPS=0`, `ADNUMLOCK=0`, no `KEY`,
+  `CAPS`, `NUMLOCK` or `MOUSE` line, the status record unread, so no wake
+  and no game); the cursor is never hidden, changed or clipped. Every host
+  also gets `ADWALLPAPER=1` (the other modes remove an inherited one): Take
+  Your Best Shot's scenes run their living-wallpaper form with it, and
+  every other module ignores it. They run at below-normal priority. Sound:
+  the primary monitor's window's host, as `Sound` and `Volume` say.
+* **Starting on the wallpaper:** every host, the first, each rotation's and
+  each respawn's, starts on the user's wallpaper (`ADSEEDIMG`, **Starting
+  from the desktop**), never a capture of the screen (no windows, no
+  icons): `PaintDesktop` into a memory DC of the monitor's size for the
+  monitor at the virtual screen's 0,0 (on Windows 11 build 26300 it gives
+  the wallpaper itself), else (another monitor, or `PaintDesktop` failing,
+  as on a hidden desktop) the monitor's file from `IDesktopWallpaper` drawn
+  as its position says (fill, fit, stretch, tile, centre, span) with WIC,
+  else the background colour (a solid-colour desktop gives that colour).
+  The part of it a host's frame covers, at the emulated size, as a P6
+  (delete-on-close), made once per window and size, and again after the
+  wallpaper changes (`WM_SETTINGCHANGE`, `SPI_SETDESKWALLPAPER`) or the
+  windows are made again. The log says `seed window=0 640x480 from
+  1440x1080 of the wallpaper (PaintDesktop) in 9 ms`.
+* **The display:** no power request: the screen saver, display sleep and
+  the lock come as usual. The hosts pause (the pacer stops, as `/s` does
+  with the display off) while a screen saver runs
+  (`SPI_GETSCREENSAVERRUNNING`, checked every second), the session is
+  locked (`WTSRegisterSessionNotification`) or the display is off
+  (`GUID_CONSOLE_DISPLAY_STATE`), and go on after: `wallpaper: pausing
+  (display on, screen saver running, session unlocked)`.
+* **Ending:** `/wallpaper /stop` finds this desktop's
+  `LongAfterDarkWallpaperControl` window, posts it `WM_CLOSE` and waits
+  for its process, 10 s at most (exit 0, also when none runs: `wallpaper:
+  /stop: none running`; 15 when it would not end); a second `/wallpaper`
+  ends the first the same way and takes its place. Signing out
+  (`WM_ENDSESSION`) ends it too. The hosts hear `QUIT`, the windows go and
+  the parent is redrawn (`RedrawWindow`, `RDW_INVALIDATE | RDW_ERASE |
+  RDW_ALLCHILDREN | RDW_FRAME`), so the wallpaper shows again, no last
+  frame.
+* **Explorer starting again:** the windows go with Explorer's
+  (`wallpaper: its window went with Explorer's`), or `TaskbarCreated`
+  reaches the control window, or the parent is found gone at the
+  once-a-second check; a display change does the same. The hosts end and
+  the windows are made again in the new desktop as soon as there is one;
+  with none for 30 s, it ends with exit 14 (`no desktop to draw on any
+  more`).
+* **Logs:** `AD_SCR_LOG` gets every line (`mode=wallpaper`, `start
+  /wallpaper`, `wallpaper: …`, the spawns); there is no last-exit log.
+
 ## The settings dialog
 
 `/c` opens a Windows 11-style window (plain Win32, no extra runtime), in the
@@ -278,7 +377,7 @@ column at most 1240 DIP wide, centred.
   releases (packages) are imported: one 4:5 box cover per release across the
   top, oldest release first (Star Trek, Johnny Castaway, Opus 'n Bill,
   Intermission, Marvel, Flintstones, Far Side, Simpsons, Star Wars, On the
-  Road Again, Snoopy, Dilbert, Star Trek TNG, Looney Tunes, ScreamSavers,
+  Road Again, Snoopy, Dilbert, Star Trek TNG, Best Shot, Looney Tunes, ScreamSavers,
   3.2, Totally Twisted, Disney, Deluxe, 10th Anniversary), each with its short title under it (64×80 DIP covers; 48×60
   without captions when the window is under 760 DIP tall). Seven fit the
   first-open window side by side, and eight compact ones the smallest. The
@@ -321,9 +420,9 @@ column at most 1240 DIP wide, centred.
   nothing and the preview carries on). Every cover shows: covers that don't
   fit on one row wrap onto more, as few rows as hold them: regular covers
   fill each row, at most eight (ten: 8 and 2; fifteen: 8 and 7; sixteen: 8
-  and 8; twenty: 8, 8 and 4), compact
+  and 8; twenty: 8, 8 and 4; twenty-one: 8, 8 and 5), compact
   ones as even as can be (fourteen: 7 and 7; twenty, where a row holds
-  ten, 10 and 10), regular
+  ten, 10 and 10; twenty-one on two rows too), regular
   while the window has the height for their rows, else compact (`ui_model.h`: `strip_grid`, `strip_band`). Only a
   window too short even for the compact rows (the smallest, with eight
   releases and more) gets one compact row that scrolls by whole
@@ -414,7 +513,8 @@ column at most 1240 DIP wide, centred.
   480 lines at the preview box's own 16:9 aspect — 856x480, or 848x480
   where the box's whole pixels come out a little taller — whatever the
   Resolution setting; a module with a screen of its own, an Intermission,
-  Star Trek, ScreamSavers or Marvel module or Johnny Castaway, at its
+  Star Trek, ScreamSavers or Marvel module, Johnny Castaway or a Best Shot
+  scene, at its
   640x480, pillarboxed in
   the wide preview as on
   a widescreen monitor: see **Emulated screen**),
@@ -444,7 +544,7 @@ column at most 1240 DIP wide, centred.
 * **Resolution** and **Monitors**, each at the start of its half of the card
   (dropdowns at most 280 DIP wide; Resolution, 480 or 720 lines, is for the
   modules that follow the display alone: an Intermission, Star Trek,
-  ScreamSavers or Marvel module, or Johnny Castaway, always runs at its own 640×480, see
+  ScreamSavers or Marvel module, Johnny Castaway or a Best Shot scene, always runs at its own 640×480, see
   **Emulated screen**), then across the card **Stretch to fit the screen
   (no black bars)** (`StretchToFit`: those 640×480 modules fill each monitor,
   stretched, in `/s` and the settings window's live preview, never in `/p`;
@@ -487,8 +587,8 @@ column at most 1240 DIP wide, centred.
   `IDM_BARS_*` in `res/resource.h`) are taken as the dialog's `WM_COMMAND`
   too, so a test can post them. The link adds nothing else: the window's
   sizes and every other control's place are 1.5.1's.
-* The footer: **Import…** with a line saying what is imported ("429
-  modules from 20 releases", or "84 modules from After Dark 4.0 Deluxe"),
+* The footer: **Import…** with a line saying what is imported ("446
+  modules from 21 releases", or "84 modules from After Dark 4.0 Deluxe"),
   then the credit, then **Preview** (full screen, of the module the details show; greyed for
   a module this host can't run yet, or whose file is missing, and while the
   details show none), **OK** and **Cancel**. The credit, "Made With Love by
@@ -501,7 +601,7 @@ column at most 1240 DIP wide, centred.
   hover cue high contrast keeps, whose hover fill is the window colour). It
   sits in the free space between the assets line's text and Preview, centred
   there and on the buttons, and shows only when its whole box fits with
-  24 DIP clear of both: beside "429 modules from 20 releases" (as long as
+  24 DIP clear of both: beside "446 modules from 21 releases" (as long as
   the twelve releases' "284 modules from 12 releases") it fits the
   first-open window at every scale, and the narrowest one at 100% only (at
   the other scales it gives way there: the line is a digit longer than the
@@ -524,13 +624,13 @@ column at most 1240 DIP wide, centred.
 Until the modules are imported the details card is one welcome: a picture
 across its top (the night sky, the moon and two flying toasters), "Welcome to
 Long After Dark", what importing does (the original modules of After Dark and
-Star Wars Screen Entertainment, from any of the twenty releases' discs, an image,
+Star Wars Screen Entertainment, from any of the twenty-one releases' discs, an image,
 or the Internet Archive; `welcome_text` in `ui_model.h`) and an **Import a
 release…** button (the importer's window is "Import a release"). The
 footer's Import is hidden meanwhile (it is the same command), its line reads
 "Nothing imported yet" (the credit beside it as ever), Single/Random are greyed, and the list shows a few
 faint placeholder rows and "Your modules appear here after import". "Long
-After Dark" stays the product's name; the words for the releases fit all twenty
+After Dark" stays the product's name; the words for the releases fit all twenty-one
 (not every one is After Dark's, and Star Trek, the Simpsons, Marvel, Snoopy's
 Screen Savers, the Looney Tunes (also on a CD), ScreamSavers, the Disney
 Collection, Johnny Castaway and Delrina's six releases came on floppies,
@@ -799,7 +899,7 @@ accepts only a host variable's shape ("AD", a capital or digit, then
 capitals, digits and underscores) other than those the front end sets
 itself (`ADSTREAM`, `ADSCREENW`/`H`, `ADCVSET`, `ADCAPS`, `ADNUMLOCK`,
 `ADSTATE`, `ADSEEDIMG`, `ADSOUND`, `ADVOLUME`, `ADAUDIOOUT`,
-`ADSTATUSHANDLE`, `ADSTATUSLOG`), and leaves out a control naming anything
+`ADSTATUSHANDLE`, `ADSTATUSLOG`, `ADWALLPAPER`), and leaves out a control naming anything
 else, one naming a variable an earlier control took, and a host control
 without a value (`host_variable_ok`). The Linux player, which has no
 settings window, gives every host each host control's default.
@@ -905,7 +1005,7 @@ running. Only files named that way are ever deleted.
   monitor changed mode or position but kept its aspect ratio (so the host's
   emulated screen size is the same) is moved, and its host carries on; so is
   one whose host runs a module with a screen of its own (an Intermission,
-  Star Trek, ScreamSavers or Marvel module, or Johnny Castaway), whose 640×480 is the same on
+  Star Trek, ScreamSavers or Marvel module, Johnny Castaway or a Best Shot scene), whose 640×480 is the same on
   every monitor (such
   windows go last, after the ones whose size matches a monitor, so neither
   kind restarts for the other). A
@@ -1079,7 +1179,7 @@ running. Only files named that way are ever deleted.
   Dark module (one that follows the display) it is the whole monitor at its
   After Dark size, in `LongAfterDark-seed-<pid>-<window>.ppm`, as ever; for a
   module with a screen of its own (an Intermission, Star Trek, ScreamSavers
-  or Marvel module, or Johnny Castaway), the part of the monitor its 640×480 frame will cover, shrunk to 640×480,
+  or Marvel module, Johnny Castaway or a Best Shot scene), the part of the monitor its 640×480 frame will cover, shrunk to 640×480,
   in `…-<window>-640x480.ppm`, one picture for both (a screen of another size
   would have its own, `…-<window>-<W>x<H>.ppm`). A window that can only
   start with such a module (it chosen alone, or the only releases imported
@@ -1154,6 +1254,7 @@ running. Only files named that way are ever deleted.
 | `AD_SCR_STRETCH` | `halftone` or `nearest`; `auto` is the default |
 | `AD_SCR_PRESENT` | `gdi`: draw with GDI's `StretchDIBits` only; `d2d`: Direct2D for `/p` too, and never given up for its cost (only when it fails); `d3d11` (or `d3d`, `direct3d`): Direct3D 11 for `/s` and `/window` whatever the look (with the defaults, the sharp look in a pass of its own), never given up for its cost (only when it fails), `/p` keeping GDI; `gdi` and `d2d` turn the looks off (`looks: crt: off (AD_SCR_PRESENT=d2d)`). The default is Direct2D for `/s` with GDI as the fallback, and Direct3D 11 while a look is on (see **Scaling** and **Looks**) |
 | `AD_SCR_NO_DWM` | pace with the 60 Hz timer only |
+| `AD_SCR_WALL_LAYERED` | `/wallpaper`: `1` makes every window layered, `0` none, whatever its parent (**Wallpaper mode**) |
 | `AD_SCR_THUMBS` | where the settings dialog keeps module thumbnails (default: `thumbs` next to the settings file) |
 | `AD_SCR_THUMBGEN` | `0`: the settings dialog takes no thumbnails in the background (the live preview still takes its own) |
 | `AD_SCR_SOUND` | `0` (or `off`, `no`, `false`): no host makes sound, whatever `settings.ini` says (every scr test sets it). Anything else leaves it to the settings |
@@ -1218,7 +1319,12 @@ only reads it.
   player's rules, with `sameAs` copies as one module and the messages for an
   ambiguous name, an unknown one, a missing file and no catalog; what the
   window plays from the settings with and without `/module` and `/random`;
-  the window's outer size for its client area at 96 and 144 DPI), the P8/P6 stream parser
+  the window's outer size for its client area at 96 and 144 DPI), wallpaper
+  mode (`wallpaper`: where its windows go over made-up window trees of
+  24H2's layout and the older one, with no Explorer and with Explorer
+  starting again; the layered style; what each way of running gives its
+  hosts, `ADWALLPAPER` included; how the wallpaper is painted, and a P6 of
+  this desktop's), the P8/P6 stream parser
   (including headers claiming frames past 8192 on an axis or 4096×4096 in
   all, which are resynced past rather than waited on), the settings.ini
   round-trip (`DifferentPerMonitor` too: missing is 0, read leniently,

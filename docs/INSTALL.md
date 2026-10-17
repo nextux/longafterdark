@@ -3,8 +3,9 @@
 **Long After Dark** is a screen saver for Windows that runs the original
 modules of After Dark, of LucasArts' Star Wars Screen Entertainment, of
 Delrina's Intermission and its Opus 'n Bill, Flintstones, Far Side and
-Dilbert collections, and of Sierra's Johnny Castaway, unchanged, under x86
-emulation. It knows twenty releases, 429 modules:
+Dilbert collections, of Sierra's Johnny Castaway and of 7th Level's Take
+Your Best Shot, unchanged, under x86 emulation. It knows twenty-one
+releases, 446 modules:
 
 | id | Release | Internet Archive download |
 |---|---|---|
@@ -28,6 +29,7 @@ emulation. It knows twenty releases, 429 modules:
 | `opusroad` | Opus 'n Bill: On the Road Again! (1994) | install files (ZIP), 4.4 MB |
 | `flintstones` | The Flintstones Screen Saver Collection (1994) | install files (3 ZIPs, one per disk, in a tar), 129.3 MB |
 | `intermission` | Intermission 4.0 (1993) | three floppy images (ZIP), 3.3 MB |
+| `bestshot` | Take Your Best Shot (1995) | CD image, 89.1 MB |
 
 Star Trek: The Screen Saver is After Dark 2.0 (version 2.0b) with 16 Star
 Trek modules, on two floppies. Marvel Comics Screen Posters (After Dark
@@ -52,6 +54,16 @@ first storytelling screen saver": the days of Johnny, a castaway on a tiny
 desert island with one palm tree. It is no After Dark or Intermission
 module but a Windows 3.1 screen saver program of its own, `SCRANTIC.SCR`,
 which Long After Dark runs unchanged, the way Windows 3.1 ran it.
+
+Take Your Best Shot (1995) is 7th Level's "Twisted Arcade Games for
+Twisted Minds", on one CD, made of Bill Plympton's animation: 17 scenes
+that were at once its screen savers and its living wallpapers, among them
+bouncing heads (About Face, Headbanger, Rebound and more), a skeet shoot
+with heads for clays (Skeet), and three arcade games, Head Shot, Hot Shot
+and Line Shot. They are neither After Dark nor Intermission modules but
+scenes of 7th Level's own Runtime Player, `PLYMPTON.EXE`, a Windows 3.1
+program which Long After Dark runs unchanged, starting each scene as the
+Best Shot program did.
 
 Star Wars Screen Entertainment is not an After Dark release, though it is
 sometimes listed as "After Dark Star Wars": its 14 modules were made for
@@ -87,7 +99,8 @@ describes: `bash tools/package.sh` stages the same files in
 - **LongAfterDark.scr**: the screen saver and its settings window.
 - **LongAfterDark.exe**: the same program again, under the name that
   shows it in a window
-  ([Show it in a window](#show-it-in-a-window-a-be-right-back-screen)).
+  ([Show it in a window](#show-it-in-a-window-a-be-right-back-screen)) or
+  on your desktop ([Living wallpaper](#living-wallpaper)).
 - **adhostwin.exe**: the emulator. The screen saver starts one for each
   monitor.
 - **adimport.exe**: copies the modules from your discs.
@@ -116,7 +129,7 @@ Double-click `adimport.exe`, or open the screen saver's settings and click
 - **A drive or folder:** the CD itself, or a folder copied from it (for
   floppies, one folder holding the files of every disk, or one holding
   nothing but a `DISK1`, `DISK2`, … folder per disk).
-- **A download from the Internet Archive:** a list of the twenty releases
+- **A download from the Internet Archive:** a list of the twenty-one releases
   with their sizes, plus one entry that fetches every release not imported
   yet. An interrupted download resumes, and each file is checked against its
   published MD5 before it is used.
@@ -178,6 +191,15 @@ it. The importer never runs the floppy's installer: it expands the program
 and its data from the floppy's compressed files, as the installer did, and
 checks them against the release.
 
+Take Your Best Shot came on one CD. Import the CD itself, its ISO image
+(`BESTSHOT.iso`, which `adimport --download bestshot` fetches) or a folder
+copied from it. The importer takes from the CD the player and its five
+libraries (in its `BESTSHOT` folder), which the CD's setup installed, and
+the 17 scenes (in `BESTACT`), which it left on the CD. It never runs the
+setup or the Best Shot program, and leaves out what only the program used (the
+wallpapers, sounds and icons it put on your desktop, and 7th Level's
+samplers of its other products).
+
 Delrina's four other releases came on floppies too. The Opus 'n Bill
 Screen Saver is online only as bulletin-board copies of its three
 floppies, a ZIP of each disk's files: `OPUS1NTA.ZIP` to `OPUS3NTA.ZIP`
@@ -211,6 +233,7 @@ adimport --image PNX-FSC1.ZIP --image PNX-FSC2.ZIP --image PNX-FSC3.ZIP --image 
 adimport --image 000580_jonny_castaway.7z
 adimport --image OPUS1NTA.ZIP --image OPUS2NTA.ZIP --image OPUS3NTA.ZIP
 adimport --image "Intermission 4.0.zip"
+adimport --image BESTSHOT.iso
 adimport --from E:\
 adimport --from C:\Copies\Snoopy
 adimport --download ad10
@@ -232,8 +255,8 @@ error and 5 when you cancel.
 ## 2. Covers
 
 With two or more releases imported, the settings window shows their box
-covers above the module list, every one of them: on two rows when they
-don't fit on one (in a short window, smaller covers without their names;
+covers above the module list, every one of them: on two rows or more when
+they don't fit on one (in a short window, smaller covers without their names;
 only in the smallest one do they scroll). Click covers to list only the
 modules of those releases (with none selected, it lists them all);
 right-click a cover for **Show only …** and **Show all releases**. An import fetches the
@@ -376,6 +399,16 @@ them, so the story goes on from one run to the next; deleting
 `state\castaway` starts it over. Keys and the mouse never reach it: they
 end the screen saver as they do any module's.
 
+Take Your Best Shot's scenes always get 640×480 too, scaled to fit: 7th
+Level's player draws them for that screen. They have no buttons, and each
+runs as Take Your Best Shot ran it as its screen saver. Head Shot, Hot Shot
+and Line Shot play a demonstration of the game; press Caps Lock to play it
+yourself: click **play** on the game's menu, and the mouse plays (no
+joystick). Shift+Esc ends a game, and Caps Lock off and on starts a new
+one. With Caps Lock on, the other scenes become Take Your Best Shot's
+interactive screen saver: clicks and keys reach the scene instead of
+ending it (see [Ending it, and playing](#ending-it-and-playing)).
+
 Several ScreamSavers modules and Marvel's poster module compose their
 pictures for 640×480 too, so all the ScreamSavers modules and Marvel's
 always get 640×480, scaled to fit. Marvel's
@@ -402,7 +435,9 @@ Intermission's own volume setting, and the music as the Windows mixer's
 synthesizer slider did, since Intermission itself set only the effects'
 volume. The modules of Delrina's own releases play wave effects (a few
 have none) and no music, but for Intermission 4.0's Rapping Pig, whose song
-is MIDI. **Preview** plays sound with the values you have not saved yet; the
+is MIDI. Take Your Best Shot's scenes play wave sound through 7th Level's
+own sound library: every scene makes sound within its first minute, most
+from the first seconds. **Preview** plays sound with the values you have not saved yet; the
 small live preview never does.
 
 The **Look** menu changes how the screen saver draws the modules' pictures.
@@ -443,7 +478,8 @@ other choices draw with your graphics card, through Direct3D 11. **Look**:
 that doesn't fill the screen: **Black** (the default), or **Ambient glow**,
 a blurred, dimmed copy of the picture. It is for the modules that always
 get 640×480 (Intermission's, Star Wars' among them, both Star Trek
-releases', ScreamSavers', Marvel's and Johnny Castaway) on a widescreen
+releases', ScreamSavers', Marvel's, Johnny Castaway and Best Shot's) on a
+widescreen
 monitor, and for After Dark's own on an ultrawide or portrait one; with
 **Stretch to fit the screen** checked, the 640×480 modules have no bars.
 
@@ -462,8 +498,9 @@ Ctrl+Alt+Del) ends the screen saver. Caps Lock never does: in some modules
 it changes something (it scares the fish, changes the colours, or in many
 Looney Tunes, Disney and Next Generation modules moves on to the next
 scene) or starts a game, as in Rodger Dodger, You Bet Your Head, Simpsons
-Trivia, Officer's Review, Mime Hunt, Frankenscreen, Marbles and Pinocchio
-(the Wishing Star: Pinocchio follows the mouse).
+Trivia, Officer's Review, Mime Hunt, Frankenscreen, Marbles, Pinocchio
+(the Wishing Star: Pinocchio follows the mouse) and Take Your Best Shot's
+Head Shot, Hot Shot and Line Shot.
 
 While a game is playing, keys, clicks and the mouse belong to it, and the
 pointer stays on the primary monitor. Press Caps Lock again to stop playing
@@ -531,8 +568,8 @@ Resizing the window scales the picture to the new size. Once the size
 settles, a module whose screen follows the display's shape (After Dark's)
 starts again in the new shape; a module with a 640x480 screen of its own
 (Intermission's, both Star Trek releases', ScreamSavers', Marvel's, Johnny
-Castaway) keeps its shape, with bars, unless **Stretch to fit the screen**
-is checked.
+Castaway, Best Shot's) keeps its shape, with bars, unless **Stretch to fit
+the screen** is checked.
 
 In OBS, add a **Window Capture** source:
 
@@ -549,6 +586,69 @@ In OBS, add a **Window Capture** source:
 The window plays sound as the primary monitor's screen saver does (Sound
 and Volume in the settings window). For the stream to have it, add an
 **Application Audio Capture** source for the same window.
+
+## Living wallpaper
+
+With `/wallpaper`, `LongAfterDark.exe` plays the modules on the Windows
+desktop itself, behind its icons and under every window, in place of your
+wallpaper, until you stop it, as Take Your Best Shot's living wallpapers
+did. Nothing starts it but this command line. From PowerShell, in the
+programs' folder:
+
+```powershell
+.\LongAfterDark.exe /wallpaper /random
+.\LongAfterDark.exe /wallpaper /stop
+```
+
+| Switch | What it does |
+|---|---|
+| `/wallpaper` | The modules on the desktop, one on each monitor the **Monitors** setting gives the screen saver (a monitor it leaves out keeps its wallpaper). A second `/wallpaper` ends the first and takes its place. |
+| `/module <module>` | That module, as with `/window`. |
+| `/random` | The modules **Random** plays, as with `/window`; **A different module on each monitor** applies. |
+| `/wallpaper /stop` | Ends the one running, and your own wallpaper shows again. |
+
+With neither `/module` nor `/random`, it shows what the screen saver would.
+Each module's own settings, the Resolution, **Stretch to fit the screen**,
+the **Look** menu and the sound apply as they do to the screen saver; sound
+comes from the primary monitor's module. `/size` and the screen saver's
+switches don't go with `/wallpaper`: such a command line, or a module it
+can't find, opens a message saying what is wrong, and nothing runs.
+
+Every module starts on a picture of your own wallpaper (never of your
+windows or icons), at the module's screen size, where the screen saver's
+modules start on a picture of the desktop: the modules that do something
+to the desktop's picture do it to your wallpaper, and Take Your Best
+Shot's scenes play the living-wallpaper form Take Your Best Shot gave them,
+on their own black (or dark brown) backdrop over the whole desktop, as the
+original did; its three games show their menu.
+When you change your wallpaper, the modules started after that start on the
+new one.
+
+The desktop works as before: no key, click or move reaches the modules or
+ends them, Caps Lock and Num Lock start no game, and the pointer is never
+hidden or held. It holds no power request, so the screen saver, the lock
+and display sleep come as they would without it. The modules pause while
+a screen saver runs, while the computer is locked and while the display is
+off, and go on after.
+
+It runs an emulated PC for each monitor the whole time, at below-normal
+priority, so that your own programs come first. That still takes processor
+time and power all day long, as a screen saver that never ended would; on a
+laptop it shortens the battery's life. Stop it when that matters.
+
+If Explorer restarts, the modules come back on the new desktop by
+themselves. Without Explorer's desktop (another shell, or Explorer not
+running) it shows nothing and exits with code 14; if Explorer goes away and
+isn't back within 30 seconds, it exits with 14 too. `/wallpaper /stop`
+exits with 0 whether one was running or not, and a `/stop` or a second
+`/wallpaper` whose old one won't end within 10 seconds exits with 15.
+
+To start it with Windows, press Win+R, type `shell:startup` and press
+Enter. In the folder that opens, right-click → **New** → **Shortcut**, and
+give it the full path of `LongAfterDark.exe` followed by the switches, such
+as `"C:\Programs\LongAfterDark\LongAfterDark.exe" /wallpaper /random`. As
+with `/window`, only `LongAfterDark.exe` takes these switches, not the
+`.scr`.
 
 ## Your own shader preset (advanced)
 

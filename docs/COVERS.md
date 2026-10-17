@@ -51,7 +51,8 @@ the sixteenth Sierra On-Line's `castaway` (Screen Antics: Johnny
 Castaway), and as the seventeenth to the twentieth Delrina's `opus`,
 `opusroad`, `flintstones` and `intermission` (Opus 'n Bill Screen Saver,
 Opus 'n Bill: On the Road Again!, The Flintstones Screen Saver Collection,
-Intermission 4.0). The UI calls a release by
+Intermission 4.0), and as the twenty-first 7th Level's `bestshot` (Take
+Your Best Shot). The UI calls a release by
 its `title`, or by its `shortTitle` where space is tight. A **cover** is the
 art that stands for a release. A **tile** is the cover rendered as a 4:5
 portrait PNG for display. The **filter** is the set of releases whose tiles
@@ -127,7 +128,8 @@ control and the details card) moves down by the band's height.
   second, after Star Trek. With all twenty, Opus 'n Bill (1993-09) comes
   third and Intermission (1993-11) fourth, before Marvel, the Flintstones
   (1994-05) sixth, before Far Side, and On the Road Again (1994-09) tenth,
-  after Star Wars. A release without a date comes
+  after Star Wars. With all twenty-one, Best Shot (1995-02) comes
+  fourteenth, after the Next Generation. A release without a date comes
   last. (As built for twelve: a row that
   scrolls starts after the left chevron's place, §1.3.)
 * **Status box.** A status box 200 DIP wide sits at the column's right
@@ -219,10 +221,10 @@ so every cover now shows, on as many rows as they need
 * **Rows.** As few as hold every cover. Regular covers fill each row left
   to right, up to what a row holds and at most eight (`kStripMaxCols`): ten
   are 8 and 2 even where a row holds nine, fifteen 8 and 7, sixteen 8 and
-  8, twenty 8, 8 and 4. Compact covers,
+  8, twenty 8, 8 and 4, twenty-one 8, 8 and 5. Compact covers,
   which only a short window gets, are as even as can be, so a cap never
   costs it a row: fourteen where a row holds ten are 7 and 7, sixteen 8
-  and 8, twenty 10 and 10. The rows are left-aligned on the
+  and 8, twenty 10 and 10, twenty-one two rows too. The rows are left-aligned on the
   column and `kStripRowGap` (8 DIP) apart, the gap between two covers of a
   row; only the last row may be shorter. The band is the rows of cells and
   the 12-DIP gap under them: 236 DIP for two regular rows, 352 for three,
@@ -691,6 +693,7 @@ photos are those two releases' covers of choice, through `--set-cover`).
 | `opusroad` (the same) | download `https://archive.org/download/OpusNBill_OnTheRoadAgain/OnB-OtRA-Box.jpg` (a scan of the box front, 1256×1593, in the item of the release's ZIP; it fills the tile, no crop), md5 `afc3289af08484ad64542363c5b6e9fb`, 465624 B, art `box` ("Box front", Internet Archive) | — | — | — |
 | `flintstones` (the same) | — (no source: the generated cover) | — | — | — |
 | `intermission` (the same) | disc `INSTALL.BMP` (the picture beside the installer's pages on disk 1: Intermission's logo, 100×150), md5 `cf21a2a530d09444445c4735d8dd59ca`, art `panel` ("Setup art", your disks) | — | — | — |
+| `bestshot` (added as the twenty-first release) | download `https://archive.org/download/takeyourbestshot/bestshot.jpg` (the box front, 432×547, in the Internet Archive's item of the CD), md5 `a225962a4e242347a056f0b356ab920b`, 58082 B, saved as `takeyourbestshot_bestshot.jpg`, art `box` ("Box front", Internet Archive) | — | — | — |
 
 Notes:
 * **ad32** starts with its disc art because the user chose it: no box scan
@@ -786,6 +789,14 @@ Notes:
   one photo of the floppy online, in the item of its KryoFlux dump, is not
   used: its label shows the disk's serial number. An import made offline
   shows the generated cover until `--refresh-covers` fetches the box.
+* **bestshot.** Take Your Best Shot's art belongs to 7th Level and Bill
+  Plympton, and is handled like the others': the box front ("Arcade
+  Series", "Twisted Arcade Games for Twisted Minds") from the Internet
+  Archive's item of the CD, fetched onto the user's machine at import time
+  and never bundled, committed or redistributed. The CD has no cover of
+  its own to offer (its pictures are the desktop program's wallpapers and
+  icons), so an import made offline shows the generated cover until
+  `--refresh-covers` fetches the box.
 * **Delrina's four more releases.** The Opus 'n Bill releases' art belongs
   to Berkeley Breathed and Delrina, the Flintstones' to Hanna-Barbera and
   Delrina, Intermission's to Delrina; all of it is handled like the
@@ -1773,7 +1784,10 @@ sections above stay the contract; this records the differences.
   would have put twenty releases on four rows, too tall again for a
   1080-line screen. The window is now 816 DIP wide, where the grid fits
   seven cells, so the twenty take three rows (7, 7 and 6) and Sources keeps
-  its height; the narrower work areas keep their fewer columns.
+  its height; the narrower work areas keep their fewer columns. With
+  Take Your Best Shot the twenty-one fill the three rows of seven, and the
+  settings dialog's strip takes them on three rows too (8, 8 and 5), at
+  the same first-open height.
 * **As built for twenty releases: the Downloads list held to Sources'
   height.** Its twenty cards (and Every release not imported yet) took the
   whole height of the work area, a screen-tall column at 150% on a 4K

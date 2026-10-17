@@ -37,6 +37,7 @@ into `research/win/dis`.
 | Host controls | Since the twenty releases a catalog control may carry `host`, the name of an environment variable of the host's: every host started for that module gets it, set to the control's value, and the value never goes out as `ADCVSET` or `SET`. The one there is: Intermission 4.0's **Speed** slider, `ADNE16IMXSPEED`, the pace of the emulated PC for a module whose speed was the PC's (§6.7). |
 | Module state | A per-user, per-package **writable overlay** over the guest's `C:\WINDOWS` and `C:\AFTERDRK` (`C:\SAVER` for the Intermission modules: Star Wars Screen Entertainment's and those of Delrina's own six releases) in `ADSTATE`, which the `.scr` always passes (`state\` next to `settings.ini`); without it a host keeps the overlay in memory, so headless runs stay deterministic and write nothing (§7). |
 | Desktop seed | The `.scr` captures each monitor before its windows appear, writes a delete-on-close P6 at the emulated size and passes `ADSEEDIMG` to that window's first host only (§8). |
+| Living wallpaper | Since the ninth round, opt-in: `LongAfterDark.exe /wallpaper` puts the modules on the desktop behind its icons. No input reaches them and none ends it, no game, no power request; the hosts pause while a screen saver runs, the session is locked or the display is off; every host gets `ADWALLPAPER=1` and the user's wallpaper as its seed (§4.7, §8). |
 | DOS Shell | Not reproducible on the current build (§9.1); ships with exit-reason logging and a 5-minute regression. |
 
 ---
@@ -244,7 +245,9 @@ modules, from 71 binaries: the program's **Setup...**. With Delrina's four
 more releases, twenty in all (429 modules, each release in its first
 build), it has 196 on 190 modules, from 172 binaries: each of the 101
 modules of the Opus 'n Bill Screen Saver, On the Road Again, the
-Flintstones and Intermission 4.0 has one, **Configure...**. Marvel's
+Flintstones and Intermission 4.0 has one, **Configure...**. With Take Your
+Best Shot, twenty-one releases (446 modules), it still has 196: its 17
+scenes have none. Marvel's
 thumbnails (ids 1007–1015) are children of
 the Images window (1006), so a configure script's `CLICK`, which goes to
 the dialog, can't reach them, but `PRESS 1006 <x> <y>` clicks the thumbnail
@@ -363,9 +366,11 @@ adhostwin.exe --configure <module> --button <slot> [--owner <hwnd>] [NAME=VALUE 
   `abis=afterdark,intermission`, the module ABIs the build's lanes run
   (PACKAGES.md §7.5), and, since the seventh release, `numlock=1`: the host
   takes the `NUMLOCK` line and `ADNUMLOCK` (§3.1, §3.2); with Johnny
-  Castaway, `scrnsave` in `abis` (PACKAGES.md §7.6). Today's line reads
-  `lanes=pe32,ne16 configure=pe32,ne16 abis=afterdark,intermission,scrnsave
-  status=1 state=1 seed=1 audio=1 numlock=1`. The saver takes `numlock=1`
+  Castaway, `scrnsave` in `abis` (PACKAGES.md §7.6); with Take Your Best
+  Shot, `7thlevel` (PACKAGES.md §7.7). Today's line reads
+  `lanes=pe32,ne16 configure=pe32,ne16
+  abis=afterdark,intermission,scrnsave,7thlevel status=1 state=1 seed=1
+  audio=1 numlock=1`. The saver takes `numlock=1`
   exactly: `numlock=0`, another spelling or nothing means no Num Lock
   toggle.
 * `--configure`: §6.1.
@@ -387,6 +392,7 @@ struct AdwHostStatusV1 {           // 64 bytes
   uint64_t input_applied;          // seq of the last input line applied before the last completed step
   uint64_t input_eaten;            // highest input seq the guest consumed (§2)
   uint32_t source;                 // why interactive: 0 none, 1 AD4 WantEvents, 2 AD3 0x0E
+                                   // (also a 7th Level scene's game or interactive saver, §5.2)
   uint32_t lane;                   // 1 pe32, 2 ne16, 3 test pattern
   uint32_t reserved[4];            // 0
 };
@@ -426,7 +432,7 @@ struct AdwHostStatusV1 {           // 64 bytes
 
 ---
 
-## 4. The saver's rules (`/s`; `/p` and `/window` take no input, §4.6)
+## 4. The saver's rules (`/s`; `/p`, `/window` and `/wallpaper` take no input, §4.6, §4.7)
 
 ### 4.1 Caps Lock tracking
 
@@ -538,8 +544,11 @@ while a hold is pending. The decision logic is a pure function
   exam.
 * Playing (after Caps Lock in Rodger Dodger, You Bet Your Head, Simpsons
   Trivia, Mime Hunt, Frankenscreen, Marbles, RPS, Magic Turtle's editor,
-  How to Draw…, and the Disney Collection's Pinocchio, whose Wishing Star
-  Pinocchio follows): keys, clicks and the mouse belong to the game. Press Caps
+  How to Draw…, the Disney Collection's Pinocchio, whose Wishing Star
+  Pinocchio follows, and, since the ninth round, Take Your Best Shot's Head
+  Shot, Hot Shot and Line Shot, whose arcade games the 7th Level protocol
+  starts in place of the screen saver's scene, PACKAGES.md §7.7): keys,
+  clicks and the mouse belong to the game. Press Caps
   Lock again to stop playing (the next key or move then ends the saver), or
   press **Alt** to end it at once.
 * **Final Exam** (Star Trek: The Screen Saver, since the seventh release)
@@ -680,6 +689,65 @@ screen. None of the rules above apply to it:
   saver's log says `display: kept on (power request)` (EMPIRICAL: the
   `scr_smoke_window` test and the hidden-desktop runs of 2026-10-04).
 
+### 4.7 Wallpaper mode (`/wallpaper`)
+
+`LongAfterDark.exe /wallpaper [/module <id or name>] [/random]`
+(`scr/README.md`, "Wallpaper mode"), new with the ninth round, plays the
+modules on the Windows desktop itself, behind its icons and under every
+window, as Take Your Best Shot's living wallpapers did, until
+`LongAfterDark.exe /wallpaper /stop`. It is opt-in: only that command line
+starts it, nothing in the settings dialog does, and without it every other
+mode is as before (the same logs, the same hosts' environment but for an
+empty `ADWALLPAPER`). One window per monitor the `Monitors` setting gives
+a host, a child of Explorer's desktop (`Progman` since Windows 11 24H2,
+just below the icons, layered at full opacity; before it the wallpaper's
+`WorkerW`), never top-level or topmost, `WS_DISABLED`; `/module`,
+`/random`, `Monitors` and `DifferentPerMonitor` as `/window` and `/s` read
+them. None of the saver's rules above apply:
+
+* **No input reaches the hosts, and none ends the mode.** The windows are
+  disabled, so the desktop's clicks go to the icons and Explorer; no `KEY`,
+  `CAPS`, `NUMLOCK` or `MOUSE` line is ever sent, and the cursor is never
+  hidden, changed or clipped (no `ClipCursor` call).
+* **No games.** As in `/window` (§4.6): every host starts with `ADCAPS=0`
+  and, for a host that takes it, `ADNUMLOCK=0`, and hears no change of
+  them; the status record is never read, so no wake and no rotation that
+  waits.
+* **`ADWALLPAPER=1`**, a new host variable, goes to every host the mode
+  starts (every other mode passes it empty, which removes an inherited
+  one; a catalog host control may not name it, §6.7). A 7th Level scene
+  runs its living-wallpaper form with it (PACKAGES.md §7.7); every other
+  module ignores it and runs as in the screen saver.
+* **Every host is seeded with the wallpaper** (§8): the first, each
+  rotation's and each respawn's, never with a capture of the screen.
+* **No power request.** The screen saver, display sleep and the lock come
+  as they would without it. The hosts pause (the pacer stops, as `/s` does
+  with the display off) while a screen saver runs
+  (`SPI_GETSCREENSAVERRUNNING`, checked every second), the session is
+  locked (`WTSRegisterSessionNotification`) or the display is off
+  (`GUID_CONSOLE_DISPLAY_STATE`), and go on after. The hosts run at
+  below-normal priority; sound is the primary monitor's window's host's,
+  as `Sound` and `Volume` say.
+* **Ending.** `/wallpaper /stop` posts `WM_CLOSE` to the running one's
+  hidden control window and waits for its process, 10 s at most; a second
+  `/wallpaper` ends the first the same way and takes its place; signing out
+  ends it too. The hosts hear `QUIT`, the windows go, and the desktop is
+  redrawn, so the wallpaper shows again.
+* **Explorer restarting**, or a display change, ends the hosts and makes
+  the windows again in the new desktop as soon as there is one.
+* **Exit codes.** 0 when it ended normally (and for `/stop`, whether or
+  not one was running); 14 when there is no Explorer desktop to draw on at
+  start (no `Progman`, or no `WorkerW` after its `0x052C` message: another
+  shell, a hidden desktop), with no window, no host and no message box, or
+  when Explorer went away and was not back within 30 s; 15 when the running
+  one would not end within 10 s; 1, 10 and 11 as `/window` (a command line
+  in error, nothing imported, no host).
+* **UNVERIFIED** on a real desktop: the checks ran on a hidden desktop
+  against a made-up Explorer window tree in both layouts (24H2 and older);
+  that DWM shows the layered child of `Progman`, the placement on several
+  monitors or mixed DPI, and the pause during a real screen saver or lock
+  have not been tried here.
+
 ---
 
 ## 5. Lane obligations (input and status)
@@ -803,7 +871,7 @@ screen. None of the rules above apply to it:
   The Butt Boys and Skating, and the Flintstones' DictaBird, Drive-In,
   Fred & The Pterodactyls, Bowling, Bronto Crane, The Flintmobile and
   Paper Boy (their May build's four of those too); none of the other
-  modules of the twenty releases does.
+  modules of the twenty-one releases does.
 * **A Windows 3.1 screen-saver program** (Johnny Castaway, `PACKAGES.md`
   §7.6) is never interactive, and keys and the mouse never reach it: the
   lane posts no key or mouse message to its window (a `MOUSE` line moves
@@ -813,6 +881,25 @@ screen. None of the rules above apply to it:
   (§4) end the run, on the same input as any other module's, and the lane
   then closes the program the way `DefScreenSaverProc` did, `WM_CLOSE` to
   its window, so that it saves its story as it ends.
+* **A 7th Level scene** (Take Your Best Shot, `PACKAGES.md` §7.7) runs in
+  7th Level's player, which the lane starts with the scene and a block that
+  says its mode. As the screen saver (mode 3) the player is never
+  interactive, and the lane posts no key or mouse message to its window:
+  the saver's rules (§4) end the run, and the lane stops the player as
+  Take Your Best Shot's desktop program did (`0x783` with 0, then
+  `WM_CLOSE`). With Caps Lock on, a game scene (Head Shot, Hot Shot, Line
+  Shot: the installer's `[Games]`, by file name; the catalog marks them
+  `"game": true`) runs its game instead (mode 6), and any other scene
+  the interactive screen saver Take Your Best Shot's Interactive option
+  gave (mode 3, its flag clear): the lane stops the player and starts it
+  again in that mode, the run is interactive from the `CAPS` line on
+  (`ADWS_INTERACTIVE`, source 2, the cursor shown), and the keys and the
+  mouse are the player's, as any game's are; Caps Lock again goes back to
+  the screen saver the same way. A game that ends itself (Shift+Esc, its
+  menu's "exit") goes back to the screen saver too, not interactive and
+  not a wake; Caps Lock off and on starts a new one. With `ADWALLPAPER=1`
+  (§4.7) a scene runs its living-wallpaper form (mode 1) whatever Caps
+  Lock says, and no input reaches it.
 
 ---
 
@@ -1290,7 +1377,7 @@ at a scratch folder gets scratch state with it.
 <state>\                                 ADSTATE
   <package>\                             deluxe (the FILES\… tree), ad10, ad32, tt, simpsons, swse, startrek,
                                          marvel, snoopy, looney, screams, disney, farside, dilbert, tng,
-                                         castaway, opus, opusroad, flintstones, intermission,
+                                         castaway, opus, opusroad, flintstones, intermission, bestshot,
                                          or legacy-<fnv32 of the module dir, 8 hex> for anything else
     WINDOWS\                             upper layer of the guest's C:\WINDOWS (both lanes of a package share it)
     <MODDIR>\                            upper layer of the guest's C:\AFTERDRK = the module dir
@@ -1322,6 +1409,10 @@ section `[ScreenSaver.ScreenAntics]`: its options (`Background`,
 install kept them, so the story goes on from one run to the next. The
 package has no `WINDOWS` folder; deleting `<state>\castaway` starts the
 story over with the program's defaults.
+
+Take Your Best Shot's player writes nothing as the screen saver (a run of
+Skeet with `ADSTATE` set left the folder empty); its `7THLEVEL.INI` is the
+lane's, as the installer wrote it (`PACKAGES.md` §7.7).
 
 Star Trek: The Screen Saver's modules keep what they write in
 `startrek\WINDOWS\AD_PREFS.INI`: Communications' `[Communications]
@@ -1471,6 +1562,21 @@ What remains:
   (black, as headless).
 * **Privacy.** The capture holds whatever was on screen. It lives only in
   that delete-on-close file and the hosts' memory.
+* **`/wallpaper` (§4.7; since the ninth round).** Every host the mode
+  starts, the first, each rotation's and each respawn's, gets a seed, and
+  it is the user's wallpaper, never a capture of the screen (no windows,
+  no icons): `PaintDesktop` into a memory DC of the monitor's size for the
+  monitor at the virtual screen's 0,0; else (another monitor, or
+  `PaintDesktop` failing, as on a hidden desktop) the monitor's file from
+  `IDesktopWallpaper` drawn as its position says (fill, fit, stretch,
+  tile, centre, span) with WIC; else the background colour. The part of it
+  the host's frame covers, at the emulated size, is written as a P6,
+  `%TEMP%\LongAfterDark-seed-<pid>-<window>-<W>x<H>-w<n>.ppm`,
+  delete-on-close as above, once per window and size, and again after the
+  wallpaper changes (`WM_SETTINGCHANGE` with `SPI_SETDESKWALLPAPER`) or
+  the windows are made again. `StartFromDesktop` does not apply. A 7th
+  Level scene's living wallpaper plays over it, as the original played over
+  the desktop's own wallpaper.
 
 ---
 
