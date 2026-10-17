@@ -7,6 +7,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <string_view>
 
@@ -34,6 +35,13 @@ void register_host_ad_snd(Runtime16& rt);
 
 // The saver window (full screen, visible): the HWND the lane hands OLDMOD16.
 uint16_t user16_saver_window(Runtime16& rt);
+// A top-level window of another program the host stands in for (the ne16
+// lane's 7thlevel protocol: BESTSHOT.EXE's main window), of class `cls` and
+// title `title`, at 0,0 with no size, its instance 0 (GetWindowWord's
+// GWW_HINSTANCE: no module), and no window procedure: what is sent to it
+// returns 0, what is posted to it waits in the queue like any message (the
+// guest's own loop may take it and DispatchMessage, which sends it).
+uint16_t user16_host_window(Runtime16& rt, const std::string& cls, const std::string& title, uint32_t style);
 // Gives a window CS_OWNDC's private DC from its next GetDC on (Delrina's
 // INTERMIS registered its saver window's class with CS_OWNDC): GetDC and
 // BeginPaint return the same DC with the attributes it was left with,
@@ -85,9 +93,40 @@ int user16_dispatch_guest(Runtime16& rt, int max = 64);
 // and DefWindowProc closes (WM_CLOSE) and validates (WM_PAINT) as Windows'
 // did; DestroyWindow takes the window's timers along. Off, nothing changes.
 void user16_set_app_task(Runtime16& rt, bool on);
+// An application task that takes the saver's input as its own (the ne16
+// lane's 7thlevel protocol, while a game or the interactive screen saver
+// plays): each input message (input16.hh user16_post_input) goes to one of
+// its windows as Windows 3.1 sent it — a key to the focus window (else the
+// active one), a mouse message to the capture window, else the last-made
+// visible top-level window under the cursor, lParam in its client
+// coordinates — instead of the saver window. Off (and with none of its
+// windows to take it), the saver window takes it, as always.
+void user16_set_app_input(Runtime16& rt, bool on);
+// Whether the emulated cursor is shown: ShowCursor's count is 0 or more.
+bool user16_cursor_shown(Runtime16& rt);
+// What Windows 3.1 did as a task ended, for what its modules left behind
+// (the 7thlevel protocol, before it frees the player and its libraries to
+// start it again): every window and class `owned` claims (by its instance
+// or its procedure) goes, without a message (their code is about to go),
+// with the windows' timers and the messages queued for them, every timer
+// and hook whose procedure it claims, and the task's own posted messages;
+// focus, activation and capture on a window that went are cleared.
+void user16_end_task(Runtime16& rt, const std::function<bool(uint16_t hinst, uint32_t proc)>& owned);
 // PostMessage's, from the host: a message in the guest's posted queue, for
 // the guest's own loop to take (not a host-posted one: user16_post_host).
 void user16_post_message(Runtime16& rt, uint16_t hwnd, uint16_t msg, uint16_t wparam, uint32_t lparam);
+// SendMessage's, from the host: the window procedure runs now (the guest
+// must be callable: inside one of its API calls, or not running) and its
+// result comes back; 0 for no such window.
+uint32_t user16_send_message(Runtime16& rt, uint16_t hwnd, uint16_t msg, uint16_t wparam, uint32_t lparam);
+// Another task's sends (Win16's inter-task SendMessage: the sender waited,
+// and the receiving task's window procedure got the message inside its next
+// GetMessage, PeekMessage or WaitMessage): with an application task
+// (user16_set_app_task), `hook` runs at each of those calls before they look
+// at the queue — the ne16 lane's 7thlevel protocol sends there what
+// BESTSHOT.EXE sent its player (user16_send_message). Not re-entered from a
+// send it makes. Null: none.
+void user16_set_receive_hook(Runtime16& rt, std::function<void()> hook);
 // The waits so far (frames ended, or time moved on, inside GetMessage/WaitMessage).
 uint64_t user16_app_waits(Runtime16& rt);
 // The last MessageBox's caption and text ("" when none was shown).

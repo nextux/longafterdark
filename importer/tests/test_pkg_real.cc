@@ -19,7 +19,8 @@
 // Road Again the Internet Archive's ZIP of its files, The Flintstones the
 // ZIPs of its June build's disks (FLINTST1..3.ZIP), Intermission 4.0 its three
 // floppy images or the Internet Archive's ZIP of them (research/five/dl: add
-// it to AD_SOURCE_ISO_DIR).
+// it to AD_SOURCE_ISO_DIR), Take Your Best Shot the Internet Archive's
+// BESTSHOT.iso (research/bestshot/dl).
 //   1. Each package's image(s) into a fresh root through adimport.exe: exit
 //      0, verified "image", nothing missing, every file matches the package
 //      manifest, the installed files are exactly the manifest (the §4 layout
@@ -69,7 +70,7 @@
 //   2. Every package plus Deluxe (imported --from the installed assets, which
 //      are only read: AD_ASSETS_DIR picks them, e.g.
 //      <repo>/build/win-pkg-setup/assets, else the data folder's) in one root:
-//      429 modules (232 over the first seven), display names unique per lane,
+//      446 modules (232 over the first seven), display names unique per lane,
 //      sameAs consistent (73), and every Deluxe entry's existing fields equal
 //      to the installed catalog's.
 //   3. Re-importing each package into that root changes nothing else.
@@ -136,14 +137,15 @@ const std::map<std::string, Expect> kExpect = {
     {"opusroad", {23, {{"SAVER", 20}, {"ENGINE", 3}}, 16, 0}},
     {"flintstones", {22, {{"SAVER", 19}, {"ENGINE", 3}}, 15, 0}},
     {"intermission", {73, {{"SAVER", 67}, {"ENGINE", 6}}, 54, 0}},
+    {"bestshot", {23, {{"BESTACT", 17}, {"BESTSHOT", 6}}, 17, 0}},
 };
 // The catalog over every release with the Deluxe tree: 232 entries over the
 // first seven, 284 with Marvel Comics Screen Posters, Snoopy's Screen Savers,
 // the Looney Tunes, ScreamSavers and the Disney Collection, 314 with The Far
 // Side and Dilbert, 327 with Star Trek: The Next Generation Screen Saver,
 // 328 with Johnny Castaway, 429 with the Opus 'n Bill Screen Saver, On the
-// Road Again, The Flintstones and Intermission 4.0; still 73 of them the
-// same bytes as an earlier entry.
+// Road Again, The Flintstones and Intermission 4.0, 446 with Take Your Best
+// Shot; still 73 of them the same bytes as an earlier entry.
 size_t combined_modules() {
   size_t n = 84;
   for (const auto& [id, e] : kExpect) n += e.modules;
@@ -204,7 +206,8 @@ void check_package_root(const fs::path& win, const Package& p) {
   // re-check), the intermission, ad2kwaj and islib recipes' own for their
   // packages.
   const bool imx = p.recipe == Recipe::intermission, ad2 = p.recipe == Recipe::ad2kwaj,
-             isl = p.recipe == Recipe::islib, is1 = p.recipe == Recipe::is1, delrina = p.delrina_installer();
+             isl = p.recipe == Recipe::islib, is1 = p.recipe == Recipe::is1, delrina = p.delrina_installer(),
+             cdc = p.recipe == Recipe::cdcopy;
   for (const char* dir : p.module_dirs) {
     if (std::string_view(dir) == "ENGINE") continue;
     for (const char* never : {"AD_SND.DLL", "OLDMOD16.DLL", "OLDMOD32.DLL", "ADTASK.DLL", "ADW30.EXE"})
@@ -260,6 +263,15 @@ void check_package_root(const fs::path& win, const Package& p) {
   } else if (is1) {
     // The program and its data in its folder alone: no ENGINE, no WINDOWS.
     CHECK(!fs::exists(root / L"ENGINE") && !fs::exists(root / L"WINDOWS"));
+  } else if (cdc) {
+    // Take Your Best Shot: the player and its libraries in BESTSHOT, the
+    // scenes in BESTACT; no ENGINE, no WINDOWS, nothing of the desktop
+    // program.
+    for (const char* n : {"PLYMPTON.EXE", "PLYMA001.DLL", "PLYMR001.DLL", "PLYMS001.DLL", "PLYMU001.DLL", "DISPDIB.DLL"})
+      CHECK(fs::exists(root / L"BESTSHOT" / to_wide(n)));
+    for (const char* n : {"BESTSHOT.EXE", "BESTSAVR.SCR", "BESTSFX.DLL"}) CHECK(!fs::exists(root / L"BESTSHOT" / to_wide(n)));
+    CHECK(!fs::exists(root / L"BESTACT" / L"BESTSHOT.BIN"));
+    CHECK(!fs::exists(root / L"ENGINE") && !fs::exists(root / L"WINDOWS"));
   } else {
     CHECK(fs::exists(root / L"ENGINE" / L"AD_SND.DLL"));
     CHECK((fs::exists(root / L"ENGINE" / L"OLDMOD16.DLL") && fs::exists(root / L"ENGINE" / L"AFTERDAR.SCR")) ||
@@ -300,15 +312,42 @@ void check_package_root(const fs::path& win, const Package& p) {
 void check_catalog_of(const phosg::JSON& cat, const Package& p) {
   const Expect& e = kExpect.at(p.id);
   const bool imx = p.recipe == Recipe::intermission, ad2 = p.recipe == Recipe::ad2kwaj,
-             isl = p.recipe == Recipe::islib, is1 = p.recipe == Recipe::is1;
-  size_t n = 0, pe = 0, controls = 0, speeds = 0;
+             isl = p.recipe == Recipe::islib, is1 = p.recipe == Recipe::is1, cdc = p.recipe == Recipe::cdcopy;
+  size_t n = 0, pe = 0, controls = 0, speeds = 0, games = 0;
   for (auto& m : cat.at("modules").as_list()) {
     if (m->get_string("package") != p.id) continue;
     n++;
     pe += m->get_string("lane") == "pe32";
     CHECK(m->get_string("id").rfind(std::string(p.id) + ".", 0) == 0);
     CHECK(m->get_string("path").rfind(std::string(p.root) + "/", 0) == 0);
-    CHECK_EQ(m->contains("abi"), imx || is1);
+    CHECK_EQ(m->contains("abi"), imx || is1 || cdc);
+    CHECK(!m->contains("game") || cdc);
+    if (cdc) {
+      // Take Your Best Shot: 7th Level scenes, each named by its own title,
+      // at the release's 640x480, no entry, nothing to set; the installer's
+      // three games marked.
+      CHECK_EQ(m->get_string("abi"), std::string("7thlevel"));
+      CHECK_EQ(m->get_string("lane"), std::string("ne16"));
+      CHECK_EQ(m->get_string("entry"), std::string());
+      CHECK_EQ(m->get_string("screen"), std::string("640x480"));
+      CHECK(m->at("controls").as_list().empty() && m->at("needs").as_list().empty() &&
+            m->at("system").as_list().empty() && !m->contains("sameAs"));
+      static const std::map<std::string, std::string> titles = {
+          {"bestshot.aboutfac", "About Face"},  {"bestshot.bflat", "B-flat"},          {"bestshot.bugeyed", "Bug-eyed"},
+          {"bestshot.faceoff", "Face Off"},     {"bestshot.getahead", "Get A Head"},   {"bestshot.headbang", "Headbanger"},
+          {"bestshot.headshot", "Head Shot"},   {"bestshot.headsup", "Heads Up"},      {"bestshot.highvolt", "High Voltage"},
+          {"bestshot.hotshot", "Hot Shot"},     {"bestshot.knockoff", "Knock Off"},    {"bestshot.lineshot", "Line Shot"},
+          {"bestshot.pugnose", "Pug Nose"},     {"bestshot.rebound", "Rebound"},       {"bestshot.screeech", "Screeech"},
+          {"bestshot.shotindr", "A Shot In The Dark"}, {"bestshot.skeet", "Skeet"}};
+      const std::string id = m->get_string("id");
+      auto it = titles.find(id);
+      CHECK(it != titles.end() && it->second == m->get_string("moduleName"));
+      const bool game = id == "bestshot.headshot" || id == "bestshot.hotshot" || id == "bestshot.lineshot";
+      CHECK_EQ(m->contains("game"), game);
+      if (game) CHECK(m->get_bool("game"));
+      games += game;
+      continue;
+    }
     if (is1) {
       // Johnny Castaway: a Windows 3.1 screen-saver program (its
       // description names it Screen Antics; the registry, Johnny
@@ -468,6 +507,7 @@ void check_catalog_of(const phosg::JSON& cat, const Package& p) {
   if (ad2) CHECK_EQ(controls, size_t(40));
   if (isl && std::string_view(p.id) == "snoopy") CHECK_EQ(controls, size_t(27));
   CHECK_EQ(speeds, p.speed_modules.size());  // every module listed has it (Intermission 4.0's alone)
+  CHECK_EQ(games, p.games.size());           // Best Shot's three
 }
 
 // Star Wars Screen Entertainment's installer script, read from its image,
@@ -1214,15 +1254,17 @@ int main(int argc, char** argv) {
   // ties with the Simpsons (1994-08) and follows it, as in the registry; On
   // the Road Again (1994-09) comes next; Snoopy's Screen Savers, Dilbert and
   // Star Trek: The Next Generation Screen Saver (1994-10) follow them, in
-  // registry order too; ScreamSavers ties with the Looney Tunes (1995-04)
-  // the same way; the Disney Collection (1995-09) comes after Totally Twisted.
+  // registry order too; Take Your Best Shot (1995-02) next; ScreamSavers
+  // ties with the Looney Tunes (1995-04) the same way; the Disney Collection
+  // (1995-09) comes after Totally Twisted.
   {
     std::vector<std::string> order;
     for (auto& pk : cat.at("packages").as_list()) order.push_back(pk->get_string("id"));
-    CHECK((order == std::vector<std::string>{"startrek",    "castaway", "opus",   "intermission", "marvel",
-                                             "flintstones", "farside",  "simpsons", "swse",       "opusroad",
-                                             "snoopy",      "dilbert",  "tng",    "looney",       "screams",
-                                             "ad32",        "tt",       "disney", "deluxe",       "ad10"}));
+    CHECK((order == std::vector<std::string>{"startrek",    "castaway", "opus",     "intermission", "marvel",
+                                             "flintstones", "farside",  "simpsons", "swse",         "opusroad",
+                                             "snoopy",      "dilbert",  "tng",      "bestshot",     "looney",
+                                             "screams",     "ad32",     "tt",       "disney",       "deluxe",
+                                             "ad10"}));
   }
   // The Looney Tunes' Messages comes after 3.2's: it is told apart by its
   // short title.

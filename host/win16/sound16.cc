@@ -1079,6 +1079,17 @@ void register_enabled_only(Runtime16& rt) {
     sync(c.rt, s, op.t);  // every queued header is done when Reset returns
     c.ret(kMmOk);
   });
+  // waveOutGetID(hWaveOut, lpuDeviceID): the one device, 0 (7th Level's
+  // PLYMA001 asks it of its open handle).
+  r.impl(M, "waveOutGetID", [](Call16& c) {
+    uint16_t h = c.w();
+    uint32_t p = c.ptr();
+    Sound16& s = snd(c.rt);
+    if (!wave_of(s, h)) return c.ret(kMmInvalHandle);
+    if (!p) return c.ret(kMmInvalParam);
+    c.rt.wr16(p, 0);
+    c.ret(kMmOk);
+  });
   r.impl(M, "waveOutGetPosition", [](Call16& c) {
     uint16_t h = c.w();
     uint32_t p = c.ptr();

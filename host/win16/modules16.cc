@@ -461,6 +461,21 @@ void ModuleTable16::free_all() {
 }
 
 void ModuleTable16::unload(Module16* m) {
+  // WEP(WEP_FREE_DLL) for a library that was initialized (set_call_wep).
+  if (call_wep_ && m->is_dll() && m->initialized) {
+    if (auto ord = m->image->find_ordinal("WEP")) {
+      if (uint32_t proc = entry_far(m, *ord)) {
+        Regs16In in;
+        in.ds = m->dgroup;
+        try {
+          uint32_t r = rt_.call_far(proc, {w16(0)}, &in);
+          trace("mod16", "%s: WEP(WEP_FREE_DLL) -> %04X", m->file.c_str(), r & 0xFFFF);
+        } catch (const std::exception& e) {
+          log("win16: %s: WEP: %s", m->file.c_str(), e.what());
+        }
+      }
+    }
+  }
   if (m->dll_entry) {
     uint32_t proc = m->dll_entry;
     m->dll_entry = 0;

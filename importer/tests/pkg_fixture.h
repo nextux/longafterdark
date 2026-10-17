@@ -21,7 +21,9 @@
 // disk's tag file, decoys); and an InstallShield 1 floppy shaped like Screen
 // Antics: Johnny Castaway's ("$" files written by isz_builder.h, a Windows
 // 3.1 screen-saver program, the installer's files and a placeholder that must
-// never be read). Each fixture is a tree (path -> bytes) that can be written as a
+// never be read); and a 7th Level CD shaped like Take Your Best Shot's (a
+// made-up Runtime Player, its libraries, 7L scene files, the customizer and
+// the rest of the disc as decoys). Each fixture is a tree (path -> bytes) that can be written as a
 // folder, an ISO image, a FAT floppy image (or several), a flat ZIP or a ZIP
 // of floppy images, plus exactly what an import must install and the catalog
 // ids it must list. Modules come from module_builder.h: made-up resources, no
@@ -1698,6 +1700,81 @@ inline PkgFixture castaway_fixture(bool placeholder_only = false) {
   f.expect[root + "RESOURCE.001"] = res;
   f.expect[root + "RESOURCE.MAP"] = map;
   f.ids = {"castaway.scrantic"};
+  return f;
+}
+
+// ---- 7th Level's Setup: Take Your Best Shot's CD ---------------------------------------------
+
+// A 7th Level resource file as its Runtime Player reads one: the magic "7L"
+// 2 0, the header's length, the product's name, NUL, the title, then NUL
+// (or, with `library`, 0xFB, the library's name and NUL), and made-up data.
+inline std::vector<uint8_t> sevenl_scene(const std::string& title, const std::string& library = "",
+                                         const std::string& product = "BestShot", size_t n = 900) {
+  std::string h = product + '\0' + title;
+  h += library.empty() ? std::string(1, '\0') : "\xFB" + library + '\0';
+  std::vector<uint8_t> v = {'7', 'L', 2, 0, uint8_t(h.size())};
+  v.insert(v.end(), h.begin(), h.end());
+  const auto d = blob("made-up scene " + title, n);
+  v.insert(v.end(), d.begin(), d.end());
+  return v;
+}
+
+// The seventeen scenes' file stems (BESTACT\<stem>.BIN), in name order.
+inline const std::vector<std::string>& bestshot_scenes() {
+  static const std::vector<std::string> v = {"ABOUTFAC", "BFLAT",    "BUGEYED",  "FACEOFF",  "GETAHEAD", "HEADBANG",
+                                             "HEADSHOT", "HEADSUP",  "HIGHVOLT", "HOTSHOT",  "KNOCKOFF", "LINESHOT",
+                                             "PUGNOSE",  "REBOUND",  "SCREEECH", "SHOTINDR", "SKEET"};
+  return v;
+}
+
+// The files a Take Your Best Shot import must never open (I5): the
+// installer, the customizer, its saver stub and its own UI scenes, the
+// samplers, wallpapers, sounds, icons and the joystick driver.
+inline const std::vector<std::string>& bestshot_decoys() {
+  static const std::vector<std::string> v = {
+      "SETUP.EXE",             "SETUP.HLP",             "DUNZIP.DLL",           "README.TXT",
+      "BESTSHOT/BESTSAVR.SCR", "BESTSHOT/BESTSHOT.EXE", "BESTSHOT/BESTSFX.DLL", "BESTSHOT/BESTICON.DLL",
+      "BESTSHOT/BESTSHOT.HLP", "BESTACT/BESTSHOT.BIN",  "BESTBIG/BESTSHOT.BIN", "BESTDEMO/SAMPLER.EXE",
+      "WALLPAPR/DEAD.BMP",     "NOISYBIT/NOISE.WAV",    "ICON/SHOT.ICO",        "JOYSTICK/JOY.DRV"};
+  return v;
+}
+
+// Its CD's files: the player (a made-up NE program) and its libraries in
+// BESTSHOT, the scenes in BESTACT (made-up titles, one naming its resource
+// library), and the decoys (the customizer's UI scene a 7L file named for
+// its product). The import installs the player, its libraries and the
+// scenes, each where it was.
+inline PkgFixture bestshot_fixture() {
+  PkgFixture f;
+  const std::string root = "packages/bestshot/";
+  auto both = [&](const std::string& rel, std::vector<uint8_t> d) {
+    f.source[rel] = d;
+    f.expect[root + rel] = std::move(d);
+  };
+  NeSpec player;
+  player.module_name = "PLYMADE";
+  player.program = true;
+  player.description = "A made-up runtime player";
+  player.module_refs = {"PLYMU001", "PLYMA001", "PLYMS001", "PLYMR001", "MMSYSTEM", "KERNEL", "GDI", "USER"};
+  player.exports = {"VIEW_PROC", "MESSAGE_PROC"};
+  both("BESTSHOT/PLYMPTON.EXE", vec(build_ne(player)));
+  for (const char* lib : {"PLYMA001.DLL", "PLYMR001.DLL", "PLYMS001.DLL", "PLYMU001.DLL", "DISPDIB.DLL"})
+    both(std::string("BESTSHOT/") + lib, blob(std::string("made-up library ") + lib, 400));
+  for (const std::string& s : bestshot_scenes())
+    both("BESTACT/" + s + ".BIN", sevenl_scene("Made Up " + s, s == "LINESHOT" ? "made001.dll" : ""));
+  for (const std::string& d : bestshot_decoys()) f.source[d] = blob("decoy " + d, 200);
+  NeSpec stub;
+  stub.module_name = "MADESAVR";
+  stub.program = true;
+  stub.description = "SCRNSAVE: Made Up Shot";
+  stub.module_refs = {"KERNEL", "USER"};
+  f.source["BESTSHOT/BESTSAVR.SCR"] = vec(build_ne(stub));
+  f.source["BESTACT/BESTSHOT.BIN"] = sevenl_scene("Made Up UI");
+  for (const std::string& s : bestshot_scenes()) {
+    std::string id = "bestshot." + s;
+    for (char& c : id) c = char(tolower((unsigned char)c));
+    f.ids.push_back(id);
+  }
   return f;
 }
 

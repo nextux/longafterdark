@@ -86,6 +86,14 @@ bool asa_file(const std::string& p) {
   return file_head(p, head) == sizeof(head) && asa_header(head);
 }
 
+// The file starts with a 7th Level resource file's header (package.hh "Kind").
+bool seventh_file(const std::string& p) {
+  char head[4] = {};
+  return file_head(p, head) == sizeof(head) && seventh_level_header(head);
+}
+
+bool ieq_ascii(const std::string& a, const char* b) { return _stricmp(a.c_str(), b) == 0; }
+
 // The file is an Intermission data file of another type (package.hh "Form"):
 // named for its reader's type and no MZ executable, as core's probe has it.
 bool data_file(const std::string& p, ImxForm* form) {
@@ -123,6 +131,14 @@ std::unique_ptr<Protocol16> Ne16Lane::choose_protocol(const Ne16Layout& layout, 
       log("%s: ADNE16KIND is ignored: an ASA animation is an Intermission module", file_of(layout.module_path).c_str());
     }
     return make_imx_protocol(layout, ImxForm::asa);
+  }
+  // A 7th Level scene is data too, which its Runtime Player plays: its header says so.
+  if (seventh_file(layout.module_path)) {
+    if (const std::string* k = env.get("ADNE16KIND"); k && !ieq_ascii(*k, "7thlevel")) {
+      log("%s: ADNE16KIND is ignored: a 7th Level scene is the 7th Level Runtime Player's",
+          file_of(layout.module_path).c_str());
+    }
+    return make_seventh_protocol(layout);
   }
   // Intermission's other data files: their extension, which INTRMLIB matched
   // against its readers' types (package.hh "Form"). An executable so named
@@ -170,6 +186,7 @@ std::unique_ptr<Protocol16> Ne16Lane::choose_protocol(const Ne16Layout& layout, 
     trace("lane", "%s: kind %s (ADNE16KIND)", file_of(layout.module_path).c_str(), kind_name(kind));
   }
   if (kind == ModuleKind::scr) return make_scr_protocol(layout);
+  if (kind == ModuleKind::seventh) return make_seventh_protocol(layout);
   return kind == ModuleKind::imx ? make_imx_protocol(layout, form) : make_ad3_protocol(layout);
 }
 
@@ -444,7 +461,7 @@ void Ne16Lane::on_command(const Command& c) {
   if (c.kind == Command::Kind::key || c.kind == Command::Kind::caps || c.kind == Command::Kind::numlock ||
       c.kind == Command::Kind::mouse) {
     // An interactive module takes every input line as its own (INTERACTION.md §5.2).
-    if (wants_events_ && c.seq > eaten_) eaten_ = c.seq;
+    if ((wants_events_ || proto_->plays()) && c.seq > eaten_) eaten_ = c.seq;
     queue_input(c);
     return;
   }
@@ -575,9 +592,12 @@ void Ne16Lane::end_step_input() {
 
 LaneStatus Ne16Lane::status() const {
   LaneStatus s;
-  s.interactive = wants_events_;
-  s.cursor = cursor_;
-  s.source = wants_events_ ? kStatusSourceAd3 : 0;  // the toggle is AD3's 0x0E (Protocol16::Call)
+  // The toggle is AD3's 0x0E (Protocol16::Call); a protocol's own state of
+  // play (Protocol16::plays: 7thlevel's games) reads the same.
+  const bool plays = proto_ && proto_->plays();
+  s.interactive = wants_events_ || plays;
+  s.cursor = cursor_ || (plays && proto_->plays_cursor());
+  s.source = s.interactive ? kStatusSourceAd3 : 0;
   // Within the last 120 steps it read the saver window's queue, or a keyboard
   // hook is in — unless the protocol takes neither key nor mouse messages
   // (scr): then nothing it reads or hooks is the saver's input.

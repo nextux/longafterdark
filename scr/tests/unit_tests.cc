@@ -1,7 +1,7 @@
 // Unit tests for the window-free parts of LongAfterDark.scr.
 //   scr_unit <suite>… [--fakeimport <exe>]
 //     suites: args parser settings catalog geometry rotation convert env layout dialog ui input seed releases
-//     paths sound present window
+//     paths sound present window wallpaper
 //     [--fakehost <exe>]  (ui: the lane probe runs against it)
 #include <windows.h>
 #include <shlobj.h>
@@ -38,6 +38,7 @@
 #include "settings.h"
 #include "sound.h"
 #include "ui_model.h"
+#include "wallpaper_mode.h"
 #include "window_mode.h"
 #include "looks_test.h"
 #include "adw/core/data_root.h"
@@ -188,6 +189,38 @@ void test_args() {
     CHECK(e.error.find(L"/size, /module and /random go with /window") != std::wstring::npos);
   }
 
+  // /wallpaper (args.h): /module and /random as /window's, /stop alone.
+  a = A({L"/wallpaper"});
+  CHECK(a.mode == Mode::wallpaper && a.error.empty() && !a.stop && a.module.empty() && !a.random);
+  a = A({L"--WallPaper", L"/module", L"Flying Toasters!", L"-random"});
+  CHECK(a.mode == Mode::wallpaper && a.error.empty() && a.module == L"Flying Toasters!" && a.random && !a.stop);
+  a = A({L"/module:bestshot.headbang", L"/wallpaper"});
+  CHECK(a.mode == Mode::wallpaper && a.error.empty() && a.module == L"bestshot.headbang");
+  a = A({L"/wallpaper", L"/stop"});
+  CHECK(a.mode == Mode::wallpaper && a.error.empty() && a.stop);
+  a = A({L"-stop", L"--wallpaper"});
+  CHECK(a.mode == Mode::wallpaper && a.error.empty() && a.stop);
+  CHECK(error_has({L"/wallpaper", L"/window"}, L"/wallpaper shows it on the desktop, /window in a window of its own"));
+  CHECK(error_has({L"/window", L"/wallpaper", L"/random"}, L"leave one of them out"));
+  CHECK(error_has({L"/wallpaper", L"/s"}, L"/wallpaper runs on the desktop, not as /s: leave one of them out."));
+  CHECK(error_has({L"/p", L"1234", L"/wallpaper"}, L"not as /p"));
+  CHECK(error_has({L"/c", L"/wallpaper", L"/stop"}, L"not as /c"));
+  CHECK(error_has({L"/wallpaper", L"/size", L"800x600"}, L"/size goes with /window: /wallpaper fills each monitor."));
+  CHECK(error_has({L"/wallpaper", L"/stop", L"/module", L"x"}, L"/wallpaper /stop ends the one running"));
+  CHECK(error_has({L"/wallpaper", L"/stop", L"/random"}, L"it takes no /module or /random"));
+  CHECK(error_has({L"/stop"}, L"/stop goes with /wallpaper"));
+  CHECK(error_has({L"/window", L"/stop"}, L"/stop goes with /wallpaper"));
+  CHECK(error_has({L"/s", L"/stop"}, L"/stop goes with /wallpaper"));
+  CHECK(error_has({L"/wallpaper:1"}, L"/wallpaper takes no value"));
+  CHECK(error_has({L"/wallpaper", L"/stop=now"}, L"/stop takes no value"));
+  CHECK(error_has({L"/wallpaper", L"/frobnicate"}, L"There is no switch \"/frobnicate\"."));
+  CHECK(error_has({L"/wallpaper", L"Toasters"}, L"\"Toasters\" is not a switch"));
+  CHECK(error_has({L"/random"}, L"/module and /random with /wallpaper too"));
+  CHECK(A({L"/wallpaper", L"/help"}).mode == Mode::help);
+  // The Windows switches alone are as they were.
+  CHECK(A({L"/s"}).mode == Mode::run && A({L"/s"}).error.empty() && !A({L"/s"}).stop);
+  CHECK(A({L"/p", L"99"}).mode == Mode::preview && A({L"/c"}).mode == Mode::settings);
+
   // /help and /? in any company: the usage, never an error.
   for (auto* s : {L"/?", L"-?", L"/help", L"--help", L"/HELP"}) {
     a = A({s});
@@ -198,12 +231,14 @@ void test_args() {
   CHECK(A({L"/s", L"/help"}).mode == Mode::help);
   const std::wstring usage = usage_text();
   for (auto* s : {L"/window", L"/size WxH", L"/module", L"/random", L"/s:", L"/c,", L"/p <window>", L"/a <window>",
-                  L"/help", L"/?", L"1280x720", L"160x120 to 7680x4320", L"LongAfterDark.exe /window /size 1920x1080 /random"}) {
+                  L"/help", L"/?", L"1280x720", L"160x120 to 7680x4320", L"LongAfterDark.exe /window /size 1920x1080 /random",
+                  L"LongAfterDark.exe /wallpaper [/module <module>] [/random]", L"LongAfterDark.exe /wallpaper /stop",
+                  L"behind its icons", L"/wallpaper /stop: ends it"}) {
     CHECK(usage.find(s) != std::wstring::npos);
   }
   const std::wstring m = usage_message(L"Something is wrong.");
   CHECK(m.rfind(L"Something is wrong.\n\n", 0) == 0 && m.find(L"/help says") != std::wstring::npos &&
-        m.size() < usage.size());
+        m.size() < usage.size() && m.find(L"/wallpaper /stop") != std::wstring::npos);
 }
 
 // ---- frame parser ------------------------------------------------------------------
@@ -896,6 +931,45 @@ void test_catalog() {
     CHECK(hr.plan.ids.size() == 2 && hr.left_out == 0);
     CHECK(rotation_needs_capabilities(s, j, nullptr) == s.rotates());
   }
+  // A 7th Level scene (Take Your Best Shot's): the same, by its own ABI, a
+  // game's "game" read by no one but its host; a host that runs Johnny
+  // Castaway's program but not the scenes shows them "Coming soon".
+  {
+    Catalog j;
+    CHECK(parse_catalog(R"({"version": 1, "modules": [
+        {"id": "ad40.alpha", "displayName": "Alpha", "lane": "pe32", "path": "FILES/AD40/ALPHA.AD"},
+        {"id": "bestshot.headshot", "displayName": "Head Shot", "lane": "ne16",
+         "path": "packages/bestshot/BESTACT/HEADSHOT.BIN", "about": "", "controls": [], "entry": "", "needs": [],
+         "system": [], "package": "bestshot", "packageTitle": "Take Your Best Shot", "moduleName": "Head Shot",
+         "md5": "4e54b4a2d94e778a50ffa81e9cc4508c", "abi": "7thlevel", "screen": "640x480", "game": true},
+        {"id": "bestshot.skeet", "displayName": "Skeet", "lane": "ne16",
+         "path": "packages/bestshot/BESTACT/SKEET.BIN", "package": "bestshot", "abi": "7thlevel",
+         "screen": "640x480"}]})",
+                        j, &err));
+    CHECK_EQ(j.modules.size(), (size_t)3);
+    const Module* hs = j.find("bestshot.headshot");
+    CHECK(hs && hs->abi == k7thLevelAbi && (hs->screen == SizeI{640, 480}) && hs->lane == "ne16");
+    CHECK(hs && hs->name == "Head Shot" && hs->package_title == "Take Your Best Shot" && hs->controls.empty());
+    CHECK((own_screen(k7thLevelAbi) == SizeI{}) && (own_screen(k7thLevelAbi, {640, 480}) == SizeI{640, 480}));
+    const HostCapabilities with_scr = parse_capabilities("lanes=pe32,ne16 abis=afterdark,intermission,scrnsave"),
+                           with_7l =
+                               parse_capabilities("lanes=pe32,ne16 abis=afterdark,intermission,scrnsave,7thlevel");
+    if (hs) {
+      CHECK(module_run(*hs, with_scr, false, false) == ModuleRun::coming_soon);
+      CHECK(module_run(*hs, with_7l, false, false) == ModuleRun::runs);
+    }
+    Settings s;
+    auto runs_on = [&j](const HostCapabilities& h) {
+      return [&j, h](const std::string& id) {
+        const Module* m = j.find(id);
+        return m && h.runs(m->lane, m->abi);
+      };
+    };
+    HostRotation hr = rotation_for_host(s, j, nullptr, runs_on(with_scr));
+    CHECK((hr.plan.ids == std::vector<std::string>{"ad40.alpha"}) && hr.left_out == 2);
+    hr = rotation_for_host(s, j, nullptr, runs_on(with_7l));
+    CHECK(hr.plan.ids.size() == 3 && hr.left_out == 0);
+  }
   CHECK(c.modules.size() == 46 && c.modules[36].id == "marvel.kilo" && c.modules[45].id == "disney.tango");
 
   // Host controls (catalog "host"): a control whose value goes to the host,
@@ -937,7 +1011,7 @@ void test_catalog() {
   for (const char* bad : {"", "A", "AD", "AD_", "AD_ASSETS_DIR", "AD_LOCALAPPDATA", "adne16imxspeed", "Adne16imxspeed",
                           "ADne16", "PATH", "XADFOO", "ADFOO=1", "ADFOO BAR", "ADFOO-BAR", "ADFOO\xC3\x89", "ADSTREAM",
                           "ADSCREENW", "ADSCREENH", "ADCVSET", "ADCAPS", "ADNUMLOCK", "ADSTATE", "ADSEEDIMG", "ADSOUND",
-                          "ADVOLUME", "ADAUDIOOUT", "ADSTATUSHANDLE", "ADSTATUSLOG"}) {
+                          "ADVOLUME", "ADAUDIOOUT", "ADSTATUSHANDLE", "ADSTATUSLOG", "ADWALLPAPER"}) {
     if (!host_variable_ok(bad)) continue;
     fprintf(stderr, "catalog: host_variable_ok(\"%s\") is true\n", bad);
     CHECK(false);
@@ -1025,9 +1099,11 @@ void test_catalog() {
     const Module& m = real.modules[i];
     CHECK(m.lane == "pe32" || m.lane == "ne16");
     // After Dark's module ABI, or Intermission's (the Intermission
-    // releases' modules) or a Windows 3.1 screen-saver program's (Johnny
-    // Castaway's), on the 16-bit lane.
-    CHECK(m.abi == kAfterDarkAbi || ((m.abi == "intermission" || m.abi == kScrnsaveAbi) && m.lane == "ne16"));
+    // releases' modules), a Windows 3.1 screen-saver program's (Johnny
+    // Castaway's) or a 7th Level scene's (Take Your Best Shot's), on the
+    // 16-bit lane.
+    CHECK(m.abi == kAfterDarkAbi ||
+          ((m.abi == "intermission" || m.abi == kScrnsaveAbi || m.abi == k7thLevelAbi) && m.lane == "ne16"));
     CHECK(!m.display_name.empty() && !m.path.empty());
     const auto& ctls = mods[i]->at("controls").as_list();
     CHECK_EQ(m.controls.size(), ctls.size());
@@ -2210,13 +2286,13 @@ void test_ui() {
   }
 
   // Status text: no closing full stop (the releases' own line is checked in
-  // the releases suite). Not every release is After Dark's: the words fit all twenty.
+  // the releases suite). Not every release is After Dark's: the words fit all twenty-one.
   CHECK(assets_summary({}) == L"Nothing imported yet");
   // The not-imported welcome: what importing does.
   CHECK(welcome_text().find(L"The screen saver runs the original modules of After Dark and Star Wars Screen "
                             L"Entertainment from your own discs.\n\n"
-                            L"Import them from any of your discs (twenty releases are supported), a disc image, or "
-                            L"the Internet Archive download.") == 0);
+                            L"Import them from any of your discs (twenty-one releases are supported), a disc image, "
+                            L"or the Internet Archive download.") == 0);
   CHECK(welcome_text().find(L"After Dark discs") == std::wstring::npos);
   Catalog c;
   CHECK(parse_catalog(fixture("catalog-win.json"), c, nullptr));
@@ -2278,7 +2354,8 @@ void test_ui() {
     // ...and the window's sizes are 1.5.1's.
     CHECK(kDesignClientW == 1104 && kDesignClientH == 716 && kMinClientW == 900 && kMinClientH == 600);
     CHECK(kDesignClientHStrip == 836 && kMinClientHStrip == 680 && kStripCompactBelow == 760);
-    CHECK(design_client_h(7) == 836 && design_client_h(12) == 952 && design_client_h(20) == 1068);
+    CHECK(design_client_h(7) == 836 && design_client_h(12) == 952 && design_client_h(20) == 1068 &&
+          design_client_h(21) == 1068);
   }
   // Designed on a 4-DIP grid: at 100% the main edges land on it.
   WindowLayout L96 = layout_window({kDesignClientW, kDesignClientH, 96, true});
@@ -2507,17 +2584,18 @@ void test_ui() {
   // doesn't show, there was no room for it.
   {
     HDC dc = CreateCompatibleDC(nullptr);
-    // The twenty releases' line, "429 modules from 20 releases", is as
-    // long as the sixteen's ("328 modules from 16 releases"), the
+    // The twenty-one releases' line, "446 modules from 21 releases", is as
+    // long as the twenty's ("429 modules from 20 releases"), the
+    // sixteen's ("328 modules from 16 releases"), the
     // fifteen's ("327 modules from 15 releases"), the
     // fourteen's ("314 modules from 14 releases") and the
     // twelve's ("284 modules from 12 releases"), a digit longer than the
     // seven's ("232 modules from 7 releases"), whose digits were
     // already wider in the caption face, Segoe UI Variable Small, than the
     // six's ("216 modules from 6 releases").
-    const wchar_t* texts[] = {L"Nothing imported yet", L"429 modules from 20 releases",
+    const wchar_t* texts[] = {L"Nothing imported yet", L"446 modules from 21 releases",
                               L"84 modules from After Dark 4.0 Deluxe",
-                              L"429 modules from 20 releases · 2 missing — import again to restore"};
+                              L"446 modules from 21 releases · 2 missing — import again to restore"};
     int shown = 0, hidden = 0, min_twelve = 0;
     std::string min_twelve_at;   // the scales it fits the narrowest window at
     for (int dpi = 96; dpi <= 240; dpi += 24) {
@@ -2574,7 +2652,7 @@ void test_ui() {
           // The status line it sits beside is never under it.
           CHECK(C.box.x > in.assets_right);
         }
-        // Where it matters: with twenty releases it shows at the first-open
+        // Where it matters: with twenty-one releases it shows at the first-open
         // size (with room to spare) at every scale; one release's long title
         // and the assets line at its longest (files missing) leave it no room
         // in the minimum window. (In the minimum window beside the releases'
@@ -2602,7 +2680,7 @@ void test_ui() {
         }
       }
     }
-    printf("ui: the credit fits beside \"429 modules from 20 releases\" in the narrowest window at %d of 7 scales (%s)\n",
+    printf("ui: the credit fits beside \"446 modules from 21 releases\" in the narrowest window at %d of 7 scales (%s)\n",
            min_twelve, min_twelve_at.c_str());
     CHECK(shown > 0 && hidden > 0);
     DeleteDC(dc);
@@ -2777,6 +2855,11 @@ void test_ui() {
     CHECK(!imx.runs("ne16", kScrnsaveAbi));
     const HostCapabilities scr = parse_capabilities("lanes=pe32,ne16 abis=afterdark,intermission,scrnsave");
     CHECK(scr.runs("ne16", kScrnsaveAbi) && scr.runs("ne16", kIntermissionAbi) && scr.runs("pe32", ""));
+    // Take Your Best Shot's scenes, the same by their own ABI.
+    CHECK(!scr.runs("ne16", k7thLevelAbi));
+    const HostCapabilities seventh =
+        parse_capabilities("lanes=pe32,ne16 abis=afterdark,intermission,scrnsave,7thlevel");
+    CHECK(seventh.runs("ne16", k7thLevelAbi) && seventh.runs("ne16", kScrnsaveAbi) && seventh.runs("pe32", ""));
     // Listed as it stands: "abis=" alone runs no module ABI at all.
     HostCapabilities no_abi = parse_capabilities("lanes=pe32,ne16 abis=");
     CHECK(no_abi.known && no_abi.abis.empty() && !no_abi.runs("pe32", "afterdark"));
@@ -3647,6 +3730,7 @@ void test_strip_wrap() {
   CHECK((strip_grid(8, false, design_area) == StripGrid{1, 8}) && (strip_grid(9, false, design_area) == StripGrid{2, 8}));
   CHECK((strip_grid(15, false, design_area) == StripGrid{2, 8}) && (strip_grid(16, false, design_area) == StripGrid{2, 8}));
   CHECK((strip_grid(20, false, design_area) == StripGrid{3, 8}));   // the twenty releases: 8, 8 and 4
+  CHECK((strip_grid(21, false, design_area) == StripGrid{3, 8}));   // the twenty-one releases: 8, 8 and 5
   CHECK((strip_grid(10, false, 1024) == StripGrid{2, 8}) && (strip_grid(15, false, 1024) == StripGrid{2, 8}));
   CHECK((strip_grid(14, true, 1024) == StripGrid{1, 14}));
   const double min_area = kMinClientW - 48 - kStripStatusW - kStripStatusGap;   // 636
@@ -3723,6 +3807,8 @@ void test_strip_wrap() {
       {16, kDesignClientW, 952, StripMode::regular, true, 2},   // sixteen releases at the first-open size: 8 and 8
       {20, kDesignClientW, 1068, StripMode::regular, true, 3},  // twenty releases at the first-open size: 8, 8 and 4
       {20, kDesignClientW, 952, StripMode::compact, true, 2},   // too short for three regular rows: two compact
+      {21, kDesignClientW, 1068, StripMode::regular, true, 3},  // twenty-one releases at the first-open size: 8, 8 and 5
+      {21, kDesignClientW, 952, StripMode::compact, true, 2},   // too short for three regular rows: two compact
       {10, 1336, 952, StripMode::regular, true, 2},             // 8 and 2 where 9 would fit
       {7, kDesignClientW, kDesignClientHStrip, StripMode::regular, true, 1},
       {7, kMinClientW, kMinClientHStrip, StripMode::compact, true, 1},
@@ -5345,6 +5431,144 @@ void test_window() {
   CHECK(at150.w - 1920 < 1920 / 2);   // the frame scales, not the client area
 }
 
+// ---- wallpaper --------------------------------------------------------------------
+
+// A made-up window tree (the search's view of one, wallpaper_mode.h): each
+// window its class and its children, topmost first.
+struct FakeTree {
+  struct Node {
+    std::wstring cls;
+    std::vector<HWND> kids;
+  };
+  std::map<HWND, Node> nodes;
+  std::vector<HWND> top;
+  uintptr_t next = 0x100;
+  HWND add(const wchar_t* cls, HWND parent = nullptr) {
+    HWND h = (HWND)(next += 0x10);
+    nodes[h] = {cls, {}};
+    (parent ? nodes[parent].kids : top).push_back(h);
+    return h;
+  }
+  DesktopWindows view() const {
+    DesktopWindows w;
+    w.children = [this](HWND p) { return p ? nodes.at(p).kids : top; };
+    w.class_name = [this](HWND h) { return nodes.at(h).cls; };
+    return w;
+  }
+};
+
+void test_wallpaper() {
+  // Windows 11 24H2 and later, after 0x052C: the icons stay in Progman and a
+  // WorkerW of its own is behind them; other top-level WorkerWs (Explorer
+  // makes several) mean nothing. Ours go into Progman, just below the icons.
+  {
+    FakeTree t;
+    HWND app = t.add(L"Notepad");
+    HWND stray = t.add(L"WorkerW");
+    HWND progman = t.add(L"Progman");
+    HWND after = t.add(L"WorkerW");
+    HWND icons = t.add(L"SHELLDLL_DefView", progman);
+    HWND worker = t.add(L"WorkerW", progman);
+    (void)app, (void)stray, (void)after, (void)worker;
+    t.add(L"SysListView32", icons);
+    const WallpaperHost h = find_wallpaper_host(t.view());
+    CHECK(h.layout == WallpaperLayout::progman && h.found());
+    CHECK(h.parent == progman && h.below == icons && h.icons == icons && h.progman == progman);
+    CHECK(h.describe().find("progman (24H2)") == 0);
+  }
+  // Before 24H2, after 0x052C: the icons in a top-level WorkerW, the
+  // wallpaper's WorkerW next below it (another window may sit between),
+  // Progman last. Ours go into that WorkerW, at its top.
+  {
+    FakeTree t;
+    t.add(L"Notepad");
+    HWND before = t.add(L"WorkerW");
+    HWND holder = t.add(L"WorkerW");
+    HWND icons = t.add(L"SHELLDLL_DefView", holder);
+    t.add(L"Shell_TrayWnd");
+    HWND wall = t.add(L"WorkerW");
+    HWND progman = t.add(L"Progman");
+    (void)before;
+    const WallpaperHost h = find_wallpaper_host(t.view());
+    CHECK(h.layout == WallpaperLayout::worker && h.parent == wall && h.below == nullptr && h.icons == icons &&
+          h.progman == progman);
+    CHECK(h.describe().find("workerw") == 0);
+  }
+  // ...and before 0x052C has made it: the icons in Progman, no WorkerW
+  // anywhere after it: nowhere to go yet.
+  {
+    FakeTree t;
+    HWND progman = t.add(L"Progman");
+    t.add(L"SHELLDLL_DefView", progman);
+    const WallpaperHost h = find_wallpaper_host(t.view());
+    CHECK(!h.found() && h.layout == WallpaperLayout::none && h.progman == progman);
+  }
+  // No Explorer (a hidden desktop, another shell): no Progman at all.
+  {
+    FakeTree t;
+    t.add(L"Notepad");
+    t.add(L"WorkerW");
+    const WallpaperHost h = find_wallpaper_host(t.view());
+    CHECK(!h.found() && !h.progman && h.describe() == "none: no Progman");
+    CHECK(!find_wallpaper_host(FakeTree{}.view()).found());
+  }
+  // Explorer starting again: Progman back but its icons not yet (none),
+  // then all of it (found again, the new windows).
+  {
+    FakeTree t;
+    HWND progman = t.add(L"Progman");
+    CHECK(!find_wallpaper_host(t.view()).found());
+    HWND icons = t.add(L"SHELLDLL_DefView", progman);
+    CHECK(!find_wallpaper_host(t.view()).found());   // no WorkerW yet
+    t.add(L"WorkerW", progman);
+    const WallpaperHost h = find_wallpaper_host(t.view());
+    CHECK(h.layout == WallpaperLayout::progman && h.parent == progman && h.below == icons);
+  }
+  // This desktop's own tree: whatever it shows, the search answers (a
+  // hidden desktop's none).
+  (void)find_wallpaper_host(real_desktop_windows()).describe();
+
+  // What each way of running gives its hosts.
+  const HostRules s = host_rules(Mode::run, true), s0 = host_rules(Mode::run, false);
+  CHECK(s.input && s.toggles && !s.power_request && !s.wallpaper_env && s.seed == SeedFrom::capture);
+  CHECK(s0.seed == SeedFrom::none && s0.input && s0.toggles);
+  const HostRules p = host_rules(Mode::preview, true);
+  CHECK(!p.input && p.toggles && !p.power_request && !p.wallpaper_env && p.seed == SeedFrom::none);
+  const HostRules w = host_rules(Mode::window, true);
+  CHECK(!w.input && !w.toggles && w.power_request && !w.wallpaper_env && w.seed == SeedFrom::none);
+  for (bool from_desktop : {true, false}) {
+    const HostRules wp = host_rules(Mode::wallpaper, from_desktop);
+    // No input and no games (ADCAPS=0), no power request, ADWALLPAPER=1, the wallpaper for every host.
+    CHECK(!wp.input && !wp.toggles && !wp.power_request && wp.wallpaper_env && wp.seed == SeedFrom::wallpaper);
+    CHECK(wallpaper_env(wp) == std::make_pair(std::wstring(L"ADWALLPAPER"), std::wstring(L"1")));
+  }
+  // The others remove an inherited one.
+  for (Mode m : {Mode::run, Mode::preview, Mode::window}) {
+    CHECK(wallpaper_env(host_rules(m, true)) == std::make_pair(std::wstring(L"ADWALLPAPER"), std::wstring()));
+  }
+  // How a monitor's picture is painted: PaintDesktop where a memory DC's
+  // coordinates are the screen's, else its file.
+  CHECK(wallpaper_paint_way({0, 0, 1920, 1080}) == WallpaperPaint::paint_desktop);
+  CHECK(wallpaper_paint_way({1920, 0, 3840, 1080}) == WallpaperPaint::file);
+  CHECK(wallpaper_paint_way({-1280, 0, 0, 1024}) == WallpaperPaint::file);
+  CHECK(wallpaper_paint_way({0, -1080, 1920, 0}) == WallpaperPaint::file);
+  // A picture of it: the part a 640x480 frame covers on a 16:9 monitor, at
+  // 640x480 (whatever the desktop shows here, a P6 of that size).
+  const std::vector<uint8_t> pic = wallpaper_p6({0, 0, 1280, 720}, {160, 0, 960, 720}, {640, 480}, nullptr);
+  const std::string head = "P6\n640 480\n255\n";
+  CHECK(pic.size() == head.size() + 640 * 480 * 3 && std::equal(head.begin(), head.end(), pic.begin()));
+  CHECK(wallpaper_p6({0, 0, 0, 0}, {0, 0, 0, 0}, {640, 480}, nullptr).empty());
+  // The classes: each its own.
+  CHECK(std::wstring(kWallpaperClass) != kWindowModeClass && std::wstring(kWallpaperControlClass) != kWindowModeClass &&
+        std::wstring(kWallpaperClass) != kWallpaperControlClass && std::wstring(kWallpaperClass) != L"LongAfterDarkSaver");
+  CHECK((kWallpaperStyle & WS_CHILD) && (kWallpaperStyle & WS_DISABLED) && !(kWallpaperStyle & WS_POPUP));
+  // 24H2's Progman (no redirection surface: 0x00200000) gets a layered
+  // window; a WorkerW (or a Progman of before) an ordinary one. Never topmost.
+  CHECK(wallpaper_ex_style(0x00200080) == (WS_EX_NOACTIVATE | WS_EX_LAYERED));
+  CHECK(wallpaper_ex_style(0x00000080) == WS_EX_NOACTIVATE && wallpaper_ex_style(0) == WS_EX_NOACTIVATE);
+  CHECK(!(wallpaper_ex_style(0x00200000) & WS_EX_TOPMOST) && !(wallpaper_ex_style(WS_EX_TOPMOST) & WS_EX_TOPMOST));
+}
+
 int main(int argc, char** argv) {
   // Never the user's data folder: this process and every one it starts
   // resolve %LOCALAPPDATA% to a scratch base (data_root.h AD_LOCALAPPDATA),
@@ -5359,6 +5583,7 @@ int main(int argc, char** argv) {
       {"dialog", test_dialog},     {"ui", test_ui},           {"input", test_input},
       {"seed", test_seed},         {"releases", test_releases}, {"paths", test_paths},
       {"sound", test_sound},       {"present", test_present}, {"window", test_window},
+      {"wallpaper", test_wallpaper},
       {"looks", [] { g_failures += run_looks_tests(); }},
   };
   std::vector<std::string> run;

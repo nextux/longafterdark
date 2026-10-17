@@ -606,7 +606,8 @@ void test_disabled() {
     rt.write_bytes(buf + 256, ima.data(), ima.size());
     CHECK((api("waveOutOpen", {l16(0), w16(0), l16(buf + 256), l16(0), l16(0), l16(1)}) & 0xFFFF) == 0,
           "pass %d: a format query succeeds as it always did", pass);
-    CHECK(!rt.shims().find_name("MMSYSTEM", "waveOutWrite")->fn, "pass %d: waveOutWrite stays unimplemented", pass);
+    CHECK(!rt.shims().find_name("MMSYSTEM", "waveOutWrite")->fn && !rt.shims().find_name("MMSYSTEM", "waveOutGetID")->fn,
+          "pass %d: waveOutWrite and waveOutGetID stay unimplemented", pass);
     // No MIDI device: midiOutOpen fails honestly and zeroes the handle (a
     // signature-only one returned 0 without writing it); no handle is valid.
     rt.wr16(buf, 0x1234);
@@ -836,6 +837,11 @@ void test_waveout() {
   CHECK(open(0, 0, 0, 0) == 0, "open");
   uint16_t h = g.rt.rd16(phwo);
   CHECK(h >= 0xE000 && g.fake.streams.size() == 1, "a handle (%04X) and one engine stream", h);
+  g.rt.wr16(mmt, 0x5555);
+  CHECK(g.api16("MMSYSTEM", "waveOutGetID", {w16(h), l16(mmt)}) == 0 && g.rt.rd16(mmt) == 0 &&
+            g.api16("MMSYSTEM", "waveOutGetID", {w16(0x1234), l16(mmt)}) == 5 &&
+            g.api16("MMSYSTEM", "waveOutGetID", {w16(h), l16(0)}) == 11,
+        "waveOutGetID: device 0; a bad handle MMSYSERR_INVALHANDLE; no pointer MMSYSERR_INVALPARAM");
   make_header(g, hdr1, data, 4410);         // 2205 frames: 100 ms
   make_header(g, hdr2, data + 4410, 4410);  // another 100 ms
   CHECK(g.api16("MMSYSTEM", "waveOutWrite", {w16(h), l16(hdr1), w16(32)}) == 34, "unprepared: WAVERR_UNPREPARED");

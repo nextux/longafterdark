@@ -7,7 +7,10 @@
 // itself checks for these two headers). Intermission's other data files go
 // by their extension, as INTRMLIB gave them to its readers: a file named
 // .FLI, .FLC, .MRF or .MSV that is no MZ executable is a Classic module,
-// played by IMFLIPLY.IMQ, IMFLCPLY.IMQ, IMMRFPLY.IMQ or IMMSVPLY.IMQ.
+// played by IMFLIPLY.IMQ, IMFLCPLY.IMQ, IMMRFPLY.IMQ or IMMSVPLY.IMQ. A file
+// that starts "7L" 02 00 is a 7th Level resource file, a scene that 7th
+// Level's Runtime Player (PLYMPTON.EXE, a Win16 program) plays: a Classic
+// module too (the ne16 lane's 7thlevel protocol), whatever its name.
 #include <cstdio>
 #include <cstring>
 
@@ -19,6 +22,8 @@ namespace adw {
 bool asa_header(const void* first4) {
   return memcmp(first4, "AniN", 4) == 0 || memcmp(first4, "AniM", 4) == 0;
 }
+
+bool seventh_level_header(const void* first4) { return memcmp(first4, "7L\x02\x00", 4) == 0; }
 
 const char* intermission_data_type(const std::string& path) {
   static const char* const kTypes[] = {"FLI", "FLC", "MRF", "MSV"};
@@ -57,6 +62,12 @@ ModuleProbe probe_module(const std::string& path_utf8) {
     fclose(f);
     p.kind = LaneKind::ne16;
     p.detail = "Intermission ASA animation";
+    return p;
+  }
+  if (read_at(0, mz, 4) && seventh_level_header(mz)) {
+    fclose(f);
+    p.kind = LaneKind::ne16;
+    p.detail = "7th Level scene";
     return p;
   }
   // An Intermission data file of another type: no executable (whatever its length), named for its reader.

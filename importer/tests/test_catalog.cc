@@ -10,7 +10,9 @@
 //     the registry's speed modules alone, after the Configure... button,
 //     "host" last; the same files under another package as before; the
 //     registry's list against the package's modules), After Dark 2.0's
-//     About rules and "screen" (the startrek package's entries only), and
+//     About rules and "screen" (the startrek package's entries only), 7th
+//     Level scenes (made-up 7L files: the title read strictly, the
+//     registry's names and games, the program's own scene left out), and
 //     regenerate_catalog (adimport --catalog-only)
 //   test_import_catalog real <scratch> <adimport.exe> <reference.json>
 //     semantic identity with the prototype's output (research/win/
@@ -889,6 +891,118 @@ void test_scrnsave(const fs::path& dir) {
   CHECK(build_catalog({other}).modules.empty());
 }
 
+// ---- 7th Level scenes ------------------------------------------------------------------------
+
+// A made-up 7th Level resource file: the magic "7L" 2 0, the header's length
+// (`n`, else the header's own), the header and made-up data after it.
+std::string sevenl(std::string_view header, int n = -1) {
+  std::string s("7L\x02\0", 4);
+  s += char(uint8_t(n < 0 ? header.size() : size_t(n)));
+  s += header;
+  return s + "made-up scene data";
+}
+
+void test_sevenl(const fs::path& dir) {
+  using namespace std::string_view_literals;
+  fs::create_directories(dir);
+  auto write = [&](const std::string& name, const std::string& data) {
+    fs::path p = dir / to_wide(name);
+    test::write_bytes(p, std::vector<uint8_t>(data.begin(), data.end()));
+    return p;
+  };
+  const Package* bs = find_package("bestshot");
+  CHECK(bs && bs->recipe == Recipe::cdcopy);
+  const std::string at = "packages/bestshot/BESTACT/";
+  // Its own title names it: data the player plays, lane ne16, no entry, no
+  // imports, no controls; the package's screen; "game" is the merge's.
+  CatalogModule m = catalog_module(write("HEADSHOT.BIN", sevenl("BestShot\0Made Up Head\0"sv)), at + "HEADSHOT.BIN", bs);
+  CHECK(m.id == "bestshot.headshot" && m.lane == "ne16" && m.abi == "7thlevel" && m.entry.empty());
+  CHECK(m.display_name == "Made Up Head" && m.module_name == "Made Up Head" && m.about.empty() && !m.credits);
+  CHECK(m.controls.empty() && m.needs.empty() && m.system.empty() && m.screen == "640x480" && !m.game);
+  // The form naming its resource library after 0xFB; a title in code page
+  // 1252, trimmed.
+  CHECK_EQ(catalog_module(write("LINESHOT.BIN", sevenl("BestShot\0 Made Up Line \xFBmade001.dll\0"sv)),
+                          at + "LINESHOT.BIN", bs)
+               .display_name,
+           std::string("Made Up Line"));
+  CHECK_EQ(catalog_module(write("CAFE.BIN", sevenl("BestShot\0Caf\xE9\0"sv)), at + "CAFE.BIN", bs).display_name,
+           std::string("Caf\xC3\xA9"));
+  // A header not of that form: the registry's name for the file, else the
+  // file stem.
+  for (const std::string& bad : {sevenl("BestShot\0Title"sv),            // no NUL at its end
+                                 sevenl("BestShot\0Title\0"sv, 200),     // longer than the file
+                                 sevenl("\0Title\0"sv),                  // no product
+                                 sevenl("BestShot\0\0"sv),               // no title
+                                 sevenl("BestShot\0Title\0x\0"sv),       // more after the title
+                                 sevenl("BestShot\0Title\xFB\0"sv),      // 0xFB and no library
+                                 sevenl("BestShot\0Title\xFBmy\xFB\0"sv),  // two of them
+                                 sevenl("Best\x01Shot\0Title\0"sv),      // an unprintable product
+                                 sevenl("BestShot\0Ti\x07tle\0"sv),      // a control character in the title
+                                 std::string("7L\x02\0", 4)}) {          // no header at all
+    CHECK_EQ(catalog_module(write("SKEET.BIN", bad), at + "SKEET.BIN", bs).display_name, std::string("Skeet"));
+    CHECK_EQ(catalog_module(write("OTHER.BIN", bad), at + "OTHER.BIN", bs).display_name, std::string("other"));
+  }
+  // The program's own scene, named for its product (the customizer's UI,
+  // BESTSHOT.BIN): no scene; any other magic is no 7th Level file.
+  for (const auto& [name, data, why] :
+       {std::tuple<std::string, std::string, std::string>{"BESTSHOT.BIN", sevenl("BestShot\0Made Up UI\0"sv),
+                                                         "a 7th Level program's own scene (named for its product, "
+                                                         "BestShot), not one it plays"},
+        {"NOTSCENE.BIN", std::string("7L\x01\0", 4) + std::string(40, 'x'), ""}}) {
+    try {
+      catalog_module(write(name, data), at + name, bs);
+      CHECK(false);
+    } catch (const ImportError& e) {
+      if (!why.empty()) CHECK_EQ(std::string(e.what()), why);
+    }
+  }
+  // The JSON: "abi", "screen", then "game" (a game's alone), last.
+  m.md5 = std::string(32, 'd');
+  std::string j = render_catalog_json({m});
+  CHECK(j.find("   \"entry\": \"\",\n") != std::string::npos);
+  CHECK(j.find("\"md5\": \"" + std::string(32, 'd') + "\",\n   \"abi\": \"7thlevel\",\n   \"screen\": \"640x480\"\n  }") !=
+        std::string::npos);
+  m.game = true;
+  j = render_catalog_json({m});
+  CHECK(j.find("\"abi\": \"7thlevel\",\n   \"screen\": \"640x480\",\n   \"game\": true\n  }") != std::string::npos);
+  phosg::JSON doc = phosg::JSON::parse(j);
+  CHECK(doc.at("modules").as_list().at(0)->get_bool("game"));
+  // The merge: only a cdcopy package's module folders list *.BIN (never the
+  // player's folder, never another package's); the registry's games are
+  // marked; a scene's own title is never replaced by the registry's name.
+  const fs::path root = dir / L"tree";
+  fs::create_directories(root / L"BESTACT");
+  fs::create_directories(root / L"BESTSHOT");
+  fs::create_directories(root / L"SCRANTIC");
+  auto put = [](const fs::path& p, const std::string& data) {
+    test::write_bytes(p, std::vector<uint8_t>(data.begin(), data.end()));
+  };
+  put(root / L"BESTACT" / L"HEADSHOT.BIN", sevenl("BestShot\0Made Up Head\0"sv));
+  put(root / L"BESTACT" / L"SKEET.BIN", sevenl("BestShot\0\0"sv));
+  put(root / L"BESTACT" / L"BESTSHOT.BIN", sevenl("BestShot\0Made Up UI\0"sv));
+  put(root / L"BESTACT" / L"NOTES.TXT", sevenl("BestShot\0Notes\0"sv));
+  put(root / L"BESTSHOT" / L"SPARE.BIN", sevenl("BestShot\0Spare\0"sv));
+  put(root / L"SCRANTIC" / L"SCENE.BIN", sevenl("BestShot\0Elsewhere\0"sv));
+  CatalogTree t;
+  t.package = bs;
+  t.dir = root;
+  std::vector<std::string> logged;
+  const CatalogDoc cd = build_catalog({t}, [&](const std::string& s) { logged.push_back(s); });
+  CHECK(cd.modules.size() == 2);
+  if (cd.modules.size() == 2) {
+    CHECK(cd.modules[0].id == "bestshot.headshot" && cd.modules[0].game && cd.modules[0].module_name == "Made Up Head" &&
+          cd.modules[0].display_name == "Made Up Head");
+    CHECK(cd.modules[1].id == "bestshot.skeet" && !cd.modules[1].game && cd.modules[1].module_name == "Skeet");
+  }
+  CHECK((logged == std::vector<std::string>{"catalog: skipped packages/bestshot/BESTACT/BESTSHOT.BIN: a 7th Level "
+                                            "program's own scene (named for its product, BestShot), not one it "
+                                            "plays"}));
+  CatalogTree other;
+  other.package = find_package("castaway");
+  other.dir = root;
+  CHECK(build_catalog({other}).modules.empty());
+}
+
 void write_tree(const fs::path& files) {
   auto put = [&](const std::wstring& rel, const std::string& data) {
     test::write_bytes(files / rel, std::vector<uint8_t>(data.begin(), data.end()));
@@ -1283,6 +1397,7 @@ int main(int argc, char** argv) {
   test_imx(dir / L"imx");
   test_speed(dir / L"speed");
   test_scrnsave(dir / L"scrnsave");
+  test_sevenl(dir / L"sevenl");
   test_scan(dir / L"scan");
   test_ad20(dir / L"ad20");
   test_json();

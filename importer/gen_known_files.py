@@ -74,6 +74,8 @@ PACKAGES = {
     "flintstones": ((), "packages/flintstones", ("SAVER", "ENGINE")),
     # Three install floppies' images (DISKS below; the ZIP they came in holds them).
     "intermission": ((), "packages/intermission", ("SAVER", "ENGINE")),
+    # The CD. No ENGINE: the scenes' player is in BESTSHOT.
+    "bestshot": (("e0df0601cfc552ebafded6cce695928a",), "packages/bestshot", ("BESTACT", "BESTSHOT")),
 }
 
 # packages.cc: the build the package's own fields describe (Package::build),

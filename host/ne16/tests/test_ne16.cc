@@ -2855,8 +2855,9 @@ void test_kinds() {
   {
     ne16::Ne16Lane lane;
     std::vector<std::string> abis = lane.abis();
-    CHECK(std::find(abis.begin(), abis.end(), "scrnsave") != abis.end() && abis.size() == 3,
-          "the lane's ABIs: afterdark, intermission, scrnsave");
+    CHECK(std::find(abis.begin(), abis.end(), "scrnsave") != abis.end() &&
+              std::find(abis.begin(), abis.end(), "7thlevel") != abis.end() && abis.size() == 4,
+          "the lane's ABIs: afterdark, intermission, scrnsave, 7thlevel");
   }
   // ADNE16KIND, ADNE16READER.
   bool is_auto = false;
@@ -2866,6 +2867,9 @@ void test_kinds() {
   CHECK(ne16::parse_kind_choice("IMX", &is_auto, &mk) && !is_auto && mk == ModuleKind::imx, "ADNE16KIND imx");
   CHECK(ne16::parse_kind_choice("ad3", &is_auto, &mk) && !is_auto && mk == ModuleKind::ad3, "ADNE16KIND ad3");
   CHECK(ne16::parse_kind_choice("SCR", &is_auto, &mk) && !is_auto && mk == ModuleKind::scr, "ADNE16KIND scr");
+  CHECK(ne16::parse_kind_choice("7thLevel", &is_auto, &mk) && !is_auto && mk == ModuleKind::seventh &&
+            std::string(ne16::kind_name(mk)) == "7thlevel",
+        "ADNE16KIND 7thlevel");
   CHECK(!ne16::parse_kind_choice("ad4", &is_auto, &mk), "ADNE16KIND: anything else is refused");
   CHECK(std::string(ne16::kind_name(ModuleKind::imx)) == "imx" && std::string(ne16::kind_name(ModuleKind::ad3)) == "ad3" &&
             std::string(ne16::kind_name(ModuleKind::scr)) == "scr",
@@ -2931,6 +2935,7 @@ void test_kinds() {
   const ne16::Ne16Layout junk = put("JUNK.AD", "not an NE image at all");
   const ne16::Ne16Layout anim = put("ANIM.ASA", std::string("AniN") + std::string(28, '\0'));
   const ne16::Ne16Layout anim_m = put("OLD.ASA", std::string("AniM") + std::string(28, '\0'));
+  const ne16::Ne16Layout scene = put("SCENE.BIN", std::string("7L\x02\x00\x0EProduct\0Scene\0", 18));
   auto choose = [](const ne16::Ne16Layout& layout, const Env& env, std::string* why) {
     std::unique_ptr<ne16::Protocol16> p = ne16::Ne16Lane::choose_protocol(layout, env, why);
     return p ? std::string(p->name()).substr(0, 4) : std::string("refused");
@@ -2947,6 +2952,8 @@ void test_kinds() {
   CHECK(choose(anim, none, &why) == "imx/" && choose(anim_m, none, &why) == "imx/",
         "an ASA animation (AniN, AniM): the IMX protocol, by its header");
   CHECK(choose(anim, force_ad3, &why) == "imx/", "an ASA animation whatever ADNE16KIND says");
+  CHECK(choose(scene, none, &why) == "7thl" && choose(scene, force_imx, &why) == "7thl",
+        "a 7th Level resource file (\"7L\" 02 00): the 7thlevel protocol, by its header, whatever ADNE16KIND says");
   CHECK(choose(ad3, force_imx, &why) == "imx/" && choose(imx, force_ad3, &why) == "ad3/" &&
             choose(reader, force_imx, &why) == "imx/",
         "ADNE16KIND forces the protocol");
@@ -2954,6 +2961,124 @@ void test_kinds() {
   for (const std::string& f : written) DeleteFileA(f.c_str());
   for (auto d = made.rbegin(); d != made.rend(); ++d) RemoveDirectoryA(d->c_str());
   RemoveDirectoryA(root.c_str());
+}
+
+// ---- the 7thlevel protocol (protocol.hh, seventh_protocol.cc) ----------------------------------------------------
+
+// A 7th Level Runtime Player scene (made-up files): its header, the block
+// BESTSHOT.EXE gave the player for its screen saver, the command tail, where
+// the player is, and the guest's disk with what the installer wrote into
+// 7THLEVEL.INI.
+void test_seventh_level() {
+  const std::string root = temp_dir("seventh");
+  const std::string pkg = root + "\\packages\\p", act = pkg + "\\BESTACT", player = pkg + "\\BESTSHOT";
+  for (const std::string& d : {root + "\\packages", pkg, act, player}) CreateDirectoryA(d.c_str(), nullptr);
+  const std::string alpha = act + "\\ALPHA.BIN", game = act + "\\HEADSHOT.BIN", own = act + "\\BESTSHOT.BIN",
+                    notes = act + "\\NOTES.BIN", exe = player + "\\PLYMPTON.EXE";
+  write_file(alpha, std::string("7L\x02\x00\x20" "Prod\0Alpha One\xFB" "lib.dll\0", 24));
+  write_file(game, std::string("7L\x02\x00\x10" "Prod\0Game\0", 15));
+  write_file(own, std::string("7L\x02\x00\x10" "Prod\0Own\0", 14));
+  write_file(notes, "MZ not a scene");
+  write_file(exe, "MZ");
+  std::string product, title;
+  CHECK(ne16::seventh_header(alpha, &product, &title) && product == "Prod" && title == "Alpha One",
+        "the header: the product, the title up to 0xFB (%s, %s)", product.c_str(), title.c_str());
+  CHECK(ne16::seventh_header(game, nullptr, &title) && title == "Game", "a title up to its NUL (%s)", title.c_str());
+  CHECK(!ne16::seventh_header(notes, &product, &title) && !ne16::seventh_header(root + "\\none.bin", nullptr, nullptr),
+        "no 7th Level file, no file: false");
+
+  // The block: a screen saver at the installer's controls (mode 3, sound on,
+  // not interactive, no password), 0x6C bytes as 6:00E6 filled them.
+  ne16::SeventhBlock b = ne16::seventh_run_block(Env::parse({}), "Alpha One");
+  CHECK(b.mode == ne16::SeventhMode::saver && b.mute == 0 && b.not_interactive == 1 && b.password == 0 &&
+            b.title == "Alpha One",
+        "the run's block: the plain screen saver");
+  b.ui_window = 0x1234;
+  b.password = 1;
+  std::string bytes = ne16::seventh_block_bytes(b);
+  auto word = [&](size_t at) { return uint16_t(uint8_t(bytes[at]) | uint8_t(bytes[at + 1]) << 8); };
+  bool zeros = true;
+  for (size_t i = 4; i < 0x12; i++) zeros &= bytes[i] == 0;
+  for (size_t i = 0x1A + 9; i < 0x6A; i++) zeros &= bytes[i] == 0;
+  CHECK(bytes.size() == ne16::kSeventhBlockSize && word(0) == 0x6C && word(2) == 3 && word(0x12) == 0 &&
+            word(0x14) == 1 && word(0x16) == 1 && word(0x18) == 0 && bytes.compare(0x1A, 9, "Alpha One") == 0 &&
+            word(0x6A) == 0x1234 && zeros,
+        "the block's bytes: size, mode 3, mute, not interactive, password (mode 3), title, the UI window");
+  b.mode = ne16::SeventhMode::game;
+  b.title = std::string(100, 'x');
+  bytes = ne16::seventh_block_bytes(b);
+  CHECK(word(2) == 6 && word(0x16) == 0 && bytes[0x1A + 0x4E] == 'x' && bytes[0x1A + 0x4F] == 0,
+        "another mode: no password word; the title cut at 0x4F characters");
+  CHECK(ne16::kSeventhBlockFlags == 0x2042, "GMEM_SHARE | GMEM_MOVEABLE | GMEM_ZEROINIT");
+
+  // What a run is (seventh_run_block): ADWALLPAPER=1 the living wallpaper
+  // whatever Caps Lock says; Caps Lock on, a game's game (mode 6) or the
+  // interactive screen saver (mode 3, +0x14 0); else the screen saver.
+  struct Role {
+    const char* wallpaper;
+    bool caps, game;
+    ne16::SeventhMode mode;
+    uint16_t not_interactive;
+  };
+  for (const Role& r : {Role{"", false, false, ne16::SeventhMode::saver, 1}, Role{"", false, true, ne16::SeventhMode::saver, 1},
+                        Role{"", true, true, ne16::SeventhMode::game, 0}, Role{"", true, false, ne16::SeventhMode::saver, 0},
+                        Role{"1", false, false, ne16::SeventhMode::wallpaper, 0},
+                        Role{"1", true, true, ne16::SeventhMode::wallpaper, 0}, Role{"0", true, true, ne16::SeventhMode::game, 0}}) {
+    const Env env = *r.wallpaper ? Env::parse({{"ADWALLPAPER", r.wallpaper}}) : Env::parse({});
+    ne16::SeventhBlock rb = ne16::seventh_run_block(env, "T", r.caps, r.game);
+    const std::string rbytes = ne16::seventh_block_bytes(rb);
+    CHECK(rb.mode == r.mode && rb.not_interactive == r.not_interactive && rb.mute == 0 && rb.password == 0 &&
+              uint8_t(rbytes[2]) == uint8_t(r.mode) && uint8_t(rbytes[0x14]) == r.not_interactive,
+          "ADWALLPAPER=%s, Caps Lock %s, %s: mode %u, +0x14 %u", r.wallpaper, r.caps ? "on" : "off",
+          r.game ? "a game" : "a scene", unsigned(rb.mode), rb.not_interactive);
+  }
+  CHECK(ne16::seventh_is_game("HEADSHOT.BIN") && ne16::seventh_is_game("D:\\BESTACT\\hotshot.bin") &&
+            ne16::seventh_is_game(act + "\\LineShot.Bin") && !ne16::seventh_is_game("SKEET.BIN") &&
+            !ne16::seventh_is_game("HEADSHOT.BAK"),
+        "the games: the installer's [Games], by file name, any case");
+  CHECK(ne16::seventh_command_tail("D:\\BESTACT\\ALPHA.BIN", 0x2A6) == " D:\\BESTACT\\ALPHA.BIN /p2A6",
+        "the command tail: \" %%s /p%%lX\"");
+
+  // The player: <package root>\BESTSHOT, the scene folder's parent's.
+  const ne16::Ne16Layout l = ne16::resolve_layout(alpha, root, [](const std::string&) { return false; });
+  CHECK(ne16::seventh_player_dir(l) == player, "the player's folder (%s)", ne16::seventh_player_dir(l).c_str());
+
+  // The guest's disk and the installer's 7THLEVEL.INI (no ADSTATE: memory).
+  VirtualClock clock{VirtualClock::Mode::fixed_step, 16667};
+  win16::Runtime16Options o;
+  o.guest_dir = ne16::kSeventhInstallDir;
+  win16::Runtime16 rt{o, clock};
+  win16::register_all16(rt);
+  ne16::mount_seventh_disk(rt, Env::parse({}), l);
+  win32::IniStore& ini = win16::profiles16(rt);
+  auto get = [&](const char* f, const char* sec, const std::string& k) {
+    return ini.get(std::string("C:\\WINDOWS\\") + f, sec, k).value_or("(none)");
+  };
+  CHECK(get("7THLEVEL.INI", "Apps", "BestShot") == "C:\\7THLEVEL\\BESTSHOT\\plympton.exe" &&
+            get("7THLEVEL.INI", "BestShot", "Path") == "C:\\7THLEVEL\\BESTSHOT\\" &&
+            get("7THLEVEL.INI", "BestShotPaths", "BestShotPath") == "D:\\bestact" &&
+            get("7THLEVEL.INI", "BestShotPaths", "DeadWallpaperPath") == "D:\\wallpapr" &&
+            get("7THLEVEL.INI", "Icons", "C:\\WINDOWS\\BESTICON.DLL") == "1",
+        "7THLEVEL.INI: the installer's 0: (the player's folder), 1: (the CD) and 2: (Windows) resolved");
+  CHECK(get("7THLEVEL.INI", "Screen Savers", "D:\\bestact\\alpha.bin") == "1" &&
+            get("7THLEVEL.INI", "Living Wallpapers", "D:\\bestact\\headshot.bin") == "1" &&
+            get("7THLEVEL.INI", "Games", "D:\\bestact\\headshot.bin") == "1" &&
+            get("7THLEVEL.INI", "Games", "D:\\bestact\\alpha.bin") == "(none)" &&
+            get("7THLEVEL.INI", "Screen Savers", "D:\\bestact\\bestshot.bin") == "(none)" &&
+            get("7THLEVEL.INI", "Screen Savers", "D:\\bestact\\notes.bin") == "(none)",
+        "the scenes: the folder's 7th Level files but the desktop program's own; [Games] the script's");
+  CHECK(get("WIN.INI", "Desktop", "WallPaper") == "(None)", "WIN.INI's desktop: no wallpaper");
+  CHECK(rt.vfs().cwd() == "C:\\7THLEVEL\\BESTSHOT" && rt.vfs().exists("C:\\7THLEVEL\\BESTSHOT\\PLYMPTON.EXE") &&
+            rt.vfs().exists("D:\\BESTACT\\ALPHA.BIN"),
+        "the player's folder is the current directory; the scenes on the CD (%s)", rt.vfs().cwd().c_str());
+  win16::DosFiles& dos = rt.state<win16::DosFiles>();
+  CHECK(dos.open("D:\\BESTACT\\NEW.TXT", 2, true) < 0, "the CD is read-only");
+  const int h = dos.open("C:\\7THLEVEL\\BESTSHOT\\NEW.TXT", 2, true);
+  CHECK(h >= 0 && GetFileAttributesA((player + "\\NEW.TXT").c_str()) == INVALID_FILE_ATTRIBUTES,
+        "the player's folder takes writes, in its upper layer, never in the package");
+  if (h >= 0) dos.close(uint16_t(h));
+  for (const std::string& f : {alpha, game, own, notes, exe}) DeleteFileA(f.c_str());
+  for (const std::string& d : {act, player, pkg, root + "\\packages", root}) RemoveDirectoryA(d.c_str());
 }
 
 // ---- the Intermission readers (imreader.hh) --------------------------------------------------------------------
@@ -3841,6 +3966,11 @@ int run_all_unit() {
     CHECK(false, "kinds: exception %s", e.what());
   }
   try {
+    test_seventh_level();
+  } catch (const std::exception& e) {
+    CHECK(false, "7th Level: exception %s", e.what());
+  }
+  try {
     test_native_reader();
   } catch (const std::exception& e) {
     CHECK(false, "native reader: exception %s", e.what());
@@ -4588,6 +4718,38 @@ int run_interaction(const std::string& exe) {
     CHECK(p.code == 0 && on == g.game && off_at_end && (!g.cursor || cursor), "%s: exit %d, interactive %s, off at the end %s%s",
           g.module, p.code, on ? "seen" : "never", off_at_end ? "yes" : "no", g.cursor ? (cursor ? ", cursor" : ", NO cursor") : "");
     printf("%s: key-filter %s\n", g.module, filter ? "raised (a WH_KEYBOARD hook while it plays)" : "never");
+  }
+  // B1b: Take Your Best Shot's games (PACKAGES.md, ABI.md §3.16): Caps Lock
+  // starts the player again as the game (mode 6), interactive with the
+  // cursor; the mouse plays (a click on the menu's "play" changes the
+  // frames); Caps Lock off starts it again as the screen saver.
+  if (module_present(win, "packages/bestshot/BESTACT/HEADSHOT.BIN")) {
+    std::string a = gos(60) + "KEY 20 1\nCAPS 1\n" + gos(2) + "KEY 20 0\n" + gos(150), n = a;
+    a += "MOUSE 224 390 0\n" + gos(2) + "MOUSE 224 390 1\n" + gos(2) + "MOUSE 224 390 0\n" + gos(120);
+    n += gos(124);
+    for (std::string* s : {&a, &n}) *s += "KEY 20 1\nCAPS 0\n" + gos(2) + "KEY 20 0\n" + gos(60) + "QUIT\n";
+    const std::string m = "packages/bestshot/BESTACT/HEADSHOT.BIN";
+    Proc pa = run_cmd(host + m + " ADSTATUSLOG=1 ADFBHASH=1 ADGOWAITMS=5000 ADTRACE=lane", a);
+    Proc pn = run_cmd(host + m + " ADFBHASH=1 ADGOWAITMS=5000", n);
+    std::vector<Status> st = statuses(pa.err);
+    bool on = false, cursor = false;
+    for (const Status& s : st) {
+      on |= (s.flags & 1) != 0;
+      cursor |= (s.flags & 3) == 3;
+    }
+    const bool off_at_end = !st.empty() && !(st.back().flags & 1);
+    const bool restarts = pa.err.find("mode 6, block") != std::string::npos &&
+                          pa.err.find("to start it as the screen saver") != std::string::npos &&
+                          pa.err.find("start 3") != std::string::npos;
+    std::vector<std::string> ha = hash_list(pa.err), hn = hash_list(pn.err);
+    size_t differ = 0;
+    for (size_t i = 0; i < std::min(ha.size(), hn.size()); i++) differ += ha[i] != hn[i];
+    CHECK(pa.code == 0 && pn.code == 0 && on && cursor && off_at_end && restarts && differ > 0 && ha.size() == hn.size(),
+          "Head Shot: exit %d, interactive %s, cursor %s, off at the end %s, the player started again %s, %zu frames differ "
+          "after the click",
+          pa.code, on ? "seen" : "never", cursor ? "seen" : "never", off_at_end ? "yes" : "no", restarts ? "yes" : "no",
+          differ);
+    printf("%s: the game started by CAPS, played and stopped (%zu frames differ after the click)\n", m.c_str(), differ);
   }
   // B2: the Trivia answers reach the WH_KEYBOARD hook, are consumed while
   // interactive, and change the frames.

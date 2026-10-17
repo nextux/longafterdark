@@ -6,10 +6,12 @@
 // with each release's `cover`) are all optional (COVERS.md §1.10), and so are
 // `abi`, the module ABI when it is not After Dark's ("intermission" for Star
 // Wars Screen Entertainment's IMX modules, "scrnsave" for Johnny Castaway's
-// Windows 3.1 screen-saver program; absent = "afterdark"), and
+// Windows 3.1 screen-saver program, "7thlevel" for Take Your Best Shot's
+// scenes; absent = "afterdark"), and
 // `screen`, the fixed screen of a module that composes a scene of that size
 // ("640x480" for Star Trek: The Screen Saver's, ScreamSavers' and Marvel's;
-// absent = none).
+// absent = none). A 7th Level scene's `game` (true on the three that are
+// games too) is the host's business: the saver reads nothing of it.
 //
 // Control shapes, as the generator (adimport, importer/catalog.h;
 // ABI.md §2.10)
@@ -51,6 +53,11 @@ inline constexpr char kIntermissionAbi[] = "intermission";
 // its catalog entry gives ("screen"); a host that doesn't list the ABI shows
 // it "Coming soon", and the rotation leaves it out, as for Intermission's.
 inline constexpr char kScrnsaveAbi[] = "scrnsave";
+// A scene of 7th Level's Runtime Player (data its package's PLYMPTON.EXE
+// plays; lane ne16): Take Your Best Shot's. Its screen is its catalog
+// entry's, and a host without the ABI shows it "Coming soon" and the
+// rotation leaves it out, as for a Windows 3.1 screen-saver program.
+inline constexpr char k7thLevelAbi[] = "7thlevel";
 
 enum class ControlType { slider, checkbox, popup, button, unknown };
 
@@ -97,8 +104,9 @@ struct Module {
   std::string display_name;
   std::string lane;                // "pe32" | "ne16"
   // The module ABI, which a host must list (--capabilities abis=) to run it:
-  // "afterdark", "intermission" (an IMX module; lane ne16) or "scrnsave" (a
-  // Windows 3.1 screen-saver program; lane ne16). Never empty.
+  // "afterdark", "intermission" (an IMX module; lane ne16), "scrnsave" (a
+  // Windows 3.1 screen-saver program; lane ne16) or "7thlevel" (a 7th Level
+  // scene; lane ne16). Never empty.
   std::string abi = kAfterDarkAbi;
   // The screen the catalog gives it ("screen": "WxH", PACKAGES.md §6): a
   // module shown at a fixed size (Star Trek: The Screen Saver's, ScreamSavers'

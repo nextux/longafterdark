@@ -96,6 +96,10 @@ const KnownFile kIntermissionKnown[] = {
 #include "known_files_intermission.inc"
     {nullptr, 0, nullptr},
 };
+const KnownFile kBestshotKnown[] = {
+#include "known_files_bestshot.inc"
+    {nullptr, 0, nullptr},
+};
 
 template <size_t N>
 std::span<const KnownFile> manifest(const KnownFile (&a)[N]) {
@@ -1369,6 +1373,92 @@ const SpeedModule kIntermissionSpeed[] = {
     {"SAVER/SNOW.IMX", SpeedStop::slow},      {"SAVER/IMSHARK.IMQ", SpeedStop::fast},
 };
 
+// ---- bestshot ----------------------------------------------------------------------------
+//
+// Take Your Best Shot (7th Level, 1995; Bill Plympton's animation): a desktop
+// customizer whose 17 scenes (BESTACT\*.BIN, 7th Level resource files) its
+// Runtime Player, PLYMPTON.EXE, plays as screen savers, living wallpapers or
+// games, on one CD installed by 7th Level's Setup. That setup copies the
+// player and its libraries from BESTSHOT\ to C:\7THLEVEL\BESTSHOT, the
+// customizer and its saver stub to the Windows folder, and leaves the scenes
+// on the CD (7THLEVEL.INI's BestShotPath, 1:bestact). The recipe is that
+// placement baked into one table, the player beside the scenes it plays
+// (research/bestshot, gitignored). Never installed: the customizer
+// (BESTSHOT.EXE, its UI scene BESTACT\BESTSHOT.BIN and BESTBIG's big one,
+// BESTSFX.DLL), the saver stub BESTSAVR.SCR (it only starts the customizer),
+// the samplers of 7th Level's other products, the icons, wallpapers, sounds
+// and the joystick driver.
+
+const char* const kBestshotModuleDirs[] = {"BESTACT"};
+// The CD (ISO-9660, volume BESTSHOT, mastered by 7th Level on 1995-02-08),
+// as the Internet Archive's item of it holds it; its download.
+const KnownImage kBestshotImages[] = {
+    {"e0df0601cfc552ebafded6cce695928a", 93456384, "ISO-9660 CD", "BESTSHOT"},
+};
+const Download kBestshotDownloads[] = {
+    {"https://archive.org/download/takeyourbestshot/BESTSHOT.iso", L"BESTSHOT.iso", 93456384,
+     "e0df0601cfc552ebafded6cce695928a", "image"},
+};
+// The player, its libraries and every scene: a scene is nothing without the
+// player, the player nothing without its libraries.
+const char* const kBestshotRequired[] = {
+    "BESTSHOT/PLYMPTON.EXE", "BESTSHOT/PLYMA001.DLL", "BESTSHOT/PLYMR001.DLL", "BESTSHOT/PLYMS001.DLL",
+    "BESTSHOT/PLYMU001.DLL", "BESTSHOT/DISPDIB.DLL",  "BESTACT/ABOUTFAC.BIN",  "BESTACT/BFLAT.BIN",
+    "BESTACT/BUGEYED.BIN",   "BESTACT/FACEOFF.BIN",   "BESTACT/GETAHEAD.BIN",  "BESTACT/HEADBANG.BIN",
+    "BESTACT/HEADSHOT.BIN",  "BESTACT/HEADSUP.BIN",   "BESTACT/HIGHVOLT.BIN",  "BESTACT/HOTSHOT.BIN",
+    "BESTACT/KNOCKOFF.BIN",  "BESTACT/LINESHOT.BIN",  "BESTACT/PUGNOSE.BIN",   "BESTACT/REBOUND.BIN",
+    "BESTACT/SCREEECH.BIN",  "BESTACT/SHOTINDR.BIN",  "BESTACT/SKEET.BIN"};
+// The fingerprint: the release's own programs (the customizer, its saver
+// stub, the player) and a scene, side by side. 7th Level's Setup and its
+// DUNZIP.DLL, and the player and its libraries, are on its other CDs too
+// (Monty Python's Desktop Pythonizer runs on the same engine); these names
+// together are Take Your Best Shot's alone.
+const char* const kBestshotFiles[] = {"BESTSHOT/BESTSAVR.SCR", "BESTSHOT/BESTSHOT.EXE", "BESTSHOT/PLYMPTON.EXE",
+                                      "BESTACT/HEADSHOT.BIN"};
+// setup.inf's [Install] copies of the player and its libraries (to its
+// install folder, here BESTSHOT), and the scenes it plays from the CD
+// (BESTACT), all as they are.
+const LooseFile kBestshotLoose[] = {
+    {"BESTSHOT/PLYMPTON.EXE", "BESTSHOT/PLYMPTON.EXE", Codec::plain},
+    {"BESTSHOT/PLYMA001.DLL", "BESTSHOT/PLYMA001.DLL", Codec::plain},
+    {"BESTSHOT/PLYMR001.DLL", "BESTSHOT/PLYMR001.DLL", Codec::plain},
+    {"BESTSHOT/PLYMS001.DLL", "BESTSHOT/PLYMS001.DLL", Codec::plain},
+    {"BESTSHOT/PLYMU001.DLL", "BESTSHOT/PLYMU001.DLL", Codec::plain},
+    {"BESTSHOT/DISPDIB.DLL", "BESTSHOT/DISPDIB.DLL", Codec::plain},
+    {"BESTACT/ABOUTFAC.BIN", "BESTACT/ABOUTFAC.BIN", Codec::plain},
+    {"BESTACT/BFLAT.BIN", "BESTACT/BFLAT.BIN", Codec::plain},
+    {"BESTACT/BUGEYED.BIN", "BESTACT/BUGEYED.BIN", Codec::plain},
+    {"BESTACT/FACEOFF.BIN", "BESTACT/FACEOFF.BIN", Codec::plain},
+    {"BESTACT/GETAHEAD.BIN", "BESTACT/GETAHEAD.BIN", Codec::plain},
+    {"BESTACT/HEADBANG.BIN", "BESTACT/HEADBANG.BIN", Codec::plain},
+    {"BESTACT/HEADSHOT.BIN", "BESTACT/HEADSHOT.BIN", Codec::plain},
+    {"BESTACT/HEADSUP.BIN", "BESTACT/HEADSUP.BIN", Codec::plain},
+    {"BESTACT/HIGHVOLT.BIN", "BESTACT/HIGHVOLT.BIN", Codec::plain},
+    {"BESTACT/HOTSHOT.BIN", "BESTACT/HOTSHOT.BIN", Codec::plain},
+    {"BESTACT/KNOCKOFF.BIN", "BESTACT/KNOCKOFF.BIN", Codec::plain},
+    {"BESTACT/LINESHOT.BIN", "BESTACT/LINESHOT.BIN", Codec::plain},
+    {"BESTACT/PUGNOSE.BIN", "BESTACT/PUGNOSE.BIN", Codec::plain},
+    {"BESTACT/REBOUND.BIN", "BESTACT/REBOUND.BIN", Codec::plain},
+    {"BESTACT/SCREEECH.BIN", "BESTACT/SCREEECH.BIN", Codec::plain},
+    {"BESTACT/SHOTINDR.BIN", "BESTACT/SHOTINDR.BIN", Codec::plain},
+    {"BESTACT/SKEET.BIN", "BESTACT/SKEET.BIN", Codec::plain},
+};
+// Each scene names itself (its header's title, which the catalog reads); these
+// are the same names, for a scene file whose title cannot be read.
+const NameOverride kBestshotNames[] = {
+    {"BESTACT/ABOUTFAC.BIN", "About Face"},   {"BESTACT/BFLAT.BIN", "B-flat"},
+    {"BESTACT/BUGEYED.BIN", "Bug-eyed"},      {"BESTACT/FACEOFF.BIN", "Face Off"},
+    {"BESTACT/GETAHEAD.BIN", "Get A Head"},   {"BESTACT/HEADBANG.BIN", "Headbanger"},
+    {"BESTACT/HEADSHOT.BIN", "Head Shot"},    {"BESTACT/HEADSUP.BIN", "Heads Up"},
+    {"BESTACT/HIGHVOLT.BIN", "High Voltage"}, {"BESTACT/HOTSHOT.BIN", "Hot Shot"},
+    {"BESTACT/KNOCKOFF.BIN", "Knock Off"},    {"BESTACT/LINESHOT.BIN", "Line Shot"},
+    {"BESTACT/PUGNOSE.BIN", "Pug Nose"},      {"BESTACT/REBOUND.BIN", "Rebound"},
+    {"BESTACT/SCREEECH.BIN", "Screeech"},     {"BESTACT/SHOTINDR.BIN", "A Shot In The Dark"},
+    {"BESTACT/SKEET.BIN", "Skeet"},
+};
+// setup.inf's [Games] (7THLEVEL.INI): the three scenes that are games too.
+const char* const kBestshotGames[] = {"BESTACT/HEADSHOT.BIN", "BESTACT/HOTSHOT.BIN", "BESTACT/LINESHOT.BIN"};
+
 // ---- box covers (COVERS.md §2.3) ------------------------------------------------------------
 //
 // Only URLs, md5s, sizes, paths and crops: the pictures are fetched (md5- and
@@ -1643,6 +1733,13 @@ const CoverSource kOpusroadCovers[] = {
 const CoverSource kIntermissionCovers[] = {
     cover_disc("panel", "Setup art", "your disks", "INSTALL.BMP", "cf21a2a530d09444445c4735d8dd59ca"),
 };
+// Take Your Best Shot: the box front, as the Internet Archive's item of the
+// CD holds it (432x547; the whole front, no crop). 7th Level's and Bill
+// Plympton's art: fetched onto the user's machine only, never bundled.
+const CoverSource kBestshotCovers[] = {
+    cover_download("box", "Box front", "Internet Archive", "https://archive.org/download/takeyourbestshot/bestshot.jpg",
+                   "a225962a4e242347a056f0b356ab920b", 58082, L"takeyourbestshot_bestshot.jpg"),
+};
 
 const Package kPackages[] = {
     {"deluxe", "After Dark 4.0 Deluxe", "Deluxe", Recipe::tree, "FILES", kDeluxeModuleDirs, kDeluxeImages,
@@ -1775,6 +1872,14 @@ const Package kPackages[] = {
      nullptr, kIntermissionDiskTags, {}, kIntermissionNames, manifest(kIntermissionKnown), kIntermissionDownloads,
      kIntermissionCovers, "1993-11", nullptr, kIntermissionLoose, nullptr, nullptr, Package::About::as_is, {},
      nullptr, nullptr, {}, nullptr, {}, kIntermissionSpeed},
+    // After the first twenty, so they keep their places (and the GUI's
+    // command ids). Every file of the CD is dated 1995-02-08. Its scenes are
+    // drawn for a 640x480 screen: the catalog gives every scene that screen,
+    // as for Star Trek: The Screen Saver.
+    {"bestshot", "Take Your Best Shot", "Best Shot", Recipe::cdcopy, "packages/bestshot", kBestshotModuleDirs,
+     kBestshotImages, kBestshotRequired, {}, nullptr, {}, "BESTACT", nullptr, nullptr, kBestshotFiles, {},
+     kBestshotNames, manifest(kBestshotKnown), kBestshotDownloads, kBestshotCovers, "1995-02", nullptr, kBestshotLoose,
+     nullptr, "640x480", Package::About::as_is, {}, nullptr, nullptr, {}, nullptr, {}, {}, kBestshotGames},
 };
 
 }  // namespace
@@ -1791,6 +1896,7 @@ const char* recipe_name(Recipe r) {
     case Recipe::ad2kwaj: return "ad2kwaj";
     case Recipe::islib: return "islib";
     case Recipe::is1: return "is1";
+    case Recipe::cdcopy: return "cdcopy";
   }
   return "?";
 }

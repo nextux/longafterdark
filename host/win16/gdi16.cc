@@ -1094,6 +1094,30 @@ void register_gdi16(Runtime16& rt) {
     if (h) GetWindowOrgEx(h, &p);
     c.ret32(pack_point(p));
   });
+  r.impl(G, "GetViewportOrg", [](Call16& c) {
+    HDC h = gt(c).host_dc(c.w());
+    POINT p{0, 0};
+    if (h) GetViewportOrgEx(h, &p);
+    c.ret32(pack_point(p));
+  });
+  // DPtoLP(hdc, lpPoints, nCount): device points to the DC's logical ones, in place.
+  r.impl(G, "DPtoLP", [](Call16& c) {
+    uint16_t hdc = c.w();
+    uint32_t pts = c.ptr();
+    int16_t n = c.sw();
+    HDC h = gt(c).host_dc(hdc);
+    if (!h || !pts || n < 0) return c.ret(0);
+    std::vector<POINT> v(static_cast<size_t>(n));
+    for (int i = 0; i < n; i++) {
+      v[size_t(i)] = POINT{int16_t(c.rt.rd16(pts + 4u * i)), int16_t(c.rt.rd16(pts + 4u * i + 2))};
+    }
+    if (n && !::DPtoLP(h, v.data(), n)) return c.ret(0);
+    for (int i = 0; i < n; i++) {
+      c.rt.wr16(pts + 4u * i, uint16_t(int16_t(v[size_t(i)].x)));
+      c.rt.wr16(pts + 4u * i + 2, uint16_t(int16_t(v[size_t(i)].y)));
+    }
+    c.ret(1);
+  });
   r.impl(G, "GetCurrentPosition", [](Call16& c) {
     HDC h = gt(c).host_dc(c.w());
     POINT p{0, 0};

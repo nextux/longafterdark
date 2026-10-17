@@ -106,7 +106,20 @@ bool after_dark3_host(const Ne16Layout& l, const FileExists& exists) {
 
 bool host_ad_snd(const Ne16Layout& l, const FileExists& exists) { return !exists(l.engine_dir + "\\" + kAdSndLibrary); }
 
-const char* kind_name(ModuleKind k) { return k == ModuleKind::ad3 ? "ad3" : k == ModuleKind::imx ? "imx" : "scr"; }
+const char* kind_name(ModuleKind k) {
+  switch (k) {
+    case ModuleKind::ad3: return "ad3";
+    case ModuleKind::imx: return "imx";
+    case ModuleKind::scr: return "scr";
+    case ModuleKind::seventh: return "7thlevel";
+  }
+  return "?";
+}
+
+std::string seventh_player_dir(const Ne16Layout& l) {
+  std::string root = dir_of(l.module_dir);
+  return (root.empty() ? std::string(".") : root) + "\\" + kSeventhPlayerDir;
+}
 
 const char* form_name(ImxForm f) {
   switch (f) {
@@ -184,9 +197,12 @@ KindProbe detect_kind(const loader::ne::Image& img, const std::string& file_name
 bool parse_kind_choice(const std::string& v, bool* is_auto, ModuleKind* forced) {
   *is_auto = true;
   if (v.empty() || ieq(v, "auto")) return true;
-  if (ieq(v, "ad3") || ieq(v, "imx") || ieq(v, "scr")) {
+  if (ieq(v, "ad3") || ieq(v, "imx") || ieq(v, "scr") || ieq(v, "7thlevel")) {
     *is_auto = false;
-    *forced = ieq(v, "ad3") ? ModuleKind::ad3 : ieq(v, "imx") ? ModuleKind::imx : ModuleKind::scr;
+    *forced = ieq(v, "ad3")   ? ModuleKind::ad3
+              : ieq(v, "imx") ? ModuleKind::imx
+              : ieq(v, "scr") ? ModuleKind::scr
+                              : ModuleKind::seventh;
     return true;
   }
   return false;

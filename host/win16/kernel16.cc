@@ -324,6 +324,8 @@ bool resident_system_module(std::string_view name) {
 
 }  // namespace
 
+std::string search_file16(Runtime16& rt, const std::string& name) { return search_file(rt, name); }
+
 uint16_t kernel16_current_task(Runtime16& rt) {
   KernelState& s = ks(rt);
   if (!s.task) s.task = make_tdb(rt, "task database");
@@ -406,6 +408,11 @@ void register_kernel16(Runtime16& rt) {
     const uint8_t len = c.rt.rd8(psp | 0x80);
     uint16_t cmd = len ? 0x81 : 0x80;
     while (len && cmd < 0x81 + len && (c.rt.rd8(psp | cmd) == ' ' || c.rt.rd8(psp | cmd) == '\t')) cmd++;
+    // The command line is a C string, as Windows 3.1's InitTask handed it
+    // (lpCmdLine): the tail's closing CR becomes its NUL. 7th Level's Runtime
+    // Player copies it with lstrcpyn and parses "/p<hex>" up to a NUL or a
+    // blank: with the CR there the number ended badly and its block was lost.
+    if (len && c.rt.rd8(psp | (0x81 + len)) == 0x0D) c.rt.wr8(psp | (0x81 + len), 0);
     trace("mod16", "InitTask: stack %u, heap %u, pStackTop %04X, pStackBottom %04X, command line PSP:%04X \"%s\"", stack,
           heap, top, bottom, cmd, c.rt.read_str(psp | cmd, size_t(0x81 + len - cmd)).c_str());
     regs.w_ax(1);

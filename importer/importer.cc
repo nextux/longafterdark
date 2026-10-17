@@ -271,6 +271,19 @@ bool is1_fingerprint(const SourceFs& fs, const Package& p) {
   return first && !first->is_dir;
 }
 
+// cdcopy: the release's own files (required_archives, paths from the root)
+// side by side on the disc, or a copy of its files. Nothing is read: their
+// names name the release (7th Level's other CDs carry the same installer and
+// player, never these programs and scenes together).
+bool cdcopy_fingerprint(const SourceFs& fs, const Package& p) {
+  if (p.required_archives.empty()) return false;
+  for (const char* f : p.required_archives) {
+    auto x = fs.find(f);
+    if (!x || x->is_dir) return false;
+  }
+  return true;
+}
+
 // Microsoft Setup's SETUP.LST is a small text file: the real one is 654 bytes.
 constexpr uint64_t kMaxSetupLst = 64 * 1024;
 
@@ -557,6 +570,8 @@ Identified identify(const SourceFs& fs, std::span<const Package> registry, const
       if (build || delrina_fingerprint(fs, p, p.marker)) matches.push_back(Identified{&p, fs.root(), "", build});
     } else if (p.recipe == Recipe::is1) {
       if (is1_fingerprint(fs, p)) matches.push_back(Identified{&p, fs.root(), ""});
+    } else if (p.recipe == Recipe::cdcopy) {
+      if (cdcopy_fingerprint(fs, p)) matches.push_back(Identified{&p, fs.root(), ""});
     } else if (p.recipe == Recipe::intermission) {
       // The script names the product; its first archive (disk 1's) must be
       // beside it.
@@ -1161,6 +1176,34 @@ class Importer {
     plan_loose_files(fs, id);
   }
 
+  // ---- recipe "cdcopy": the installer's copies and the disc's own files ----
+  // Every file of the table must be there; each is copied as it is, from its
+  // path on the disc. Only the table's files are ever opened (I5): the
+  // installer, the release's other programs, pictures and sounds never are.
+  void plan_cdcopy(const SourceFs& fs, const Identified& id) {
+    std::string missing;
+    std::vector<std::pair<const LooseFile*, SourceNode>> found;
+    for (const LooseFile& lf : loose_files()) {
+      auto n = fs.find(join(id.dir_path, lf.from));
+      if (!n || n->is_dir) {
+        missing += std::string(missing.empty() ? "" : ", ") + lf.from;
+        continue;
+      }
+      found.emplace_back(&lf, std::move(*n));
+    }
+    if (!missing.empty()) invalid("the source is missing " + missing + ", which the CD of " + title_ + " holds");
+    for (auto& [lf, n] : found) {
+      Planned pl;
+      pl.rel = root_ + "/" + lf->to;
+      pl.size = n.size;
+      pl.from = join(id.dir_path, lf->from);
+      if (n.mtime) pl.has_mtime = true, pl.mtime = *n.mtime;
+      const SourceFs* src = &fs;
+      pl.read = [src, n](const Sink& sink) { src->read(n, sink); };
+      add(std::move(pl));
+    }
+  }
+
   // The registry's loose files (intermission, ad2kwaj, is1), under the names
   // the installer gave them, expanded when compressed. One the source lacks is
   // not planned: the manifest then reports it missing.
@@ -1446,13 +1489,15 @@ class Importer {
   // the DLLs' and drivers' imports in I2, and the sound database in ST_RES\
   // in I4; for the InstallShield 2 packages (islib) AD.EXE out of the module
   // folders in I1, the DLLs' and drivers' imports in I2, and their own I3;
-  // for the InstallShield 1 package (is1, a screen-saver program) its own I3.
+  // for the InstallShield 1 package (is1, a screen-saver program) its own I3;
+  // for a 7th Level package (cdcopy: scenes and their player) its own I3.
   void check_invariants(const fs::path& stage) const {
     const Package& p = *pkg_;
     const bool imx = p.recipe == Recipe::intermission;
     const bool ad2 = p.recipe == Recipe::ad2kwaj;
     const bool isl = p.recipe == Recipe::islib;
     const bool is1 = p.recipe == Recipe::is1;
+    const bool cdc = p.recipe == Recipe::cdcopy;
     std::set<std::string> have;  // upper case, relative to the package root
     for (const ImportedFile& f : r_.files) have.insert(ascii_upper(f.path.substr(root_.size() + 1)));
     std::vector<std::string> folders;
@@ -1556,6 +1601,15 @@ class Importer {
       for (const std::string& f : have)
         if (f.rfind("ENGINE/", 0) == 0 || f.rfind("WINDOWS/", 0) == 0)
           fail("I3", f + ": an InstallShield 1 package has only its module folder");
+    } else if (cdc) {
+      // 7th Level scenes and the Runtime Player that plays them, in its
+      // folder beside theirs, where the 16-bit lane finds it
+      // (<root>\BESTSHOT\PLYMPTON.EXE); no ENGINE (nothing of After Dark's)
+      // and no WINDOWS folder (the player's 7THLEVEL.INI is the lane's).
+      if (!have.count("BESTSHOT/PLYMPTON.EXE")) fail("I3", "no BESTSHOT\\PLYMPTON.EXE");
+      for (const std::string& f : have)
+        if (f.rfind("ENGINE/", 0) == 0 || f.rfind("WINDOWS/", 0) == 0)
+          fail("I3", f + ": a 7th Level package has only its scenes and their player");
     } else {
       if (!have.count("ENGINE/AD_SND.DLL")) fail("I3", "no ENGINE\\AD_SND.DLL");
       if (!(have.count("ENGINE/OLDMOD16.DLL") && have.count("ENGINE/AFTERDAR.SCR")) && !have.count("ENGINE/ADTASK.DLL"))
@@ -2253,6 +2307,7 @@ ImportResult run_import(const Source& src, const ImportOptions& opts) {
     else if (pkg.recipe == Recipe::intermission) imp.plan_intermission(*sfs, id);
     else if (pkg.recipe == Recipe::islib) imp.plan_islib(*sfs, id);
     else if (pkg.recipe == Recipe::is1) imp.plan_is1(*sfs, id);
+    else if (pkg.recipe == Recipe::cdcopy) imp.plan_cdcopy(*sfs, id);
     else imp.plan_ad2kwaj(*sfs, id);
     imp.check_required();
     imp.check_sizes();

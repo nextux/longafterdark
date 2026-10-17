@@ -1,6 +1,7 @@
 // adw_lane_ne16 — the Classic lane: a 16-bit NE module (an After Dark
-// 2.x/3.x .AD, an Intermission .IMX, or a Windows 3.1 screen saver's .SCR)
-// run on the Win16 guest runtime (host/win16). Where the engine files come from follows the package rule
+// 2.x/3.x .AD, an Intermission .IMX, a Windows 3.1 screen saver's .SCR, or a
+// scene of 7th Level's Runtime Player) run on the Win16 guest runtime
+// (host/win16). Where the engine files come from follows the package rule
 // (package.hh, PACKAGES.md §7.1/§7.3).
 //
 // Module protocols (protocol.hh): the lane (lane.cc) is the machinery every
@@ -11,15 +12,18 @@
 // of the protocol the module speaks: its choices and runtime options, the
 // guest's disk, load, one call of each frame's run, SET, unload, and a button
 // in configure mode. Below, "DRAWFRAME" in the lane's sections is that call.
-// Three protocols exist, After Dark's own, Delrina Intermission's and
-// Windows 3.1's screen-saver program, and the module's exports choose
-// (package.hh detect_kind; ADNE16KIND forces one): MODULE is an After Dark
-// module, SAVERINIT with SAVERDRAW an Intermission one, an application
-// exporting SCREENSAVERPROC a Windows 3.1 saver; an NE file that is none of
-// them is refused (exit 1). All are NE, so all are this lane's (catalog
-// "lane":"ne16"; an Intermission entry adds "abi":"intermission", a Windows
-// 3.1 saver's "abi":"scrnsave"), and --capabilities lists the three ABIs
-// (Lane::abis: afterdark, intermission, scrnsave).
+// Four protocols exist, After Dark's own, Delrina Intermission's, Windows
+// 3.1's screen-saver program and 7th Level's Runtime Player, and the module's
+// exports choose (package.hh detect_kind; ADNE16KIND forces one): MODULE is
+// an After Dark module, SAVERINIT with SAVERDRAW an Intermission one, an
+// application exporting SCREENSAVERPROC a Windows 3.1 saver; an NE file that
+// is none of them is refused (exit 1). A data file goes by its header or
+// extension: an Intermission animation or data file is Intermission's, a 7th
+// Level resource file ("7L" 02 00) the Runtime Player's. All are this lane's
+// (catalog "lane":"ne16"; an Intermission entry adds "abi":"intermission", a
+// Windows 3.1 saver's "abi":"scrnsave", a 7th Level scene's
+// "abi":"7thlevel"), and --capabilities lists the four ABIs (Lane::abis:
+// afterdark, intermission, scrnsave, 7thlevel).
 //
 // The AD3 protocol (ad3_protocol.cc): an After Dark 2.x/3.x module driven the
 // way AFTERDAR.SCR drove it through OLDMOD32's flat thunks (ABI.md §3.1–§3.3,
@@ -232,6 +236,46 @@
 // dir at C:\SIERRA\SCRANTIC (its installer's default) as the current
 // directory, C:\WINDOWS with its installer's profile seeds (win16/dos16.hh
 // seed_scrnsave).
+//
+// 7th Level scenes (seventh_protocol.cc, ABI.md §3.16): Take Your Best
+// Shot's BESTACT\*.BIN are 7th Level resource files that its Runtime Player
+// plays. The module file is the scene; the player is the package's
+// BESTSHOT\PLYMPTON.EXE (package.hh "The 7th Level Runtime Player"), run
+// unchanged as the runtime's task the way Windows 3.1 ran it (as a Windows
+// 3.1 saver is, above: one call, every frame ending inside it, Long calls
+// required) with its own libraries — PLYMU001, PLYMA001, PLYMS001, PLYMR001
+// and Microsoft's DISPDIB, loaded from its folder, each LibEntry run, WEP
+// when they go (win16 ModuleTable16::set_call_wep). The protocol stands in
+// for Take Your Best Shot's desktop program BESTSHOT.EXE, which started
+// every scene: a 0x6C-byte block that says the mode
+// (GlobalAlloc(GMEM_SHARE | GMEM_MOVEABLE | GMEM_ZEROINIT); protocol.hh
+// SeventhBlock, seventh_run_block — the one place a run's mode is decided:
+// the screen saver, mode 3; with Caps Lock a game's game, mode 6, or another
+// scene's interactive saver; with ADWALLPAPER=1 the living wallpaper, mode
+// 1), the command tail " D:\BESTACT\<scene>
+// /p<hBlock>", BESTSHOT's two top-level windows (win16
+// user16_host_window), and, at the player's first message call (where
+// WinExec returned and BESTSHOT found its window), SendMessage(player, 0x783,
+// BESTSHOT's main window, 0) (win16 user16_set_receive_hook). Its window
+// (VIEW_CLASS, the screen's size) is the saver window: it takes no key or
+// mouse message (the host's saver ends the run on input) — but while a game
+// or the interactive saver plays under Caps Lock (Protocol16::plays: the run
+// is interactive and eats every input line), when keys and the mouse go to
+// its window (win16 user16_set_app_input). Caps Lock on or off stops the
+// player as BESTSHOT.EXE did and starts it again with the new block, what
+// the ended task left freed (win16 user16_end_task, every module, its
+// memory); a game that ends itself goes back to the saver. Its loop is
+// PeekMessage's, so frames end at the deadline in an API call. Sound off is a
+// PC without a sound card (Runtime16Options::sound_device false; PLYMA001
+// would wait forever for the silent device's WHDR_DONE); sound on plays
+// through the engine. At shutdown the player is stopped as BESTSHOT.EXE
+// stopped it: 0x783 with 0, then WM_CLOSE; the task resumes until it exits.
+// A player that ends itself (its MessageBox, WM_QUIT) stops the run with its
+// text (exit 1). No buttons. The disk (protocol.hh mount_seventh_disk): the
+// player's folder at C:\7THLEVEL\BESTSHOT (SETUP.EXE's default) as the
+// current directory, the scene's folder on the CD as D:\BESTACT (read-only),
+// C:\WINDOWS with 7THLEVEL.INI as the installer wrote it (win16/dos16.hh
+// seed_seventh_level).
 //
 // Input and status (INTERACTION.md §5.2): AFTERDAR.SCR forwarded no key or
 // mouse message to a Classic module (ABI.md §3.1); modules poll
@@ -587,7 +631,7 @@ class Ne16Lane : public Lane {
   static std::unique_ptr<Protocol16> choose_protocol(const Ne16Layout& layout, const Env& env, std::string* why);
 
   const char* name() const override { return "ne16"; }
-  std::vector<std::string> abis() const override { return {"afterdark", "intermission", "scrnsave"}; }
+  std::vector<std::string> abis() const override { return {"afterdark", "intermission", "scrnsave", "7thlevel"}; }
   bool init(const std::string& module_path, LaneContext& ctx) override;
   uint32_t frame_interval_us() const override { return 16667; }
   void on_command(const Command& c) override;

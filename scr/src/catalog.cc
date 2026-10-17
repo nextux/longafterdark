@@ -128,7 +128,7 @@ bool host_variable_ok(std::string_view name) {
   // own two): never a catalog's to change.
   static constexpr std::string_view kOwn[] = {
       "ADSTREAM", "ADSCREENW", "ADSCREENH", "ADCVSET",   "ADCAPS",   "ADNUMLOCK",      "ADSTATE",
-      "ADSEEDIMG", "ADSOUND",  "ADVOLUME",  "ADAUDIOOUT", "ADSTATUSHANDLE", "ADSTATUSLOG",
+      "ADSEEDIMG", "ADSOUND",  "ADVOLUME",  "ADAUDIOOUT", "ADSTATUSHANDLE", "ADSTATUSLOG", "ADWALLPAPER",
   };
   if (name.size() < 3 || name.substr(0, 2) != "AD" || name[2] == '_') return false;
   for (char ch : name) {

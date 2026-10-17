@@ -77,7 +77,7 @@ std::wstring size_text(int w, int h) { return std::to_wstring(w) + L"x" + std::t
 
 Args parse_args(const std::vector<std::wstring>& argv) {
   Args a;
-  bool classic = false, window = false, help = false, sized = false;
+  bool classic = false, window = false, wallpaper = false, help = false, sized = false;
   std::wstring classic_text;   // the Windows switch as written
   std::wstring other;          // the first unknown switch or stray word
   auto fail = [&](std::wstring e) {
@@ -110,9 +110,11 @@ Args parse_args(const std::vector<std::wstring>& argv) {
       help = true;
       continue;
     }
-    if (name == L"window" || name == L"random") {
+    if (name == L"window" || name == L"random" || name == L"wallpaper" || name == L"stop") {
       if (glued) fail(L"/" + name + L" takes no value (\"" + t + L"\").");
       if (name == L"window") window = true;
+      else if (name == L"wallpaper") wallpaper = true;
+      else if (name == L"stop") a.stop = true;
       else a.random = true;
       continue;
     }
@@ -175,18 +177,31 @@ Args parse_args(const std::vector<std::wstring>& argv) {
     a.error.clear();
     return a;
   }
-  if (window) {
-    if (classic) fail(L"/window runs in a window, not as " + classic_text + L": leave one of them out.");
+  auto stray = [&] {
     if (!other.empty()) {
       fail(other.size() > 1 && (other[0] == L'/' || other[0] == L'-')
                ? L"There is no switch \"" + other + L"\"."
                : L"\"" + other + L"\" is not a switch: a value goes right after its switch (/size 1920x1080), "
                                  L"and a name with spaces in quotes (/module \"Flying Toasters!\").");
     }
+  };
+  if (wallpaper) {
+    if (window) fail(L"/wallpaper shows it on the desktop, /window in a window of its own: leave one of them out.");
+    if (classic) fail(L"/wallpaper runs on the desktop, not as " + classic_text + L": leave one of them out.");
+    if (sized) fail(L"/size goes with /window: /wallpaper fills each monitor.");
+    if (a.stop && (!a.module.empty() || a.random)) {
+      fail(L"/wallpaper /stop ends the one running: it takes no /module or /random.");
+    }
+    stray();
+    a.mode = Mode::wallpaper;
+  } else if (window) {
+    if (classic) fail(L"/window runs in a window, not as " + classic_text + L": leave one of them out.");
+    stray();
     a.mode = Mode::window;
   } else if (sized || !a.module.empty() || a.random) {
-    fail(L"/size, /module and /random go with /window.");
+    fail(L"/size, /module and /random go with /window (/module and /random with /wallpaper too).");
   }
+  if (a.stop && !wallpaper) fail(L"/stop goes with /wallpaper: LongAfterDark.exe /wallpaper /stop.");
   if (a.mode == Mode::preview && (!a.has_hwnd || a.hwnd == 0)) a.valid = false;
   return a;
 }
@@ -204,6 +219,15 @@ std::wstring usage_text() {
          L"/module, that one first.\n"
          L"With neither /module nor /random, the window shows what the screen saver would.\n"
          L"\n"
+         L"LongAfterDark.exe /wallpaper [/module <module>] [/random]\n"
+         L"LongAfterDark.exe /wallpaper /stop\n"
+         L"\n"
+         L"/wallpaper: on the Windows desktop itself, behind its icons and every window: a living wallpaper "
+         L"on each monitor the screen saver uses, until /wallpaper /stop or you sign out. Each module starts on "
+         L"your wallpaper; no key or click reaches it, and it pauses while the screen saver runs or the computer "
+         L"is locked. /module and /random as for /window; a second /wallpaper replaces the first.\n"
+         L"/wallpaper /stop: ends it; the desktop shows your wallpaper again.\n"
+         L"\n"
          L"/s: the screen saver, full screen.\n"
          L"/c, or nothing: the settings window.\n"
          L"/p <window>, /a <window>: what Windows itself uses (the preview in Screen Saver Settings; a "
@@ -219,6 +243,7 @@ std::wstring usage_message(const std::wstring& problem) {
   return problem + L"\n\n"
                    L"LongAfterDark.exe /window [/size WxH] [/module <module>] [/random], as in:\n"
                    L".\\LongAfterDark.exe /window /size 1920x1080 /random\n"
+                   L"LongAfterDark.exe /wallpaper [/module <module>] [/random], or /wallpaper /stop.\n"
                    L"\n"
                    L"LongAfterDark.exe /help says what each switch does.";
 }

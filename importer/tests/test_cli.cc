@@ -108,15 +108,18 @@ int main(int argc, char** argv) {
   std::string out;
   CHECK_EQ(run(exe, {L"--help"}, "help", &out), 0);
   CHECK(out.find("usage: adimport") != std::string::npos);
-  // Every release by title, and every id for --package, the twentieth last.
+  // Every release by title, and every id for --package, the twenty-first last.
   const size_t tng_at = out.find("\n  Star Trek: The Next Generation Screen Saver"),
                castaway_at = out.find("\n  Screen Antics: Johnny Castaway"),
                intermission_at = out.find("\n  Intermission 4.0\r\n") != std::string::npos
                                      ? out.find("\n  Intermission 4.0\r\n")
-                                     : out.find("\n  Intermission 4.0\n");
+                                     : out.find("\n  Intermission 4.0\n"),
+               bestshot_at = out.find("\n  Take Your Best Shot");
   CHECK(tng_at != std::string::npos && castaway_at != std::string::npos && tng_at < castaway_at &&
-        intermission_at != std::string::npos && castaway_at < intermission_at);
-  CHECK(out.find(", farside, dilbert, tng, castaway, opus, opusroad, flintstones, intermission)") != std::string::npos);
+        intermission_at != std::string::npos && castaway_at < intermission_at && bestshot_at != std::string::npos &&
+        intermission_at < bestshot_at);
+  CHECK(out.find(", farside, dilbert, tng, castaway, opus, opusroad, flintstones, intermission, bestshot)") !=
+        std::string::npos);
   CHECK_EQ(run(exe, {}, "no arguments, no console"), 1);
   CHECK_EQ(run(exe, {L"--bogus"}, "unknown flag"), 1);
   CHECK_EQ(run(exe, {L"--iso", iso.wstring(), L"--from", dir.wstring()}, "two sources"), 1);
@@ -259,6 +262,9 @@ int main(int argc, char** argv) {
         std::string::npos);
   CHECK(out.find("\n  intermission Intermission 4.0                             "
                  "not installed; download 3.3 MB (ZIP of 3 floppy images)") != std::string::npos);
+  // Take Your Best Shot's CD image.
+  CHECK(out.find("\n  bestshot     Take Your Best Shot                          "
+                 "not installed; download 89.1 MB (disc image)") != std::string::npos);
   CHECK_EQ(run(exe, {L"--set-cover", L"tt", pic, L"--dest", dest.wstring()}, "--set-cover, not imported", &out), 1);
   CHECK(out.find("Totally Twisted After Dark isn't imported") != std::string::npos);
   CHECK_EQ(run(exe, {L"--set-cover", L"deluxe", pic, L"--dest", dest.wstring()}, "--set-cover, no picture"), 2);

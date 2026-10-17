@@ -560,6 +560,46 @@ const char* data_module_form(const std::string& file_name, std::string_view data
   return nullptr;
 }
 
+// A 7th Level resource file (its Runtime Player's scenes), by its magic, "7L"
+// 2 0, as the ne16 lane tells one, whatever the file's name.
+bool sevenl_magic(std::string_view data) { return data.size() >= 4 && data.substr(0, 4) == std::string_view("7L\x02\0", 4); }
+
+// A 7th Level resource file's names, read strictly: byte 4 is the length n
+// of the header that follows, n bytes ending in a NUL: the product's name
+// (printable ASCII: "BestShot"), NUL, the scene's title, then NUL or 0xFB
+// and the resource library it names ("plymr001.dll"), NUL. nullopt for any
+// other form (an empty name or title, a NUL or 0xFB out of place, n past
+// the file).
+struct SevenLNames {
+  std::string_view product, title;
+};
+std::optional<SevenLNames> sevenl_names(std::string_view data) {
+  if (!sevenl_magic(data) || data.size() < 5) return std::nullopt;
+  const size_t n = uint8_t(data[4]);
+  if (n < 4 || data.size() - 5 < n) return std::nullopt;
+  const std::string_view h = data.substr(5, n);
+  if (h.back() != '\0') return std::nullopt;
+  const size_t end_product = h.find('\0');
+  const std::string_view product = h.substr(0, end_product);
+  if (product.empty() || end_product + 1 >= h.size()) return std::nullopt;
+  for (char c : product)
+    if (c < 0x20 || c > 0x7E) return std::nullopt;
+  const std::string_view rest = h.substr(end_product + 1);
+  const size_t end_title = rest.find_first_of(std::string_view("\0\xFB", 2));
+  if (end_title == 0) return std::nullopt;
+  const std::string_view title = rest.substr(0, end_title);
+  for (char c : title)
+    if (uint8_t(c) < 0x20) return std::nullopt;
+  if (rest[end_title] == '\0') {
+    if (end_title + 1 != rest.size()) return std::nullopt;
+  } else {
+    const std::string_view lib = rest.substr(end_title + 1);
+    if (lib.size() < 2 || lib.find('\0') != lib.size() - 1 || lib.find('\xFB') != std::string_view::npos)
+      return std::nullopt;
+  }
+  return SevenLNames{product, title};
+}
+
 void add_controls(CatalogModule& m, const std::function<std::optional<std::string_view>(uint16_t)>& find) {
   for (int slot = 0; slot < 4; slot++) {
     auto d = find(uint16_t(slot + 1));
@@ -620,6 +660,29 @@ CatalogModule catalog_module(const fs::path& file, const std::string& rel_path, 
     m.package = package->id;
     m.package_title = package->title;
     if (package->screen) m.screen = package->screen;
+  }
+  if (sevenl_magic(data)) {
+    // A 7th Level scene: data, which the Runtime Player (a program of its
+    // package's, run with the scene on its command line) plays; no named
+    // entry, no imports, no settings of its own. Named by its own title; the
+    // registry's name for it (a name override) only when it has none.
+    m.lane = "ne16";
+    m.id = (legacy_ids ? "classic." : std::string(package->id) + ".") + base;
+    m.abi = k7thLevelAbi;
+    const auto names = sevenl_names(data);
+    // The program's own scene (the customizer's UI: BESTSHOT.BIN, named for
+    // its product "BestShot") is no scene it plays as a saver.
+    if (names && ascii_lower(std::string(names->product)) == base)
+      throw ImportError(Status::source_invalid, "a 7th Level program's own scene (named for its product, " +
+                                                    std::string(names->product) + "), not one it plays");
+    m.display_name = names ? trim_name(cp1252_to_utf8(names->title)) : std::string();
+    const std::string root = package ? std::string(package->root) + "/" : std::string();
+    if (m.display_name.empty() && package && rel_path.size() > root.size() && rel_path.compare(0, root.size(), root) == 0)
+      for (const NameOverride& o : package->name_overrides)
+        if (ascii_upper(o.module) == ascii_upper(rel_path.substr(root.size()))) m.display_name = o.name;
+    if (m.display_name.empty()) m.display_name = base;
+    m.module_name = m.display_name;
+    return m;
   }
   if (asa_header(data) || data_module_form(to_utf8(file.filename().wstring()), data)) {
     // Played by one of Intermission's readers (the ASA reader, or the FLI,
@@ -719,9 +782,10 @@ bool iequals_w(std::wstring_view a, std::wstring_view b) {
 }
 
 // <dir>\*.AD (and, with `imx`, *.IMX; with `asa_imq`, *.ASA, *.IMQ, *.FLI,
-// *.MRF and *.MSV too; with `scr`, *.SCR), matched case-insensitively (as
-// glob does on Windows) and sorted by name together.
-std::vector<std::wstring> modules_in(const fs::path& dir, bool imx, bool asa_imq = false, bool scr = false) {
+// *.MRF and *.MSV too; with `scr`, *.SCR; with `bin`, *.BIN), matched
+// case-insensitively (as glob does on Windows) and sorted by name together.
+std::vector<std::wstring> modules_in(const fs::path& dir, bool imx, bool asa_imq = false, bool scr = false,
+                                     bool bin = false) {
   std::vector<std::wstring> names;
   std::error_code ec;
   auto ends_with = [](std::wstring_view n, std::wstring_view ext) {
@@ -735,7 +799,7 @@ std::vector<std::wstring> modules_in(const fs::path& dir, bool imx, bool asa_imq
           (asa_imq && four &&
            (ends_with(n, L".ASA") || ends_with(n, L".IMQ") || ends_with(n, L".FLI") || ends_with(n, L".MRF") ||
             ends_with(n, L".MSV"))) ||
-          (scr && four && ends_with(n, L".SCR"))))
+          (scr && four && ends_with(n, L".SCR")) || (bin && four && ends_with(n, L".BIN"))))
       continue;
     std::error_code fe;
     if (it->is_regular_file(fe)) names.push_back(n);
@@ -762,14 +826,16 @@ std::vector<ModuleFile> module_files(const Package& pkg, const fs::path& dir) {
   // Deluxe's three fixed places hold *.AD only, so its order and ids stay as
   // they always were; the other packages' folders may hold IMX modules, a
   // Delrina release's module folders ASA animations and IMQ modules (never
-  // its ENGINE, where the ASA reader is), and an InstallShield 1 package's a
+  // its ENGINE, where the ASA reader is), an InstallShield 1 package's a
   // screen-saver program (*.SCR: only there, never After Dark's
-  // ENGINE\AFTERDAR.SCR).
+  // ENGINE\AFTERDAR.SCR), and a 7th Level package's its scenes (*.BIN; never
+  // its player's folder, which is no module folder).
   const bool imx = !pkg.is_deluxe();
   auto add_dir = [&](const std::string& d) {
     const bool asa_imq = pkg.delrina_installer() && d != "ENGINE";
     const bool scr = pkg.recipe == Recipe::is1 && d != "ENGINE";
-    for (const auto& n : modules_in(dir / to_wide(d), imx, asa_imq, scr))
+    const bool bin = pkg.recipe == Recipe::cdcopy && d != "ENGINE";
+    for (const auto& n : modules_in(dir / to_wide(d), imx, asa_imq, scr, bin))
       order.push_back({dir / to_wide(d) / n, root + "/" + d + "/" + to_utf8(n), d + "/" + to_utf8(n)});
   };
   bool engine_listed = false;
@@ -824,8 +890,14 @@ CatalogDoc build_catalog(const std::vector<CatalogTree>& trees, const std::funct
           if (log) log("catalog: skipped " + f.rel + ": duplicate id " + m.id);
           continue;
         }
-        for (const NameOverride& o : pkg.name_overrides)
-          if (key_names(o.module, f.pkg_rel)) m.module_name = o.name;
+        // A 7th Level scene's own title names it (catalog_module took the
+        // registry's name only for a scene without one).
+        if (m.abi != k7thLevelAbi)
+          for (const NameOverride& o : pkg.name_overrides)
+            if (key_names(o.module, f.pkg_rel)) m.module_name = o.name;
+        // The registry's games among a 7th Level release's scenes.
+        if (m.abi == k7thLevelAbi)
+          for (const char* g : pkg.games) m.game = m.game || key_names(g, f.pkg_rel);
         // The Speed control, after the module's own (its Configure...
         // button), at the module's own starting stop; on an Intermission
         // module only: an After Dark module's slot 1 is its own.
@@ -887,13 +959,14 @@ namespace {
 // json.dump(obj, indent=1, ensure_ascii=False) does: objects keep insertion
 // order, one member per line, one space of indent per level.
 struct Json {
-  enum class Kind { number, string, array, object } kind = Kind::number;
-  long long number = 0;
+  enum class Kind { number, string, array, object, boolean } kind = Kind::number;
+  long long number = 0;  // a boolean's too (0 or 1)
   std::string string;
   std::vector<Json> array;
   std::vector<std::pair<std::string, Json>> object;
 
   static Json num(long long v) { return Json{Kind::number, v, {}, {}, {}}; }
+  static Json boolean(bool v) { return Json{Kind::boolean, v ? 1 : 0, {}, {}, {}}; }
   static Json str(std::string v) { return Json{Kind::string, 0, std::move(v), {}, {}}; }
   static Json arr() { return Json{Kind::array, 0, {}, {}, {}}; }
   static Json obj() { return Json{Kind::object, 0, {}, {}, {}}; }
@@ -936,6 +1009,7 @@ void write_json(std::string& o, const Json& j, int level) {
   };
   switch (j.kind) {
     case Json::Kind::number: o += std::to_string(j.number); break;
+    case Json::Kind::boolean: o += j.number ? "true" : "false"; break;
     case Json::Kind::string: write_string(o, j.string); break;
     case Json::Kind::array:
       if (j.array.empty()) {
@@ -1024,6 +1098,9 @@ Json module_json(const CatalogModule& m) {
   // Last too, and only for a package shown at a fixed screen: every other
   // entry is laid out as before it existed.
   if (!m.screen.empty()) j.add("screen", Json::str(m.screen));
+  // Last again, and only on a 7th Level scene that is a game too: every
+  // other entry is laid out as before it existed.
+  if (m.game) j.add("game", Json::boolean(true));
   return j;
 }
 

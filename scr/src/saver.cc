@@ -14,6 +14,7 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <vector>
 
 #include "adw/ui/capture.h"
@@ -32,6 +33,7 @@
 #include "settings.h"
 #include "sound.h"
 #include "test_hooks.h"
+#include "wallpaper_mode.h"
 #include "window_mode.h"
 
 namespace adw::scr {
@@ -79,6 +81,11 @@ constexpr UINT kHoldPollMs = 16;
 // A rotation that waits for a game to end re-checks this often (§4.2).
 constexpr UINT kRotateRetryMs = 1000;
 constexpr UINT kScriptTickMs = 10;
+// /wallpaper: whether the screen saver runs, and whether its windows are
+// still in Explorer's, is checked this often; one that lost them gets them
+// back (Explorer started again) or, after kWallpaperLostMs, ends.
+constexpr UINT kWallpaperTickMs = 1000;
+constexpr UINT kWallpaperLostMs = 30000;
 constexpr wchar_t kClassName[] = L"LongAfterDarkSaver";
 // GUID_CONSOLE_DISPLAY_STATE (winnt.h), spelled out so no GUID library is
 // needed: the console display's power state, 0 off / 1 on / 2 dimmed.
@@ -247,6 +254,9 @@ class SaverWindow {
   bool create_preview(HWND parent);
   // /window: an ordinary window with a client area of `client` physical pixels.
   bool create_windowed(SizeI client);
+  // /wallpaper: a child of the desktop's window `host.parent` covering
+  // `monitor` (virtual-screen pixels), below its icons.
+  bool create_wallpaper(const RECT& monitor, const WallpaperHost& host);
   void start();
   // Builds the rotation (or, when every monitor follows one, joins it) and
   // starts the first host; start() does it at once unless the App still
@@ -450,7 +460,12 @@ struct PendingHold {
 class App {
  public:
   App(const Args& a, HINSTANCE hi)
-      : args(a), hinst(hi), preview(a.mode == Mode::preview), windowed(a.mode == Mode::window) {}
+      : args(a),
+        hinst(hi),
+        preview(a.mode == Mode::preview),
+        windowed(a.mode == Mode::window),
+        wallpaper(a.mode == Mode::wallpaper),
+        rules(host_rules(a.mode, true)) {}
   int run();
   // Never blocks: it can run inside a message another thread is waiting on
   // (a /p child's WM_DESTROY is sent by the control panel's DestroyWindow,
@@ -525,6 +540,37 @@ class App {
   // clipped, Caps Lock and Num Lock do nothing (every host starts with both
   // off and hears neither), and the display is kept awake while it is open.
   bool windowed;
+  // /wallpaper (wallpaper_mode.h): a window per monitor in the desktop's,
+  // which /wallpaper /stop, a second /wallpaper, the end of the session or
+  // Explorer gone for good ends. Its hosts hear no input, as /window's, and
+  // start on the user's wallpaper, every one of them; nothing keeps the
+  // display on, and they pause while the screen saver runs, the session is
+  // locked or the display is off.
+  bool wallpaper;
+  HostRules rules;                         // what its hosts get (host_rules; the seed set in run)
+  HWND control = nullptr;                  // /wallpaper's hidden top-level window
+  HANDLE wall_mutex = nullptr;             // one /wallpaper per session
+  WallpaperHost desk;                      // where its windows are
+  UINT taskbar_created = 0;                // Explorer started (again)
+  UINT_PTR wall_timer = 0;                 // thread timer: wall_tick
+  bool wall_lost = false;                  // its windows went with Explorer's
+  std::string wall_said;                   // the last search's answer logged (a wait for Explorer logs it once)
+  Clock::time_point wall_lost_at{};
+  bool display_state_on = true, saver_running = false, session_locked = false;
+  int wall_seed_serial = 0;                // seed files are never reused: a new wallpaper, new files
+  std::map<std::tuple<int, int, int, bool>, std::wstring> wall_seeds;   // window, emulated w x h, fixed -> file
+  // The P6 of `rc`'s wallpaper for a host at `screen` in window `index`:
+  // made once (and again after the wallpaper changes), delete-on-close.
+  std::wstring wallpaper_seed(int index, const RECT& rc, const ModuleScreen& screen);
+  // Its windows went with Explorer's, or Explorer started again.
+  void wallpaper_lost(const char* why);
+  // Explorer makes its WorkerW (0x052C); then the windows go in, one per
+  // monitor that runs a host; `start` starts them (a first run starts them
+  // with the rest).
+  bool embed_wallpaper(const char* why, bool start);
+  void wall_tick();
+  void wall_pause();                       // the hosts pause or resume, as the session says
+  LRESULT control_message(HWND h, UINT msg, WPARAM wp, LPARAM lp);
   HANDLE awake = nullptr;                  // /window's power request (keep_awake)
   bool awake_legacy = false;               // ...or SetThreadExecutionState's, when none could be made
   Hooks hooks;
@@ -622,6 +668,7 @@ class App {
 
  private:
   bool load();
+  int run_wallpaper();                     // /wallpaper up to its windows: 0 to go on, else the exit code
   // /window's /module and /random over the settings just read (window_settings).
   // False when /module names nothing it can play: a message box said why.
   bool window_choice();
@@ -649,6 +696,15 @@ LRESULT CALLBACK wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     return DefWindowProcW(hwnd, msg, wp, lp);
   }
   return w ? w->handle(msg, wp, lp) : DefWindowProcW(hwnd, msg, wp, lp);
+}
+
+LRESULT CALLBACK control_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+  if (msg == WM_NCCREATE) {
+    SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR) reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams);
+  }
+  auto* app = reinterpret_cast<App*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+  if (msg == WM_NCDESTROY) SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+  return app ? app->control_message(hwnd, msg, wp, lp) : DefWindowProcW(hwnd, msg, wp, lp);
 }
 
 // ---- SaverWindow ---------------------------------------------------------------
@@ -704,6 +760,33 @@ bool SaverWindow::create_windowed(SizeI client) {
            GetDpiForWindow(hwnd), outer.w, outer.h);
   // SW_SHOWDEFAULT: as a shortcut's "Run" says (normal, minimized, maximized).
   ShowWindow(hwnd, SW_SHOWDEFAULT);
+  return true;
+}
+
+bool SaverWindow::create_wallpaper(const RECT& monitor, const WallpaperHost& host) {
+  const int w = monitor.right - monitor.left, h = monitor.bottom - monitor.top;
+  rc_ = monitor;
+  if (w > 0 && h > 0) aspect_ = (double)w / h;
+  // Where the monitor is in the parent's client area: Progman's and the
+  // WorkerW's cover the virtual screen, from its top-left.
+  POINT at{monitor.left, monitor.top};
+  MapWindowPoints(nullptr, host.parent, &at, 1);
+  DWORD ex = wallpaper_ex_style((DWORD)GetWindowLongPtrW(host.parent, GWL_EXSTYLE));
+  const std::wstring layered = env_w(L"AD_SCR_WALL_LAYERED");
+  if (layered == L"0") ex &= ~(DWORD)WS_EX_LAYERED;
+  else if (layered == L"1") ex |= WS_EX_LAYERED;
+  CreateWindowExW(ex, kWallpaperClass, L"Long After Dark wallpaper", kWallpaperStyle, at.x, at.y, w, h, host.parent,
+                  nullptr, app_.hinst, this);
+  if (!hwnd) {
+    last_log("wallpaper: window=%d not made in %s (error %lu)", index_, host.describe().c_str(), GetLastError());
+    return false;
+  }
+  // A layered window shows nothing until it is given its opacity.
+  if (ex & WS_EX_LAYERED) SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+  // Just below the icons (24H2: above Progman's WorkerW), else the top of the WorkerW's.
+  SetWindowPos(hwnd, host.below ? host.below : HWND_TOP, at.x, at.y, w, h, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+  last_log("wallpaper: window=%d on %dx%d at %ld,%ld (%ld,%ld in its parent) dpi=%u%s", index_, w, h, monitor.left,
+           monitor.top, at.x, at.y, GetDpiForWindow(hwnd), (ex & WS_EX_LAYERED) ? " layered" : "");
   return true;
 }
 
@@ -906,7 +989,8 @@ void SaverWindow::spawn() {
 
   // Only a window's first host starts on the desktop (§8), from the capture
   // taken at its screen; without one (it failed, or its screen was not among
-  // the three planned, plan_seed_shots) it starts on black.
+  // the three planned, plan_seed_shots) it starts on black. /wallpaper's
+  // every host starts on the wallpaper (App::wallpaper_seed).
   std::wstring seed;
   for (const Seed& s : seeds_) {
     if (s.screen == screen) seed = s.path;
@@ -915,6 +999,12 @@ void SaverWindow::spawn() {
     last_log("seed window=%d: none taken at %dx%d; the module starts on black", index_, emu.w, emu.h);
   }
   seeds_.clear();
+  if (app_.rules.seed == SeedFrom::wallpaper) {
+    seed = app_.wallpaper_seed(index_, rc_, screen);
+    // Painting it may wait on Explorer (COM), which lets messages in: a
+    // window that went with Explorer's meanwhile starts no host.
+    if (!hwnd) return;
+  }
 
   HostSpec spec;
   spec.exe = app_.host_exe;
@@ -931,12 +1021,14 @@ void SaverWindow::spawn() {
       {L"ADSTATE", state_dir()},
       // An empty value removes a stale inherited one.
       {L"ADSEEDIMG", seed},
+      wallpaper_env(app_.rules),
   };
   add_sound_env(spec.env, sound);
   add_host_control_env(spec.env, values.env);
   const bool seeded = !seed.empty();
   spec.stderr_path = env_w(L"AD_SCR_HOSTLOG");
-  spec.priority_class = app_.preview ? BELOW_NORMAL_PRIORITY_CLASS : 0;
+  // A thumbnail, or the desktop's background: the user's programs come first.
+  spec.priority_class = app_.preview || app_.wallpaper ? BELOW_NORMAL_PRIORITY_CLASS : 0;
 
   if (host_ && this == app_.owner()) app_.owner_host_gone(host_.get());
   ++generation_;
@@ -1488,6 +1580,10 @@ LRESULT SaverWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
     bool handled = false;
     const LRESULT r = handle_windowed(msg, wp, lp, &handled);
     if (handled) return r;
+  } else if (app_.wallpaper) {
+    // Disabled, under the icons: nothing of the user's should reach it, and
+    // nothing that does is input (DefWindowProc; the pointer is the desktop's).
+    if (msg == WM_MOUSEACTIVATE) return MA_NOACTIVATE;
   } else if (!app_.preview) {
     // Real input is ignored while a test script drives the rules.
     const bool real_input = !app_.scripted();
@@ -1630,7 +1726,7 @@ LRESULT SaverWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
       app_.request_exit(kExitOk, "WM_CLOSE");
       return 0;
     case WM_DESTROY:
-      if (!parent_ && !app_.windowed) WTSUnRegisterSessionNotification(hwnd);
+      if (!parent_ && !app_.windowed && !app_.wallpaper) WTSUnRegisterSessionNotification(hwnd);
       KillTimer(hwnd, kTimerWatchdog);
       KillTimer(hwnd, kTimerRotate);
       KillTimer(hwnd, kTimerRotateRetry);
@@ -1638,8 +1734,12 @@ LRESULT SaverWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
       KillTimer(hwnd, kTimerResized);
       hwnd = nullptr;
       // A preview dies with the control panel's window; that ends us too.
-      // A monitor that went away only ends its own window.
-      if (!app_.exiting && !retiring_) app_.request_exit(kExitOk, "window destroyed");
+      // A monitor that went away only ends its own window. A wallpaper
+      // window goes with Explorer's (it restarts): they are made again.
+      if (!app_.exiting && !retiring_) {
+        if (app_.wallpaper) app_.wallpaper_lost("its window went with Explorer's");
+        else app_.request_exit(kExitOk, "window destroyed");
+      }
       return 0;
   }
   return DefWindowProcW(hwnd, msg, wp, lp);
@@ -1680,7 +1780,7 @@ bool App::load() {
     message_code = kExitHostMissing;
   }
   log_line("mode=%s catalog=%s modules=%zu available=%zu host=%s module=%s",
-           preview ? "preview" : windowed ? "window" : "run",
+           preview ? "preview" : windowed ? "window" : wallpaper ? "wallpaper" : "run",
            narrow(catalog_path()).c_str(), catalog.modules.size(), available.size(), narrow(host_exe).c_str(),
            settings.module.c_str());
   if (!hooks.input_script.empty()) {
@@ -1773,8 +1873,17 @@ void App::capture_seeds(const std::vector<Monitor>& mons) {
 int App::run() {
   hooks = read_hooks();
   sound_forced_off = adw::scr::sound_forced_off();
+  if (wallpaper) {
+    if (const int code = run_wallpaper(); code != kExitOk || args.stop) return code;
+  }
   load();
-  if (windowed && !window_choice()) return kExitBadArgs;
+  if (wallpaper && !message.empty()) {
+    // Nothing to put on the desktop: said as /s would, in a box.
+    last_log("wallpaper: %s", narrow(message).c_str());
+    MessageBoxW(nullptr, message.c_str(), L"Long After Dark", MB_OK | MB_SETFOREGROUND | MB_ICONERROR);
+    return message_code;
+  }
+  if ((windowed || wallpaper) && !window_choice()) return kExitBadArgs;
   // The looks (looks.h): /s's (the settings dialog's Preview runs /s on its
   // settings) and /window's. /p draws as it always has. They draw only
   // through Direct3D, which AD_SCR_PRESENT=d2d or gdi rules out.
@@ -1791,8 +1900,8 @@ int App::run() {
   wc.lpfnWndProc = wndproc;
   wc.hInstance = hinst;
   wc.hIcon = LoadIconW(hinst, MAKEINTRESOURCEW(100));   // its caption and taskbar button take the small size from it
-  wc.hCursor = preview || windowed ? LoadCursorW(nullptr, IDC_ARROW) : nullptr;
-  wc.lpszClassName = windowed ? kWindowModeClass : kClassName;
+  wc.hCursor = preview || windowed || wallpaper ? LoadCursorW(nullptr, IDC_ARROW) : nullptr;
+  wc.lpszClassName = windowed ? kWindowModeClass : wallpaper ? kWallpaperClass : kClassName;
   RegisterClassExW(&wc);
 
   job = create_kill_on_close_job();
@@ -1826,6 +1935,34 @@ int App::run() {
     if (!w->create_windowed({args.width, args.height})) return kExitBadArgs;
     windows.push_back(std::move(w));
     keep_awake(true);
+  } else if (wallpaper) {
+    last_log("start /wallpaper build=%s %s module=%s rotates=%d available=%zu/%zu host=%s settings=%s state=%s",
+             __DATE__, __TIME__, settings.module.c_str(), settings.rotates() ? 1 : 0, available.size(),
+             catalog.modules.size(), narrow(host_exe).c_str(), narrow(settings_path()).c_str(),
+             narrow(state_dir()).c_str());
+    if (sound_forced_off) last_log("sound: off (AD_SCR_SOUND=0)");
+    else if (!settings.sound) last_log("sound: off (Sound=0)");
+    else last_log("sound: primary monitor, volume %d", std::clamp(settings.volume, 0, 100));
+    WNDCLASSEXW cc{};
+    cc.cbSize = sizeof(cc);
+    cc.lpfnWndProc = control_proc;
+    cc.hInstance = hinst;
+    cc.lpszClassName = kWallpaperControlClass;
+    RegisterClassExW(&cc);
+    // Hidden, never shown: a top-level window hears the broadcasts a child never does.
+    control = CreateWindowExW(WS_EX_TOOLWINDOW, kWallpaperControlClass, L"Long After Dark wallpaper", WS_POPUP, 0, 0,
+                              0, 0, nullptr, nullptr, hinst, this);
+    taskbar_created = RegisterWindowMessageW(L"TaskbarCreated");
+    if (control) {
+      // Locked, unlocked; the display off and on (registration reports it now).
+      WTSRegisterSessionNotification(control, NOTIFY_FOR_THIS_SESSION);
+      power_notify = RegisterPowerSettingNotification(control, &kConsoleDisplayState, DEVICE_NOTIFY_WINDOW_HANDLE);
+    }
+    if (!embed_wallpaper("start", false)) {
+      last_log("wallpaper: nothing shown");
+      return kExitNoDesktop;
+    }
+    wall_timer = SetTimer(nullptr, 0, kWallpaperTickMs, nullptr);
   } else {
     // The last-exit log (INTERACTION.md §9.1): always on, one per /s run.
     last_log_open(last_exit_log_path());
@@ -1917,7 +2054,7 @@ int App::run() {
   }
   request_exit(exit_code);   // no-op unless the loop ended some other way
   teardown();
-  if (!preview && !windowed && !cursor_visible) ShowCursor(TRUE);
+  if (!preview && !windowed && !wallpaper && !cursor_visible) ShowCursor(TRUE);
   return exit_code;
 }
 
@@ -1977,6 +2114,200 @@ void App::keep_awake(bool on) {
   awake_legacy = false;
 }
 
+// /wallpaper /stop, and a second /wallpaper, find the one running by its
+// control window (this desktop's) and close it; the mutex then makes sure
+// no other runs in this session. Before any of it, the desktop must have
+// somewhere to put the windows: no Explorer (a hidden desktop, a shell of
+// another kind), nothing is shown.
+int App::run_wallpaper() {
+  if (HWND old = FindWindowW(kWallpaperControlClass, nullptr)) {
+    DWORD pid = 0;
+    GetWindowThreadProcessId(old, &pid);
+    HANDLE p = OpenProcess(SYNCHRONIZE, FALSE, pid);
+    PostMessageW(old, WM_CLOSE, 0, 0);
+    const DWORD w = p ? WaitForSingleObject(p, 10000) : WAIT_FAILED;
+    if (p) CloseHandle(p);
+    log_line("wallpaper: %s the one running (pid %lu): %s", args.stop ? "/stop: ended" : "replacing", pid,
+             w == WAIT_OBJECT_0 ? "it ended" : "it did not end");
+    if (w != WAIT_OBJECT_0 && w != WAIT_FAILED) return kExitWallpaperBusy;
+  } else if (args.stop) {
+    log_line("wallpaper: /stop: none running");
+  }
+  if (args.stop) return kExitOk;
+  if (HWND progman = FindWindowW(L"Progman", nullptr)) {
+    DWORD_PTR r = 0;
+    SendMessageTimeoutW(progman, kProgmanSpawnWorker, 0xD, 1, SMTO_NORMAL, 1000, &r);
+  }
+  const WallpaperHost h = find_wallpaper_host(real_desktop_windows());
+  if (!h.found()) {
+    log_line("wallpaper: no desktop host (%s): nothing shown", h.describe().c_str());
+    return kExitNoDesktop;
+  }
+  wall_mutex = CreateMutexW(nullptr, TRUE, kWallpaperMutex);
+  if (wall_mutex && GetLastError() == ERROR_ALREADY_EXISTS) {
+    const DWORD w = WaitForSingleObject(wall_mutex, 10000);
+    if (w != WAIT_OBJECT_0 && w != WAIT_ABANDONED) {
+      log_line("wallpaper: another /wallpaper of this session holds on");
+      return kExitWallpaperBusy;
+    }
+  }
+  return kExitOk;
+}
+
+bool App::embed_wallpaper(const char* why, bool start) {
+  if (HWND progman = FindWindowW(L"Progman", nullptr)) {
+    DWORD_PTR r = 0;
+    SendMessageTimeoutW(progman, kProgmanSpawnWorker, 0xD, 1, SMTO_NORMAL, 1000, &r);
+  }
+  desk = find_wallpaper_host(real_desktop_windows());
+  const std::string said = desk.describe() + " (" + why + ")";
+  if (said != wall_said) last_log("wallpaper: %s", said.c_str());
+  wall_said = said;
+  if (!desk.found()) return false;
+  // Our windows live in the parent's coordinates, at its DPI awareness (as
+  // /p's do: per-monitor-v2 for Explorer's, so nothing changes).
+  if (DPI_AWARENESS_CONTEXT ctx = GetWindowDpiAwarenessContext(desk.parent)) SetThreadDpiAwarenessContext(ctx);
+  std::vector<Monitor> mons = monitors(topology_changes);
+  for (size_t i = 0; i < mons.size(); ++i) {
+    const RECT& r = mons[i].rc;
+    last_log("monitor %zu: %ld,%ld %ldx%ld%s", i, r.left, r.top, r.right - r.left, r.bottom - r.top,
+             mons[i].primary ? " primary" : "");
+  }
+  for (const Monitor& m : mons) {
+    // A monitor the Monitors setting leaves out keeps the desktop's wallpaper.
+    if (!slot_for(m).runs_host) continue;
+    auto w = make_window(m);
+    if (w->create_wallpaper(m.rc, desk)) windows.push_back(std::move(w));
+  }
+  if (windows.empty()) return false;
+  if (start) {
+    for (auto& w : windows) w->start();
+  }
+  return true;
+}
+
+void App::wallpaper_lost(const char* why) {
+  if (exiting) return;
+  if (!wall_lost) {
+    wall_lost = true;
+    wall_lost_at = Clock::now();
+    last_log("wallpaper: %s; its windows are made again", why);
+  }
+  // At once rather than on the next tick (wall_tick does it).
+  if (wall_timer) wall_timer = SetTimer(nullptr, wall_timer, 100, nullptr);
+}
+
+void App::wall_tick() {
+  if (exiting) return;
+  if (wall_timer) wall_timer = SetTimer(nullptr, wall_timer, kWallpaperTickMs, nullptr);
+  BOOL running = FALSE;
+  SystemParametersInfoW(SPI_GETSCREENSAVERRUNNING, 0, &running, 0);
+  if ((running != FALSE) != saver_running) {
+    saver_running = running != FALSE;
+    last_log("wallpaper: the screen saver %s", saver_running ? "runs" : "has ended");
+    wall_pause();
+  }
+  if (!wall_lost && (!desk.parent || !IsWindow(desk.parent))) wallpaper_lost("the desktop's window is gone");
+  if (!wall_lost) return;
+  // The windows that were (each gone with its parent, or still there): their
+  // hosts end, and they go.
+  for (auto& w : windows) w->retire();
+  windows.clear();
+  wall_seeds.clear();   // the wallpaper may have changed with it
+  if (embed_wallpaper("again", true)) {
+    wall_lost = false;
+    return;
+  }
+  if (Clock::now() - wall_lost_at > milliseconds(kWallpaperLostMs)) {
+    request_exit(kExitNoDesktop, "no desktop to draw on any more");
+  }
+}
+
+void App::wall_pause() {
+  const bool on = display_state_on && !saver_running && !session_locked;
+  if (on != display_on) {
+    last_log("wallpaper: %s (display %s, screen saver %s, session %s)", on ? "resuming" : "pausing",
+             display_state_on ? "on" : "off", saver_running ? "running" : "not running",
+             session_locked ? "locked" : "unlocked");
+  }
+  set_display_on(on);
+}
+
+LRESULT App::control_message(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
+  if (taskbar_created && msg == taskbar_created) {
+    wallpaper_lost("Explorer started again");
+    return 0;
+  }
+  switch (msg) {
+    case WM_CLOSE:
+      request_exit(kExitOk, "WM_CLOSE");   // /wallpaper /stop, or a second /wallpaper
+      return 0;
+    case WM_QUERYENDSESSION:
+      return TRUE;
+    case WM_ENDSESSION:
+      if (wp) request_exit(kExitOk, "the session ends");
+      return 0;
+    case WM_DISPLAYCHANGE:
+      display_changed();
+      return 0;
+    case WM_SETTINGCHANGE:
+      if (wp == SPI_SETDESKWALLPAPER) {
+        // The next hosts start on the new one.
+        last_log("wallpaper: the desktop's wallpaper changed");
+        wall_seeds.clear();
+      }
+      return 0;
+    case WM_WTSSESSION_CHANGE:
+      if (wp == WTS_SESSION_LOCK || wp == WTS_SESSION_UNLOCK) {
+        session_locked = wp == WTS_SESSION_LOCK;
+        wall_pause();
+      }
+      return 0;
+    case WM_POWERBROADCAST:
+      if (wp == PBT_POWERSETTINGCHANGE) {
+        auto* ps = reinterpret_cast<const POWERBROADCAST_SETTING*>(lp);
+        if (ps && ps->PowerSetting == kConsoleDisplayState && ps->DataLength >= sizeof(DWORD)) {
+          DWORD state = 0;
+          memcpy(&state, ps->Data, sizeof(state));
+          display_state_on = state != 0;   // dimmed still shows it
+          wall_pause();
+        }
+        return TRUE;
+      }
+      break;
+  }
+  return DefWindowProcW(h, msg, wp, lp);
+}
+
+// INTERACTION.md §8 for /wallpaper: the user's wallpaper alone (no windows,
+// no icons), painted afresh (wallpaper_mode.h paint_wallpaper), the part a
+// host's frame covers (seed_source) at its emulated size. Every host gets
+// one, so each kind is made once per window and kept.
+std::wstring App::wallpaper_seed(int index, const RECT& rc, const ModuleScreen& screen) {
+  const auto key = std::make_tuple(index, screen.emu.w, screen.emu.h, screen.fixed);
+  if (auto it = wall_seeds.find(key); it != wall_seeds.end()) return it->second;
+  const int mw = rc.right - rc.left, mh = rc.bottom - rc.top;
+  const RectI src = seed_source(screen, mw, mh, settings.stretch_to_fit && screen.fixed);
+  const auto t0 = Clock::now();
+  std::string how;
+  const std::vector<uint8_t> p6 = wallpaper_p6(rc, src, screen.emu, &how);
+  // A name of its own each time: an earlier file may still be open in a host.
+  std::wstring path = seed_file_path(GetCurrentProcessId(), index,
+                                     std::to_wstring(screen.emu.w) + L"x" + std::to_wstring(screen.emu.h) + L"-w" +
+                                         std::to_wstring(wall_seed_serial++)),
+               err;
+  HANDLE h = write_seed_file(path, p6, &err);
+  if (h == INVALID_HANDLE_VALUE) {
+    last_log("seed window=%d: %s; the module starts on black", index, narrow(err).c_str());
+    return {};
+  }
+  seed_files.push_back(h);
+  wall_seeds[key] = path;
+  last_log("seed window=%d %dx%d from %dx%d of the wallpaper (%s) in %lld ms", index, screen.emu.w, screen.emu.h, src.w,
+           src.h, how.c_str(), (long long)std::chrono::duration_cast<milliseconds>(Clock::now() - t0).count());
+  return path;
+}
+
 void App::request_exit(int code, const char* why) {
   if (exiting) return;
   exiting = true;
@@ -1988,12 +2319,14 @@ void App::request_exit(int code, const char* why) {
     power_notify = nullptr;
   }
   if (windowed) keep_awake(false);
+  if (control) WTSUnRegisterSessionNotification(control);
   if (clip_active) {
     ClipCursor(nullptr);
     clip_active = false;
     log_line("clip released (exit)");
   }
-  for (UINT_PTR* t : {&caps_timer, &hold_timer, &script_timer, &caps_wait_timer, &rotate_timer, &rotate_retry_timer}) {
+  for (UINT_PTR* t : {&caps_timer, &hold_timer, &script_timer, &caps_wait_timer, &rotate_timer, &rotate_retry_timer,
+                      &wall_timer}) {
     if (*t) KillTimer(nullptr, *t);
     *t = 0;
   }
@@ -2219,10 +2552,18 @@ bool App::on_thread_message(const MSG& msg) {
     script_tick();
     return true;
   }
+  if (wall_timer && msg.wParam == wall_timer) {
+    wall_tick();
+    return true;
+  }
   return false;
 }
 
 void App::relayout() {
+  if (wallpaper) {
+    if (!exiting) wallpaper_lost("the monitors changed");
+    return;
+  }
   if (preview || exiting || windows.empty()) return;
   std::vector<Monitor> mons = monitors(++topology_changes);
   std::vector<ScreenSlot> now, next;
@@ -2298,6 +2639,17 @@ void App::teardown() {
   // Delete-on-close: the desktop captures go with their last handle.
   for (HANDLE h : seed_files) CloseHandle(h);
   seed_files.clear();
+  if (wallpaper) {
+    // The desktop paints its wallpaper again where the windows were: no
+    // last frame left on it.
+    if (desk.parent && IsWindow(desk.parent)) {
+      RedrawWindow(desk.parent, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN | RDW_FRAME);
+    }
+    if (control) DestroyWindow(control);
+    control = nullptr;
+    if (wall_mutex) CloseHandle(wall_mutex);
+    wall_mutex = nullptr;
+  }
   if (looks_prepare.joinable()) looks_prepare.join();   // a compile still under way: the windows are gone
 }
 
@@ -2357,13 +2709,13 @@ void App::start_input() {
 }
 
 int App::caps_toggle() const {
-  if (windowed) return 0;   // no games in a window: every module starts as if it were off
+  if (!rules.toggles) return 0;   // no games in a window or on the desktop: every module starts as if it were off
   if (scripted()) return synthetic_caps;
   return (GetKeyState(VK_CAPITAL) & 1) ? 1 : 0;
 }
 
 int App::numlock_toggle() const {
-  if (windowed) return 0;
+  if (!rules.toggles) return 0;
   if (scripted()) return synthetic_numlock;
   return (GetKeyState(VK_NUMLOCK) & 1) ? 1 : 0;
 }
@@ -2381,7 +2733,7 @@ OwnerStatus App::owner_status() const {
 }
 
 bool App::owner_playing_no_rotate() const {
-  if (windowed) return false;   // nobody plays: the rotation keeps time
+  if (windowed || wallpaper) return false;   // nobody plays: the rotation keeps time
   OwnerStatus st = owner_status();
   return st.interactive() && !st.rotate_ok();
 }
@@ -2419,7 +2771,7 @@ void App::evaluate(const InputEvent& ev, uint64_t n, long dx, long dy) {
 }
 
 void App::check_caps() {
-  if (exiting || windowed) return;   // /window: its hosts hear no input
+  if (exiting || windowed || wallpaper) return;   // /window, /wallpaper: their hosts hear no input
   SaverWindow* o = owner();
   if (!o || !o->host()) return;
   const int now = caps_toggle();
@@ -2434,7 +2786,7 @@ void App::check_caps() {
 void App::check_numlock() {
   // Only a host that numbers NUMLOCK lines hears one: another would leave the
   // input lines' numbers behind the saver's count (dialog_support.h).
-  if (exiting || windowed || !host_caps.takes_numlock_lines()) return;
+  if (exiting || windowed || wallpaper || !host_caps.takes_numlock_lines()) return;
   SaverWindow* o = owner();
   if (!o || !o->host()) return;
   const int now = numlock_toggle();
@@ -2553,7 +2905,7 @@ void App::on_cursor(HWND) { SetCursor(cursor_visible ? LoadCursorW(nullptr, IDC_
 void App::poll_status() {
   // /window never ends but by its close button: not even when a module asks
   // to wake the saver (ADWS_WAKE).
-  if (preview || windowed || exiting) return;
+  if (preview || windowed || wallpaper || exiting) return;
   SaverWindow* o = owner();
   OwnerStatus st = owner_status();
   if (st.wake()) {

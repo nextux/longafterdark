@@ -129,6 +129,14 @@ void GlobalHeap16::free_owned(uint16_t owner) {
   }
 }
 
+std::vector<uint16_t> GlobalHeap16::guest_handles() const {
+  std::vector<uint16_t> out;
+  for (const auto& [sel, b] : blocks_) {
+    if (!b.owner) out.push_back(b.handle());
+  }
+  return out;
+}
+
 uint32_t GlobalHeap16::lock(uint16_t h) {
   GlobalBlock* b = find(h);
   if (!b || !b->base) return 0;

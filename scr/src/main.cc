@@ -1,7 +1,7 @@
 // LongAfterDark.scr — the Long After Dark screen saver for Windows.
 //
-// A thin front-end: it never runs module code itself. /s, /p and /window
-// spawn adhostwin.exe (one per monitor, or one for the window) and present
+// A thin front-end: it never runs module code itself. /s, /p, /window and
+// /wallpaper spawn adhostwin.exe (one per monitor, or one for the window) and present
 // the P8 frames it streams back; /c edits settings.ini. See docs/DESIGN.md §1
 // and §6a. The same program ships again as LongAfterDark.exe, the name the
 // switches a user types reach it under (args.h).
@@ -40,6 +40,7 @@ int WINAPI wWinMain(HINSTANCE hinst, HINSTANCE, PWSTR, int) {
     case adw::scr::Mode::run:
     case adw::scr::Mode::preview:
     case adw::scr::Mode::window:
+    case adw::scr::Mode::wallpaper:
       return adw::scr::run_saver(args, hinst);
     case adw::scr::Mode::password:
       return 0;   // Win9x password change; NT handles passwords itself

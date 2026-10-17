@@ -17,7 +17,8 @@ struct Module {
   std::string display_name;    // "Flying Toasters"
   std::string name;            // moduleName, else displayName
   std::string lane;            // "pe32" | "ne16"
-  std::string abi = "afterdark";   // or "intermission" (Star Wars Screen Entertainment), "scrnsave" (Johnny Castaway)
+  std::string abi = "afterdark";   // or "intermission" (Star Wars Screen Entertainment), "scrnsave" (Johnny Castaway),
+                                   // "7thlevel" (Take Your Best Shot's scenes)
   SizeI screen;                // catalog "screen" ("640x480": Star Trek, ScreamSavers, Marvel), {0, 0} when none
   std::string path;            // relative to the win dir, forward slashes
   std::string package, package_title;

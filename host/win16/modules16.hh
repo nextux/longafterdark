@@ -104,12 +104,21 @@ class ModuleTable16 {
   Module16* load_task(const std::string& host_path, const std::string& guest_path, const std::string& command_tail,
                       uint16_t* err = nullptr);
   const Task16* task() const { return task_.module ? &task_ : nullptr; }
+  // The nCmdShow InitTask hands the task (WinExec's second argument; SW_SHOWNORMAL unless set).
+  void set_task_cmd_show(uint16_t cmd_show) { task_.cmd_show = cmd_show; }
   // Starts the task (see Tasks above) and returns DX:AX if its start returns.
   uint32_t run_task();
 
   // Host directories searched for a bare DLL name after the guest's
   // directories (current, Windows, System) resolve nowhere.
   void add_search_dir(const std::string& host_dir);
+
+  // WEP at unload (off by default, so the modules that ran without it run as
+  // they did): Windows 3.1's KERNEL called a DLL's exported WEP(WEP_FREE_DLL)
+  // when its last reference went, before its segments were freed (DS its
+  // DGROUP). The ne16 lane's 7thlevel protocol turns it on: the player's
+  // libraries ran under Windows 3.1's loader.
+  void set_call_wep(bool on) { call_wep_ = on; }
 
   // LoadLibrary: a bare name ("ad_snd.dll", "AD_RSRC"), or a guest path.
   // Loads and initializes the module and what it imports; a module already
@@ -155,6 +164,7 @@ class ModuleTable16 {
   std::vector<std::unique_ptr<Module16>> modules_;
   std::vector<std::pair<uint32_t, uint16_t>> fixed_sels_;  // __A000H & co.
   Task16 task_;
+  bool call_wep_ = false;
 };
 
 }  // namespace adw::win16

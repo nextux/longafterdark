@@ -26,6 +26,7 @@ add_library(adw_scr STATIC
   src/shader_preset.cc
   src/sound.cc
   src/ui_model.cc
+  src/wallpaper_mode.cc
   src/window_mode.cc
 )
 target_include_directories(adw_scr PUBLIC src)
@@ -151,7 +152,7 @@ target_link_libraries(scr_smoke PRIVATE adw_scr adw_ui user32 gdi32 comctl32 win
 target_link_options(scr_smoke PRIVATE -municode)
 
 foreach(_t args parser settings catalog geometry rotation convert env layout input seed releases paths sound present
-           window looks)
+           window wallpaper looks)
   add_test(NAME scr_unit_${_t} COMMAND scr_unit ${_t})
 endforeach()
 # Starts fakeimport.exe the way the dialog starts adimport.exe.

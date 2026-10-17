@@ -26,8 +26,12 @@
 //                    member names and a volume label in code page 437 (two
 //                    names that differ in a letter outside ASCII are two; the
 //                    record is UTF-8); Presage's INSTALL.DAT; Microsoft
-//                    Setup's SETUP.LST
-//   recipes          exact file sets, fix-ups only from matching sources,
+//                    Setup's SETUP.LST; Take Your Best Shot's programs and
+//                    scene by name (another 7th Level CD and Best Shot's
+//                    without its scenes no release; one scene missing
+//                    refused; the customizer, its UI scene and the rest of
+//                    the disc never opened; "game" on its three games)
+//   recipes         exact file sets, fix-ups only from matching sources,
 //                    the §4.2 invariants (and the intermission, ad2kwaj and
 //                    islib recipes' own), required files and archives (every
 //                    install disk), the derived password (never written or
@@ -368,14 +372,15 @@ int main(int argc, char** argv) {
   {
     // Registry order: the first seven keep their places (the GUI's command
     // ids go by it), the five after them in the order the plan gives, then
-    // the two Delrina Intermission releases.
+    // the two Delrina Intermission releases; Take Your Best Shot last.
     std::vector<std::string> order;
     for (const Package& p : builtin_packages()) order.push_back(p.id);
     CHECK((std::vector<std::string>(order.begin(), order.begin() + std::min<size_t>(order.size(), 7)) ==
            std::vector<std::string>{"deluxe", "ad10", "ad32", "tt", "simpsons", "swse", "startrek"}));
     CHECK((order == std::vector<std::string>{"deluxe", "ad10", "ad32", "tt", "simpsons", "swse", "startrek", "marvel",
                                              "snoopy", "looney", "screams", "disney", "farside", "dilbert", "tng",
-                                             "castaway", "opus", "opusroad", "flintstones", "intermission"}));
+                                             "castaway", "opus", "opusroad", "flintstones", "intermission",
+                                             "bestshot"}));
     for (const char* id : {"looney", "screams", "disney"}) CHECK(std::find(order.begin(), order.end(), id) != order.end());
     CHECK(std::find(order.begin(), order.end(), "looney") < std::find(order.begin(), order.end(), "screams"));
     CHECK(std::find(order.begin(), order.end(), "screams") < std::find(order.begin(), order.end(), "disney"));
@@ -3204,8 +3209,8 @@ int main(int argc, char** argv) {
     // the known images they are.
     std::vector<std::string> order;
     for (const Package& p : builtin_packages()) order.push_back(p.id);
-    CHECK(order.size() == 20 &&
-          (std::vector<std::string>(order.end() - 5, order.end()) ==
+    CHECK(order.size() == 21 &&
+          (std::vector<std::string>(order.begin() + 15, order.begin() + 20) ==
            std::vector<std::string>{"castaway", "opus", "opusroad", "flintstones", "intermission"}));
     struct Want {
       const char* id;
@@ -3592,6 +3597,151 @@ int main(int argc, char** argv) {
     }
   }
 
+  // ---- Take Your Best Shot: 7th Level's CD, its scenes and their player ------------------------------
+  {
+    // The registry: after the first twenty (their GUI command ids), the CD
+    // its known image and its one download, the box front its cover; the
+    // player, its libraries and the seventeen scenes installed as they are,
+    // where they were; a name for every scene, and three games.
+    const Package* p = find_package("bestshot");
+    CHECK(p != nullptr);
+    if (p) {
+      CHECK(builtin_packages().size() == 21 && &builtin_packages()[20] == p);
+      CHECK(p->recipe == Recipe::cdcopy && std::string(recipe_name(p->recipe)) == "cdcopy" &&
+            std::string(p->root) == "packages/bestshot");
+      CHECK(std::string(p->title) == "Take Your Best Shot" && std::string(p->short_title) == "Best Shot");
+      CHECK(std::string(p->released) == "1995-02" && p->screen && std::string(p->screen) == "640x480");
+      CHECK(std::string(p->module_dir) == "BESTACT" && p->module_dirs.size() == 1 &&
+            std::string(p->module_dirs[0]) == "BESTACT" && !p->engine_dll && !p->folder_afi && !p->marker);
+      CHECK((std::vector<std::string>(p->required_archives.begin(), p->required_archives.end()) ==
+             std::vector<std::string>{"BESTSHOT/BESTSAVR.SCR", "BESTSHOT/BESTSHOT.EXE", "BESTSHOT/PLYMPTON.EXE",
+                                      "BESTACT/HEADSHOT.BIN"}));
+      CHECK(p->loose_files.size() == 23 && p->required.size() == 23);
+      std::set<std::string> to;
+      for (const LooseFile& lf : p->loose_files) {
+        CHECK(std::string_view(lf.from) == lf.to && lf.codec == Codec::plain);
+        to.insert(lf.to);
+      }
+      for (const char* r : p->required) CHECK(to.count(r) == 1);
+      for (const std::string& s : test::bestshot_scenes()) CHECK(to.count("BESTACT/" + s + ".BIN") == 1);
+      for (const std::string& d : test::bestshot_decoys()) CHECK(to.count(d) == 0);
+      CHECK(p->images.size() == 1 && std::string(p->images[0].md5) == "e0df0601cfc552ebafded6cce695928a" &&
+            p->images[0].size == 93456384 && p->images[0].disk == 0);
+      CHECK(p->downloads.size() == 1 && std::string(p->downloads[0].md5) == p->images[0].md5 &&
+            p->downloads[0].size == p->images[0].size && std::string(p->downloads[0].kind) == "image" &&
+            std::string(p->downloads[0].url) == "https://archive.org/download/takeyourbestshot/BESTSHOT.iso");
+      CHECK(p->covers.size() == 1 && p->covers[0].kind == CoverSource::Kind::download &&
+            std::string(p->covers[0].art) == "box");
+      CHECK_EQ(p->manifest.size(), size_t(23));
+      CHECK_EQ(p->name_overrides.size(), size_t(17));
+      CHECK((std::vector<std::string>(p->games.begin(), p->games.end()) ==
+             std::vector<std::string>{"BESTACT/HEADSHOT.BIN", "BESTACT/HOTSHOT.BIN", "BESTACT/LINESHOT.BIN"}));
+      CHECK(p->fixups.empty() && p->never_opened.empty() && p->library_members.empty() && !p->install_name &&
+            !p->setup_title && p->speed_modules.empty() && p->builds.empty());
+      for (const Package& q : builtin_packages()) CHECK_EQ(q.games.empty(), &q != p);
+    }
+
+    const test::PkgFixture bs = test::bestshot_fixture();
+    test::TestRegistry rb = registry_for({{"bestshot", &bs}});
+    CHECK_EQ(bs.ids.size(), size_t(17));
+    test::write_tree(src / L"bestshot", bs.source);
+    test::write_bytes(src / L"bestshot.iso", test::iso_of(bs, false, "BESTSHOT"));
+    // Decoys: another 7th Level CD (the same installer and player, its own
+    // programs and scenes), Best Shot's CD without its scenes, and without
+    // one of them.
+    {
+      test::Tree other;
+      for (const char* n : {"SETUP.EXE", "SETUP.HLP", "DUNZIP.DLL", "README.TXT"})
+        other[n] = test::blob(std::string("another disc's ") + n);
+      for (const auto& [rel, d] : bs.source)
+        if (rel.rfind("BESTSHOT/PLYM", 0) == 0 || rel == "BESTSHOT/DISPDIB.DLL") other["PYTHON/" + rel.substr(9)] = d;
+      other["PYTHON/PYTHSAVR.SCR"] = test::blob("another saver stub");
+      other["PYTHACT/SPAM.BIN"] = test::sevenl_scene("Made Up Spam", "", "Python");
+      test::write_tree(src / L"sevenl-other", other);
+      test::Tree no_scenes, no_skeet = bs.source;
+      for (const auto& [rel, d] : bs.source)
+        if (rel.rfind("BESTACT/", 0) != 0) no_scenes[rel] = d;
+      no_skeet.erase("BESTACT/SKEET.BIN");
+      test::write_tree(src / L"bestshot-no-scenes", no_scenes);
+      test::write_tree(src / L"bestshot-no-skeet", no_skeet);
+    }
+    // Identified by the customizer, its saver stub, the player and a scene
+    // side by side (names only); the other 7th Level CD and Best Shot's
+    // without its scenes are no release; the other releases are still
+    // themselves.
+    CHECK(identify_folder(src / L"bestshot", nullptr, rb.span()) == &rb.get("bestshot"));
+    CHECK(identify_folder(src / L"bestshot") == find_package("bestshot"));
+    CHECK(identify_folder(src / L"sevenl-other", nullptr, rb.span()) == nullptr);
+    CHECK(identify_folder(src / L"bestshot-no-scenes", nullptr, rb.span()) == nullptr);
+    CHECK(identify_folder(src / L"castaway", nullptr, rb.span()) == &rb.get("castaway"));
+    CHECK(identify_folder(src / L"tng", nullptr, rb.span()) == &rb.get("tng"));
+    // The folder, the decoys locked: they are never opened.
+    std::vector<HANDLE> held;
+    for (const std::string& decoy : test::bestshot_decoys()) {
+      const fs::path d = test::path_under(src / L"bestshot", decoy);
+      held.push_back(CreateFileW(d.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, 0, nullptr));
+    }
+    for (HANDLE h : held) CHECK(h != INVALID_HANDLE_VALUE);
+    ImportResult r = run("bestshot folder, decoys locked", folder(src / L"bestshot"),
+                         opts_for(dir / L"bestshot-locked", rb), Status::ok);
+    for (HANDLE h : held) CloseHandle(h);
+    CHECK_EQ(r.verified, std::string("files"));
+    check_installed(dir / L"bestshot-locked" / L"win", bs, "packages/bestshot");
+    // The CD: the same files, the catalog's seventeen scenes.
+    fs::path root = dir / L"alone-bestshot";
+    r = run("bestshot CD", image(src / L"bestshot.iso"), opts_for(root, rb), Status::ok);
+    CHECK_EQ(r.package_id, std::string("bestshot"));
+    CHECK_EQ(r.verified, std::string("files"));
+    CHECK_EQ(r.package_modules, size_t(17));
+    check_installed(root / L"win", bs, "packages/bestshot");
+    CHECK(catalog_ids(root / L"win") == bs.ids);
+    CHECK(no_leftovers(root / L"win"));
+    // Known by its md5, it verifies "image".
+    {
+      test::TestRegistry by_md5 = registry_for({{"bestshot", &bs}});
+      by_md5.image("bestshot", md5_file_hex(src / L"bestshot.iso"), fs::file_size(src / L"bestshot.iso"));
+      r = run("bestshot CD by its md5", image(src / L"bestshot.iso"), opts_for(dir / L"bestshot-md5", by_md5),
+              Status::ok);
+      CHECK_EQ(r.verified, std::string("image"));
+    }
+    // The catalog entries: 7th Level scenes named by their own titles, the
+    // player's ne16 lane, at 640x480; the three games marked "game", last.
+    phosg::JSON cat = json_at(root / L"win" / L"catalog-win.json");
+    size_t games = 0;
+    for (auto& m : cat.at("modules").as_list()) {
+      const std::string id = m->get_string("id");
+      CHECK_EQ(m->get_string("lane"), std::string("ne16"));
+      CHECK_EQ(m->get_string("abi"), std::string("7thlevel"));
+      CHECK_EQ(m->get_string("screen"), std::string("640x480"));
+      CHECK_EQ(m->get_string("entry"), std::string());
+      CHECK_EQ(m->get_string("about"), std::string());
+      CHECK(m->at("controls").as_list().empty() && m->at("needs").as_list().empty() &&
+            m->at("system").as_list().empty());
+      std::string stem = id.substr(9);
+      for (char& c : stem) c = char(toupper((unsigned char)c));
+      CHECK_EQ(m->get_string("path"), "packages/bestshot/BESTACT/" + stem + ".BIN");
+      CHECK_EQ(m->get_string("displayName"), "Made Up " + stem);
+      CHECK_EQ(m->get_string("moduleName"), "Made Up " + stem);
+      const bool game = id == "bestshot.headshot" || id == "bestshot.hotshot" || id == "bestshot.lineshot";
+      CHECK_EQ(m->contains("game"), game);
+      if (m->contains("game")) {
+        CHECK(m->at("game").is_bool() && m->get_bool("game"));
+        games++;
+      }
+    }
+    CHECK_EQ(games, size_t(3));
+    // Without one scene it is not the whole release: nothing is installed.
+    r = run("bestshot, no Skeet", folder(src / L"bestshot-no-skeet"), opts_for(dir / L"bestshot-no-skeet", rb),
+            Status::source_invalid);
+    CHECK(r.message.find("BESTACT/SKEET.BIN") != std::string::npos);
+    CHECK(!fs::exists(dir / L"bestshot-no-skeet" / L"win" / L"packages" / L"bestshot"));
+    for (const wchar_t* decoy : {L"sevenl-other", L"bestshot-no-scenes"}) {
+      r = run("a 7th Level decoy", folder(src / decoy), opts_for(dir / (std::wstring(decoy) + L"-out"), rb),
+              Status::source_invalid);
+      CHECK(r.message.find("not a known release") != std::string::npos);
+    }
+  }
+
   // ---- --catalog-only without FILES, win_assets_dir, --remove, list --------------------------------------
   {
     fs::path root = dir / L"nofiles";
@@ -3611,7 +3761,7 @@ int main(int argc, char** argv) {
     CHECK_EQ(win_assets_dir(dir / L"fresh"), dir / L"fresh" / L"win");
 
     auto states = list_packages(root, reg.span());
-    CHECK_EQ(states.size(), size_t(20));
+    CHECK_EQ(states.size(), size_t(21));
     for (auto& s : states) {
       bool want = std::string(s.package->id) == "ad32" || std::string(s.package->id) == "simpsons";
       CHECK_EQ(s.installed, want);
@@ -3914,7 +4064,7 @@ int main(int argc, char** argv) {
         if (col != std::string::npos) cols.push_back(line.rfind("not ", col) == col - 4 ? col - 4 : col);
         pos += 3;
       }
-      CHECK_EQ(cols.size(), size_t(20));
+      CHECK_EQ(cols.size(), size_t(21));
       for (size_t c : cols) CHECK_EQ(c, cols.front());
       CHECK(out.find("  swse         Star Wars Screen Entertainment               installed, ") != std::string::npos);
       CHECK(out.find("  startrek     Star Trek: The Screen Saver                  installed, ") != std::string::npos);
@@ -3930,6 +4080,8 @@ int main(int argc, char** argv) {
                      "the install files)") != std::string::npos);
       CHECK(out.find("  castaway     Screen Antics: Johnny Castaway               "
                      "not installed; download 1.3 MB (floppy image)") != std::string::npos);
+      CHECK(out.find("  bestshot     Take Your Best Shot                          "
+                     "not installed; download 89.1 MB (disc image)") != std::string::npos);
     }
     CHECK_EQ(cli({L"--list-packages", L"--image", L"x"}, "--list-packages + a source"), 1);
     CHECK_EQ(cli({L"--remove", L"tt", L"--catalog-only"}, "--remove + --catalog-only"), 1);

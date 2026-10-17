@@ -304,7 +304,7 @@ std::string env_fields() {
   // ADNE16IMXSPEED: Intermission 4.0's Speed, a host control (catalog "host").
   for (const char* k : {"ADSTREAM", "ADSCREENW", "ADSCREENH", "ADCVSET", "AD_ASSETS_DIR", "ADSTATE", "ADCAPS",
                         "ADNUMLOCK", "ADSEEDIMG", "ADSTATUSHANDLE", "ADSOUND", "ADVOLUME", "ADAUDIOOUT",
-                        "ADNE16IMXSPEED"}) {
+                        "ADNE16IMXSPEED", "ADWALLPAPER"}) {
     s += "\t";
     s += k;
     s += "=" + env(k);

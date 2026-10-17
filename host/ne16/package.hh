@@ -18,7 +18,7 @@
 // OLDMOD16.DLL), and DLLs come from the module dir, <win>\FILES\CLASSIC, then
 // the engine dir.
 //
-// Kind (ADNE16KIND=auto|ad3|imx|scr; lane.hh "Module protocols"): auto reads
+// Kind (ADNE16KIND=auto|ad3|imx|scr|7thlevel; lane.hh "Module protocols"): auto reads
 // the module's exports, resident or non-resident, in any case — MODULE is an
 // After Dark 2.x/3.x module (ad3; it wins when both are there); SAVERINIT
 // and SAVERDRAW an Intermission module (imx), unless it also exports
@@ -31,7 +31,16 @@
 // that starts "AniN" or "AniM" is an Intermission ASA animation (imx, form
 // asa), and a file named *.FLI, *.FLC, *.MRF or *.MSV that is no MZ
 // executable an Intermission data file of that type (imx, forms fli, flc,
-// mrf, msv: core's intermission_data_type), whatever ADNE16KIND says.
+// mrf, msv: core's intermission_data_type), whatever ADNE16KIND says. A file
+// that starts "7L" 02 00 is a 7th Level resource file, a scene of 7th Level's
+// Runtime Player (7thlevel, whatever its name; ADNE16KIND can only say so).
+//
+// The 7th Level Runtime Player (7thlevel): the scene's player is
+// <package root>\BESTSHOT\PLYMPTON.EXE — the folder Take Your Best Shot's
+// installer put it in (c:\7thLevel\BestShot), beside the scenes' BESTACT
+// folder from its CD; package root = the scene folder's parent, packaged or
+// not. A rule by folder and file name, never a package id. The player's own
+// DLLs (PLYMU001, PLYMA001, PLYMS001, PLYMR001 and DISPDIB) are in its folder.
 //
 // Form (imx): what the Intermission module's file is, which picks its
 // reader. INTRMLIB's FINDALLMODULES (1:1e06) made every *.IMQ of the saver
@@ -150,8 +159,8 @@ Ne16Layout resolve_layout(const std::string& module_full_path, const std::string
 
 // ---- the module's kind ----------------------------------------------------------------------------------------
 
-enum class ModuleKind { ad3, imx, scr };
-const char* kind_name(ModuleKind k);  // "ad3", "imx", "scr"
+enum class ModuleKind { ad3, imx, scr, seventh };
+const char* kind_name(ModuleKind k);  // "ad3", "imx", "scr", "7thlevel"
 // An Intermission module's form (the rule above).
 enum class ImxForm { imx, asa, imq, fli, flc, mrf, msv };
 const char* form_name(ImxForm f);  // "imx", "asa", "imq", "fli", "flc", "mrf", "msv"
@@ -169,8 +178,16 @@ struct KindProbe {
 };
 // `file_name` is the module file's name (the IMXX_ rule).
 KindProbe detect_kind(const loader::ne::Image& img, const std::string& file_name);
-// ADNE16KIND's value ("" = auto). False when it is not auto, ad3, imx or scr.
+// ADNE16KIND's value ("" = auto). False when it is not auto, ad3, imx, scr or 7thlevel.
 bool parse_kind_choice(const std::string& value, bool* is_auto, ModuleKind* forced);
+
+// ---- the 7th Level Runtime Player ------------------------------------------------------------------------------
+
+// The player's folder, file, and the scenes' folder on its CD (the rule above).
+constexpr const char* kSeventhPlayerDir = "BESTSHOT";
+constexpr const char* kSeventhPlayer = "PLYMPTON.EXE";
+// <package root>\BESTSHOT, the package root being the scene folder's parent.
+std::string seventh_player_dir(const Ne16Layout& layout);
 
 // ---- the IMX reader -------------------------------------------------------------------------------------------
 

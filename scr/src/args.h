@@ -19,6 +19,11 @@
 // \"Flying Toasters!\""). /size, /module and /random go with /window; with
 // /window, an unknown switch or a stray word is an error, as is a size
 // outside kWindowMinSize..kWindowMaxSize.
+//   /wallpaper       on the Windows desktop, behind its icons (wallpaper_mode.h)
+//   /stop            with /wallpaper: ends the one running
+// /module and /random go with /wallpaper as with /window; /size does not
+// (each monitor's window is the monitor's size), nor /window or a Windows
+// switch, and /stop takes neither.
 #pragma once
 
 #include <cstdint>
@@ -27,7 +32,7 @@
 
 namespace adw::scr {
 
-enum class Mode { settings, run, preview, password, window, help };
+enum class Mode { settings, run, preview, password, window, wallpaper, help };
 
 // /size's default and its limits, in physical pixels.
 inline constexpr int kWindowDefaultW = 1280, kWindowDefaultH = 720;
@@ -40,10 +45,11 @@ struct Args {
   bool has_hwnd = false;
   bool valid = true;          // false: /p without a window to draw into
   // /window's: the client area, the module named ("" for none: the settings
-  // choose) and /random.
+  // choose) and /random (/wallpaper's too, but for the size).
   int width = kWindowDefaultW, height = kWindowDefaultH;
   std::wstring module;
   bool random = false;
+  bool stop = false;          // /wallpaper /stop
   // What is wrong with the command line, for the user ("" when nothing is):
   // the program shows it with the usage (usage_message) and exits.
   std::wstring error;

@@ -14,6 +14,7 @@ add_library(adw_lane_ne16 STATIC
   imx_protocol.cc
   imreader.cc
   scr_protocol.cc
+  seventh_protocol.cc
   package.cc
 )
 target_include_directories(adw_lane_ne16 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

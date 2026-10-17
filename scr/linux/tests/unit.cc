@@ -144,6 +144,9 @@ void test_status() {
   // Johnny Castaway's program runs only on a host that lists its ABI.
   CHECK(!c.runs("ne16", "scrnsave") &&
         parse_capabilities("lanes=pe32,ne16 abis=afterdark,intermission,scrnsave").runs("ne16", "scrnsave"));
+  // So do Take Your Best Shot's scenes.
+  CHECK(!parse_capabilities("lanes=pe32,ne16 abis=afterdark,intermission,scrnsave").runs("ne16", "7thlevel") &&
+        parse_capabilities("lanes=pe32,ne16 abis=afterdark,intermission,scrnsave,7thlevel").runs("ne16", "7thlevel"));
   HostCapabilities old = parse_capabilities("lanes=pe32,ne16 status=1");
   CHECK(old.known && !old.numlock && !old.takes_numlock_lines() && !old.takes_numlock_env());
   CHECK(old.runs("ne16", "afterdark") && !old.runs("ne16", "intermission"));
@@ -231,6 +234,8 @@ void test_geometry() {
   CHECK((own_screen("afterdark", {640, 480}) == SizeI{640, 480}));
   // A Windows 3.1 screen-saver program's screen is its catalog entry's.
   CHECK((own_screen("scrnsave") == SizeI{}) && (own_screen("scrnsave", {640, 480}) == SizeI{640, 480}));
+  // So is a 7th Level scene's.
+  CHECK((own_screen("7thlevel") == SizeI{}) && (own_screen("7thlevel", {640, 480}) == SizeI{640, 480}));
   CHECK(module_screen({640, 480}, 16.0 / 9.0, 1.0).fixed);
   CHECK((module_screen({}, 16.0 / 9.0, 1.0).emu == SizeI{856, 480}));
   // --lines 720 (the Windows Resolution setting's 1.5): After Dark's follow
@@ -553,11 +558,19 @@ void test_catalog() {
         {"index": 8, "name": "Pick", "type": "popup", "items": ["a", "b", "c"], "default": 9, "host": "ADPICK"},
         {"index": 10, "name": "Plain", "type": "slider", "min": 10, "max": 20, "default": 99, "host": "ADPLAIN"},
         {"index": 11, "name": "Labels", "type": "slider", "items": ["a", "b", "c"], "defaultStop": 1, "host": "ADLABELS"},
-        {"index": 12, "name": "Odd", "type": "dial", "default": 1, "host": "ADODD"}]}]})";
+        {"index": 12, "name": "Odd", "type": "dial", "default": 1, "host": "ADODD"}]},
+      {"id": "bestshot.headshot", "displayName": "Head Shot", "lane": "ne16",
+       "path": "packages/bestshot/BESTACT/HEADSHOT.BIN", "about": "", "controls": [], "entry": "", "needs": [],
+       "system": [], "package": "bestshot", "packageTitle": "Take Your Best Shot", "moduleName": "Head Shot",
+       "abi": "7thlevel", "screen": "640x480", "game": true}]})";
   }
   Catalog cat;
   std::string err;
   CHECK(load_catalog(file, cat, &err));
+  // A 7th Level scene: its ABI and screen as the catalog gives them; its
+  // "game" is its host's business.
+  const Module* shot = cat.find("bestshot.headshot");
+  CHECK(shot && shot->abi == "7thlevel" && (shot->screen == SizeI{640, 480}) && shot->host_env.empty());
   using Env = std::vector<std::pair<std::string, std::string>>;
   // Each module's own starting stop, as the catalog writes it.
   const Module* dragon = cat.find("intermission.dragon");

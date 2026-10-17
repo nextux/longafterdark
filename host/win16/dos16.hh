@@ -111,6 +111,10 @@ class DosFiles : public RuntimeState16 {
 // seeds ⊕ the file, writes to the upper layer only.
 win32::IniStore& profiles16(Runtime16& rt);
 
+// OpenFile's search for a bare name (kernel16.cc): the current, Windows and
+// System directories, then the module folder; a path is made full as it is.
+std::string search_file16(Runtime16& rt, const std::string& name);
+
 // Installs the INT handlers above on `rt` and seeds the guest disk: C:\WINDOWS
 // and C:\WINDOWS\TEMP as in-memory overlays (the lane mounts its own over
 // them), the INI files After Dark's installer left there as empty virtual
@@ -170,6 +174,30 @@ struct ScrnsaveSeeds {
   std::string source_dir;
 };
 void seed_scrnsave(Runtime16& rt, const ScrnsaveSeeds& seeds);
+// The profile seeds a 7th Level Runtime Player scene (the ne16 lane's
+// 7thlevel protocol) runs over, read as seed ⊕ file and never written out —
+// what Take Your Best Shot's SETUP.EXE wrote into C:\WINDOWS\7THLEVEL.INI
+// (its script's <7thLevel.ini> part), its prefixes resolved: 0: the install
+// dir with a backslash (install_dir), 1: the CD's root (cd, "D:\"), 2: the
+// Windows dir:
+//   [BestShot] Path = 0:;  [Apps] BestShot = 0:plympton.exe;
+//   [Icons] 2:BESTICON.DLL = 1;
+//   [BestShotPaths] DeadWallpaperPath = 1:wallpapr, NoisyBitsPath =
+//        1:noisybit, KeyboardSoundsPath = 1:bestshot, BestShotPath =
+//        1:bestact, BestShotBigPath = 1:bestbig;
+//   [Games] 1:bestact\<scene> = 1 for each of `games`; [Living Wallpapers]
+//        and [Screen Savers] the same for each of `scenes`.
+// (Its [App Commentary Relations], the desktop program's list of other
+// programs, is BESTSHOT.EXE's alone and not seeded.) WIN.INI [Desktop]
+// WallPaper = (None) and TileWallPaper = 0, Windows 3.1's own, which the
+// player reads. What the player and its libraries write there lands in
+// C:\WINDOWS's upper layer, ADSTATE's when set.
+struct SeventhLevelSeeds {
+  std::string install_dir;  // "C:\\7THLEVEL\\BESTSHOT"
+  std::string cd;           // "D:"
+  std::vector<std::string> scenes, games;  // file names in the CD's BESTACT, lower case as the script had them
+};
+void seed_seventh_level(Runtime16& rt, const SeventhLevelSeeds& seeds);
 struct IntermissionSeeds {
   int volume = 0;
   bool swse_gdi = false;

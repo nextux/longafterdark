@@ -26,6 +26,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "MemoryContext.hh"
 #include "win16/ldt.hh"
@@ -89,6 +90,9 @@ class GlobalHeap16 {
   GlobalBlock* containing(uint32_t linear);
   // Frees every block owned by a module (FreeLibrary of its last reference).
   void free_owned(uint16_t owner);
+  // The handles of the guest's own blocks (GlobalAlloc's, owner 0), in selector order: what a task
+  // left (the ne16 lane's 7thlevel protocol frees those its player made when it starts it again).
+  std::vector<uint16_t> guest_handles() const;
   size_t block_count() const { return blocks_.size(); }
   win32::GuestHeap& arena() { return arena_; }
 

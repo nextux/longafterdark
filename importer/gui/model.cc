@@ -149,7 +149,7 @@ std::wstring sources_intro(bool any_installed, std::span<const Package> registry
     static const wchar_t* const kWords[] = {L"no",     L"one",     L"two",      L"three",    L"four",    L"five",
                                             L"six",    L"seven",   L"eight",    L"nine",     L"ten",     L"eleven",
                                             L"twelve", L"thirteen", L"fourteen", L"fifteen", L"sixteen", L"seventeen",
-                                            L"eighteen", L"nineteen", L"twenty"};
+                                            L"eighteen", L"nineteen", L"twenty",  L"twenty-one"};
     const size_t n = known.size();
     releases = (n < std::size(kWords) ? std::wstring(kWords[n]) : std::to_wstring(n)) + (n == 1 ? L" release" : L" releases");
   } else {

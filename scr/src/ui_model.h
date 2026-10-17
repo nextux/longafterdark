@@ -150,7 +150,7 @@ std::wstring assets_summary(const AssetCounts& a);
 // importing does, for every release (eleven of After Dark modules, seven of
 // Delrina Intermission's: Star Wars Screen Entertainment, The Far Side,
 // Dilbert, both Opus 'n Bill releases, The Flintstones and Intermission 4.0
-// itself; and Johnny Castaway).
+// itself; Johnny Castaway, and Take Your Best Shot).
 std::wstring welcome_text();
 
 // ---- string-slider stops ---------------------------------------------------------
@@ -415,7 +415,7 @@ WindowLayout layout_window(const LayoutInput& in);
 // rows at the first-open width over it, so the columns have their design
 // heights: 836 (kDesignClientHStrip) for one row of covers (up to eight
 // releases), 952 for two (up to sixteen), 1068 for three (up to twenty-four:
-// the twenty releases' 8, 8 and 4).
+// the twenty-one releases' 8, 8 and 5).
 int design_client_h(int strip_tiles);
 
 // The Look link in WindowLayout::look_link (pixels): its text as it fits

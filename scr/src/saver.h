@@ -1,6 +1,7 @@
 // The running screen saver: /s (one borderless topmost window per monitor),
-// /p (a child of the Display control panel's preview window) and /window (an
-// ordinary window of its own, window_mode.h).
+// /p (a child of the Display control panel's preview window), /window (an
+// ordinary window of its own, window_mode.h) and /wallpaper (one window per
+// monitor inside the desktop's, wallpaper_mode.h).
 #pragma once
 
 #include <string>
@@ -18,6 +19,8 @@ enum : int {
   kExitHostMissing = 11,     // adhostwin.exe missing: the message was shown
   kExitStartFailed = 12,     // test hook only: a module "could not be started"
   kExitNoneRuns = 13,        // test hook only: the host can run none of the modules imported (said so)
+  kExitNoDesktop = 14,       // /wallpaper: no desktop of Explorer's to go into (none here, a hidden desktop): nothing shown
+  kExitWallpaperBusy = 15,   // /wallpaper: the one running would not stop
 };
 
 int run_saver(const Args& args, void* hinstance);

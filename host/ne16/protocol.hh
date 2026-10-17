@@ -32,8 +32,16 @@
 //        it (long calls are required), and at shutdown it is closed as on
 //        the input that woke the saver. It takes no key or mouse messages;
 //        its button runs the program with "/c".
+//   7thlevel  a 7th Level Runtime Player scene (a 7th Level resource file: Take
+//        Your Best Shot's BESTACT\*.BIN), run as Take Your Best Shot's
+//        desktop program BESTSHOT.EXE ran it: the real player, PLYMPTON.EXE,
+//        with its own DLLs, as the runtime's task, its command line the scene
+//        and "/p" with the handle of the 0x6C-byte block that says the mode
+//        (seventh_protocol.cc, make_seventh_protocol; lane.hh "7th Level
+//        scenes"). A task as scr's is; it takes no key or mouse messages in
+//        the saver's mode and has no button.
 // Ne16Lane's default factory picks one by the module's exports (package.hh
-// detect_kind, ADNE16KIND).
+// detect_kind, ADNE16KIND), a data file by its header or extension.
 //
 // A run (Ne16Lane::init, step, on_command, shutdown):
 //   configure_runtime   before the runtime exists: the protocol's choices and its runtime options
@@ -129,6 +137,14 @@ class Protocol16 {
   // AD3, IMX: true; scr: false (a Windows 3.1 saver closed itself on a mouse
   // move; the host's saver ends the run on input itself).
   virtual bool takes_mouse_messages() const { return true; }
+  // Whether the module now plays as a state of its own, outside the calls'
+  // results (7thlevel: a game, or the interactive screen saver, while Caps
+  // Lock is on): the lane reports it interactive (source 2, ADWS_INTERACTIVE)
+  // and consumes every input line, as for AD3's 0x0E (Call::toggle_events);
+  // plays_cursor, whether it wants the cursor shown meanwhile (ADWS_CURSOR).
+  // AD3, IMX, scr: false.
+  virtual bool plays() const { return false; }
+  virtual bool plays_cursor() const { return false; }
   // Whether the protocol's calls can only run as long calls (lane.hh "Long
   // calls"): scr, whose one call is the program's task. The lane refuses the
   // module (exit 1) when they are off (ADMIPS=0, ADNE16LONGCALLS=0).
@@ -282,5 +298,77 @@ std::string scr_install_dir(const Ne16Layout& layout);
 // ADSTATE's package dir or memory, C:\WINDOWS\SYSTEM (the engine dir), H:,
 // with the profile seeds its installer left (win16/dos16.hh seed_scrnsave).
 void mount_scr_disk(win16::Runtime16& rt, const Env& env, const Ne16Layout& layout);
+
+// ---- the 7thlevel protocol (seventh_protocol.cc) -----------------------------------------------------------
+
+// The 7th Level Runtime Player protocol for the scene at layout.module_path
+// (its player: package.hh seventh_player_dir).
+std::unique_ptr<Protocol16> make_seventh_protocol(const Ne16Layout& layout);
+
+// The player's modes, the block's +2 (BESTSHOT.EXE's callers of 6:00E6; the
+// player's 1:6EB0 takes 0..6; its 1:70A2 starts each).
+enum class SeventhMode : uint16_t {
+  program = 0,           // another 7th Level program (BESTSHOT's samplers)
+  wallpaper = 1,         // the living wallpaper (7:04E9: its flag 0): the scene in a window at the
+                         // bottom of the z-order (1:7266, 1:ADE2)
+  wallpaper_preview = 2, // the living wallpaper's preview in BESTSHOT's dialog (10:2BBC: flag 1): topmost
+  saver = 3,             // the screen saver (6:068A, BESTSHOT's /s)
+  saver_preview = 4,     // the screen saver's preview in BESTSHOT's dialog (10:30B8)
+  five = 5,              // (the player sets a flag of its own; no BESTSHOT caller)
+  game = 6,              // a game (2:06CA)
+};
+// What BESTSHOT.EXE's 6:00E6 put in the block (GlobalAlloc(GMEM_SHARE |
+// GMEM_MOVEABLE | GMEM_ZEROINIT, 0x6C)) before it WinExec'd the player.
+struct SeventhBlock {
+  SeventhMode mode = SeventhMode::saver;
+  uint16_t mute = 0;             // +0x12: [BestShotControls] ScreenSaverMute (GamesMute,
+                                 // LivingWallpaperMute) == YES
+  uint16_t not_interactive = 1;  // +0x14: 6:00E6's caller's flag == 0 — the screen saver's
+                                 // ScreenSaverInteractive != YES; 0 for a game and the living wallpaper.
+                                 // The player reads it in modes 3 and 4 (1:6F41): 0 is the interactive
+                                 // saver, which no input closes (1:7656, 1:784E)
+  uint16_t password = 0;         // +0x16 (mode 3 only): ScreenSaverPasswordOn == YES and a password
+  std::string title;             // +0x1A: the scene's title, at most 0x4F characters
+  uint16_t ui_window = 0;        // +0x6A: BESTSHOT's UI window (the host's stand-in)
+};
+constexpr uint16_t kSeventhBlockSize = 0x6C;
+constexpr uint16_t kSeventhBlockFlags = 0x2042;  // GMEM_SHARE | GMEM_ZEROINIT | GMEM_MOVEABLE
+// The block's 0x6C bytes as 6:00E6 filled them (the rest zero).
+std::string seventh_block_bytes(const SeventhBlock& b);
+// What a run of a scene is, the one place it is decided (lane.hh "7th Level
+// scenes"): with ADWALLPAPER=1 (the saver's /wallpaper) the living wallpaper
+// as BESTSHOT.EXE installed one (mode 1, 4:05D0 → 7:04E9: sound on, which
+// LivingWallpaperMute's default leaves), whatever Caps Lock says; else, Caps
+// Lock on (`caps`), a game scene's game (`game`: the installer's [Games];
+// mode 6 as 2:06CA started it, sound on) or another scene's interactive
+// screen saver (mode 3 with ScreenSaverInteractive=YES, +0x14 0); else the
+// screen saver as BESTSHOT's /s started it with the installer's defaults
+// (mode 3, sound on, not interactive, no password). Titled `title`.
+SeventhBlock seventh_run_block(const Env& env, const std::string& title, bool caps = false, bool game = false);
+// Whether the scene file `file` (a file name or path) is one of the games
+// the installer listed under 7THLEVEL.INI's [Games]: HEADSHOT.BIN,
+// HOTSHOT.BIN, LINESHOT.BIN (any case) — a rule by file name.
+bool seventh_is_game(const std::string& file);
+// A 7th Level resource file's product key and title, from its header ("7L"
+// 02 00, a length byte, the product NUL-terminated — "BestShot", BESTSHOT.EXE's
+// [Apps] key for the player —, the title ending at a NUL or 0xFB). False when
+// the file is not one.
+bool seventh_header(const std::string& host_path, std::string* product, std::string* title);
+// The player's command tail (the PSP's): BESTSHOT's wsprintf(" %s /p%lX",
+// scene, MAKELONG(hBlock, 0)) after its own name.
+std::string seventh_command_tail(const std::string& guest_scene, uint16_t hblock);
+
+// Where the player's installer put things on the guest's disk: the player's
+// folder at C:\7THLEVEL\BESTSHOT (SETUP.EXE's default, c:\7thLevel\BestShot),
+// the scenes on the CD at D:\BESTACT.
+constexpr const char* kSeventhInstallDir = "C:\\7THLEVEL\\BESTSHOT";
+constexpr const char* kSeventhCdDrive = "D:";
+// The guest's disk for a 7th Level scene (seventh_protocol.cc): the player's
+// folder at kSeventhInstallDir (the current directory) and C:\WINDOWS (over
+// the package's windows dir when it has one) as copy-on-write overlays whose
+// upper layers are ADSTATE's package dir or memory, the scene's folder on the
+// CD (D:\<folder>, read-only), C:\WINDOWS\SYSTEM (the engine dir), H:, with
+// the profile seeds the installer left (win16/dos16.hh seed_seventh_level).
+void mount_seventh_disk(win16::Runtime16& rt, const Env& env, const Ne16Layout& layout);
 
 }  // namespace adw::ne16

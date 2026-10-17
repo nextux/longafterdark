@@ -131,8 +131,10 @@ class Lane {
   // readers play; a catalog entry says "abi":"intermission", and no "abi"
   // means "afterdark") and "scrnsave" (a Windows 3.1 screen saver: a .SCR
   // program built on SCRNSAVE.LIB, run as Windows 3.1 ran it;
-  // "abi":"scrnsave"). The pe32 lane runs {afterdark}, the ne16 lane
-  // {afterdark, intermission, scrnsave}.
+  // "abi":"scrnsave") and "7thlevel" (a scene of 7th Level's Runtime Player,
+  // run by the player itself as Take Your Best Shot ran it; "abi":"7thlevel").
+  // The pe32 lane runs {afterdark}, the ne16 lane {afterdark, intermission,
+  // scrnsave, 7thlevel}.
   virtual std::vector<std::string> abis() const { return {}; }
   // Run a module's button handler (§6.1). ctx.input holds ADCVSET, ADCAPS and ADNUMLOCK;
   // ctx.env.state_root is persistent in this mode. The lane may fill
@@ -155,7 +157,9 @@ class Lane {
 // morph, an .MSV MultiSaver group —, which is no executable and which
 // Intermission gave the reader whose type is the file's extension (INTRMLIB's
 // FINDALLMODULES matched every file's extension against its readers' types):
-// here it is the extension too.
+// here it is the extension too. So is a 7th Level resource file (it starts
+// "7L" 02 00): a scene of 7th Level's Runtime Player, a Win16 program the
+// ne16 lane runs as its task (Take Your Best Shot's BESTACT\*.BIN).
 enum class LaneKind { pe32, ne16, unsupported, unreadable };
 struct ModuleProbe {
   LaneKind kind = LaneKind::unreadable;
@@ -164,6 +168,8 @@ struct ModuleProbe {
 ModuleProbe probe_module(const std::string& path_utf8);
 // Whether a file's first four bytes are an Intermission ASA animation's header ("AniN" or "AniM").
 bool asa_header(const void* first4);
+// Whether a file's first four bytes are a 7th Level resource file's ("7L" 02 00).
+bool seventh_level_header(const void* first4);
 // The Intermission data type a file name's extension names, upper case
 // ("FLI", "FLC", "MRF" or "MSV"; any case in the name), else nullptr. ASA is
 // not among them: an ASA animation goes by its header.

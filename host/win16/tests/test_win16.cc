@@ -434,8 +434,11 @@ constexpr char kTestResource[16] = "hello, resource";
 // `push ds; pop ax; nop; …` that returns DS. With `resource`, a resource
 // table holding one resource follows the segment table: RT_RCDATA 7
 // (kTestResource), or `type` `id` holding `data`.
+// With wep_sel, the DLL also exports WEP (ordinal 2, 1:0x30), which counts
+// its calls in the word at wep_sel:0 and keeps its argument at wep_sel:2.
 std::string build_ne(bool resource = false, uint16_t type = 10, uint16_t id = 7,
-                     std::string_view data = std::string_view(kTestResource, sizeof(kTestResource))) {
+                     std::string_view data = std::string_view(kTestResource, sizeof(kTestResource)),
+                     uint16_t wep_sel = 0) {
   std::string f(0x40, '\0');
   f[0] = 'M';
   f[1] = 'Z';
@@ -454,19 +457,23 @@ std::string build_ne(bool resource = false, uint16_t type = 10, uint16_t id = 7,
   std::string seg, res, resident, modref, imp, entry;
   resident += char(6) + std::string("TESTNE") + std::string("\0\0", 2);
   resident += char(4) + std::string("FUNC") + std::string("\x01\x00", 2);
+  if (wep_sel) resident += char(3) + std::string("WEP") + std::string("\x02\x00", 2);
   resident += '\0';
   imp += '\0';
   imp += char(6) + std::string("KERNEL");
   w16(modref, 0, 1);  // KERNEL at imported-names offset 1
-  // Entry table: one bundle of 1 moveable entry: ordinal 1 → seg 1:0x20.
-  entry += char(1);
+  // Entry table: one bundle of moveable entries: ordinal 1 → seg 1:0x20 (and 2 → 1:0x30).
+  entry += char(wep_sel ? 2 : 1);
   entry += char(0xFF);
-  entry += char(0x03);  // exported | shared data
-  entry += char(0xCD);
-  entry += char(0x3F);
-  entry += char(1);
-  entry += char(0x20);
-  entry += char(0x00);
+  for (uint8_t at : {uint8_t(0x20), uint8_t(0x30)}) {
+    if (at == 0x30 && !wep_sel) break;
+    entry += char(0x03);  // exported | shared data
+    entry += char(0xCD);
+    entry += char(0x3F);
+    entry += char(1);
+    entry += char(at);
+    entry += char(0x00);
+  }
   entry += '\0';
   // Resource table: alignment shift 4; one type (RT_RCDATA) of one resource
   // (id 7, 16 bytes at 0x310 = 0x31 << 4; or the caller's, its length in
@@ -521,6 +528,15 @@ std::string build_ne(bool resource = false, uint16_t type = 10, uint16_t id = 7,
   // FUNC at 0x20: push ds; pop ax; nop; mov ax, ax(=patched DS); retf
   const uint8_t fn[] = {0x1E, 0x58, 0x90, 0xCB};
   memcpy(code.data() + 0x20, fn, sizeof(fn));
+  // WEP at 0x30: push bp; mov bp,sp; mov ax,wep_sel; mov es,ax; inc word es:[0];
+  // mov ax,[bp+6]; mov es:[2],ax; mov ax,1; pop bp; retf 2
+  if (wep_sel) {
+    const uint8_t wep[] = {0x55, 0x8B, 0xEC, 0xB8, uint8_t(wep_sel), uint8_t(wep_sel >> 8), 0x8E, 0xC0, 0x26, 0xFF,
+                           0x06, 0x00, 0x00, 0x8B, 0x46, 0x06, 0x26, 0xA3, 0x02, 0x00, 0xB8, 0x01, 0x00, 0x5D, 0xCA,
+                           0x02, 0x00};
+    code.resize(0x30 + sizeof(wep) + 1, '\x90');
+    memcpy(code.data() + 0x30, wep, sizeof(wep));
+  }
   // Relocations: 1 record: import ordinal KERNEL.3 at offset 1, pointer32.
   std::string rel;
   w16(rel, 0, 1);
@@ -3503,6 +3519,246 @@ void test_toolhelp_walk() {
   CHECK(m.rt.rd32(ge) == 0x24 && m.rt.rd32(ge + 4) == 0xDEADBEEF, "the GLOBALENTRY is left as it was");
 }
 
+// What 7th Level's Runtime Player and its libraries call (the ne16 lane's
+// 7thlevel protocol), with made-up data: multimedia file I/O, no joystick,
+// TOOLHELP's MemManInfo, installable drivers, the emulated cursor's
+// position, SetClassWord, GetViewportOrg/DPtoLP, a host window, another
+// task's sends at the message calls, and WEP when a library goes.
+void test_seventh_level_calls() {
+  Machine m;
+  Screen screen(64, 48);
+  m.rt.attach_display(screen);
+  m.rt.vfs().mount_overlay("C:\\SAVER", "", "");
+  m.rt.vfs().set_cwd("C:\\SAVER");
+  uint16_t ds = m.data(1024);
+  const uint32_t d = uint32_t(ds) << 16;
+  auto str = [&](uint32_t at, const char* s) {
+    m.rt.write_str(d + at, s, 64);
+    return d + at;
+  };
+  auto lo = [](uint32_t v) { return v & 0xFFFF; };
+
+  // mmio: create and write, MMIO_EXIST, read back with MMIO_ALLOCBUF and
+  // seeks, MMIO_DELETE; a missing file's wErrorRet; a bad handle.
+  const uint32_t name = str(0, "C:\\SAVER\\SHOT.BMP");
+  uint16_t h = uint16_t(api(m, "MMSYSTEM", "mmioOpen", {l16(name), l16(0), l16(0x1001)}));
+  CHECK(h != 0, "mmioOpen(MMIO_CREATE | MMIO_WRITE): a handle");
+  m.rt.write_bytes(d + 0x100, "BMxyz", 5);
+  CHECK(api(m, "MMSYSTEM", "mmioWrite", {w16(h), l16(d + 0x100), l16(5)}) == 5, "mmioWrite: 5 bytes");
+  CHECK(lo(api(m, "MMSYSTEM", "mmioClose", {w16(h), w16(0)})) == 0, "mmioClose");
+  CHECK(lo(api(m, "MMSYSTEM", "mmioClose", {w16(h), w16(0)})) == 5, "mmioClose again: MMSYSERR_INVALHANDLE");
+  CHECK(lo(api(m, "MMSYSTEM", "mmioOpen", {l16(name), l16(0), l16(0x4000)})) == 1, "MMIO_EXIST: TRUE");
+  h = uint16_t(api(m, "MMSYSTEM", "mmioOpen", {l16(str(0x40, "shot.bmp")), l16(0), l16(0x10000)}));
+  CHECK(h != 0, "mmioOpen(MMIO_ALLOCBUF) of a bare name: found in the current directory");
+  CHECK(api(m, "MMSYSTEM", "mmioSeek", {w16(h), l16(0), w16(2)}) == 5 &&
+            api(m, "MMSYSTEM", "mmioSeek", {w16(h), l16(1), w16(0)}) == 1,
+        "mmioSeek: SEEK_END, SEEK_SET");
+  CHECK(api(m, "MMSYSTEM", "mmioRead", {w16(h), l16(d + 0x120), l16(10)}) == 4 && m.rt.rd8(d + 0x120) == 'M' &&
+            m.rt.rd8(d + 0x123) == 'z',
+        "mmioRead: what is left");
+  api(m, "MMSYSTEM", "mmioClose", {w16(h), w16(0)});
+  CHECK(lo(api(m, "MMSYSTEM", "mmioOpen", {l16(name), l16(0), l16(0x200)})) == 1 &&
+            lo(api(m, "MMSYSTEM", "mmioOpen", {l16(name), l16(0), l16(0x4000)})) == 0,
+        "MMIO_DELETE: TRUE, and the file is gone");
+  m.rt.wr16(d + 0x180 + 0x0C, 0xEEEE);
+  CHECK(lo(api(m, "MMSYSTEM", "mmioOpen", {l16(name), l16(d + 0x180), l16(0)})) == 0 && m.rt.rd16(d + 0x18C) == 257,
+        "a missing file: NULL, wErrorRet MMIOERR_CANNOTOPEN");
+
+  // No joystick.
+  CHECK(lo(api(m, "MMSYSTEM", "joyGetNumDevs", {})) == 0, "joyGetNumDevs: none");
+  CHECK(lo(api(m, "MMSYSTEM", "joySetCapture", {w16(1), w16(0), w16(10), w16(1)})) == 167 &&
+            lo(api(m, "MMSYSTEM", "joyGetPos", {w16(0), l16(d + 0x1C0)})) == 167,
+        "joySetCapture, joyGetPos: JOYERR_UNPLUGGED");
+  CHECK(lo(api(m, "MMSYSTEM", "joyReleaseCapture", {w16(0)})) == 0, "joyReleaseCapture: nothing captured, success");
+
+  // MemManInfo: the arena, no swap file.
+  m.rt.wr32(d + 0x1C0, 0x2A);
+  CHECK(lo(api(m, "TOOLHELP", "MemManInfo", {l16(d + 0x1C0)})) == 1, "MemManInfo: TRUE");
+  const uint32_t total = m.rt.rd32(d + 0x1C0 + 0x1C), free_pages = m.rt.rd32(d + 0x1C0 + 0x18);
+  CHECK(m.rt.rd16(d + 0x1C0 + 0x28) == 4096 && total == m.rt.arena().size() / 4096 && free_pages <= total &&
+            free_pages == m.rt.arena().bytes_free() / 4096 && m.rt.rd32(d + 0x1C0 + 0x24) == 0 &&
+            m.rt.rd32(d + 0x1C0 + 4) == m.rt.arena().largest_free(),
+        "MemManInfo: 4 KB pages, the arena's size and free pages, no swap file");
+  m.rt.wr32(d + 0x1C0, 0x28);
+  CHECK(lo(api(m, "TOOLHELP", "MemManInfo", {l16(d + 0x1C0)})) == 0, "MemManInfo: a wrong dwSize is FALSE");
+
+  // Installable drivers: none loads.
+  profiles16(m.rt).add_seed("C:\\WINDOWS\\SYSTEM.INI", "drivers", "joystick", "ibmjoy.drv");
+  CHECK(lo(api(m, "USER", "OpenDriver", {l16(str(0x200, "joystick")), l16(0), l16(0)})) == 0 &&
+            lo(api(m, "USER", "OpenDriver", {l16(str(0x200, "nothing")), l16(0), l16(0)})) == 0,
+        "OpenDriver: NULL, with or without a SYSTEM.INI line");
+  CHECK(api(m, "USER", "SendDriverMessage", {w16(0), w16(0x902), l16(0), l16(0)}) == 0 &&
+            api(m, "USER", "CloseDriver", {w16(0), l16(0), l16(0)}) == 0,
+        "SendDriverMessage, CloseDriver on no driver: 0");
+
+  // SetCursorPos: the emulated cursor, inside the screen or ClipCursor's rectangle.
+  api(m, "USER", "SetCursorPos", {w16(10), w16(20)});
+  api(m, "USER", "GetCursorPos", {l16(d + 0x220)});
+  CHECK(m.rt.rd16(d + 0x220) == 10 && m.rt.rd16(d + 0x222) == 20, "GetCursorPos reports SetCursorPos's position");
+  api(m, "USER", "SetCursorPos", {w16(1000), w16(uint16_t(-5))});
+  api(m, "USER", "GetCursorPos", {l16(d + 0x220)});
+  CHECK(m.rt.rd16(d + 0x220) == 63 && m.rt.rd16(d + 0x222) == 0, "kept on the screen (%d, %d)",
+        int16_t(m.rt.rd16(d + 0x220)), int16_t(m.rt.rd16(d + 0x222)));
+  m.rt.wr16(d + 0x230, 5), m.rt.wr16(d + 0x232, 6), m.rt.wr16(d + 0x234, 9), m.rt.wr16(d + 0x236, 8);
+  api(m, "USER", "ClipCursor", {l16(d + 0x230)});
+  api(m, "USER", "SetCursorPos", {w16(0), w16(30)});
+  api(m, "USER", "GetCursorPos", {l16(d + 0x220)});
+  CHECK(m.rt.rd16(d + 0x220) == 5 && m.rt.rd16(d + 0x222) == 7, "kept in ClipCursor's rectangle");
+  api(m, "USER", "ClipCursor", {l16(0)});
+
+  // SetClassWord on a registered class (GCW_STYLE, GCW_HCURSOR).
+  const uint32_t cls = str(0x240, "SEVENCLS");
+  for (uint32_t i = 0; i < 26; i += 2) m.rt.wr16(d + 0x280 + i, 0);
+  m.rt.wr16(d + 0x280, 0x0003);  // WNDCLASS.style
+  m.rt.wr32(d + 0x280 + 22, cls);
+  CHECK(lo(api(m, "USER", "RegisterClass", {l16(d + 0x280)})), "RegisterClass");
+  const uint16_t w = uint16_t(api(m, "USER", "CreateWindow", {l16(cls), l16(cls), l16(0), w16(0), w16(0), w16(10),
+                                                                w16(10), w16(0), w16(0), w16(0), l16(0)}));
+  CHECK(w != 0, "CreateWindow");
+  CHECK(lo(api(m, "USER", "SetClassWord", {w16(w), w16(uint16_t(-26)), w16(0x0008)})) == 3 &&
+            lo(api(m, "USER", "GetClassWord", {w16(w), w16(uint16_t(-26))})) == 8,
+        "SetClassWord(GCW_STYLE): the old style back, the new one kept");
+  CHECK(lo(api(m, "USER", "SetClassWord", {w16(w), w16(uint16_t(-12)), w16(0x1234)})) == 0 &&
+            lo(api(m, "USER", "GetClassWord", {w16(w), w16(uint16_t(-12))})) == 0x1234 &&
+            lo(api(m, "USER", "SetClassWord", {w16(w), w16(uint16_t(-2)), w16(1)})) == 0 &&
+            lo(api(m, "USER", "SetClassWord", {w16(0x7777), w16(uint16_t(-26)), w16(1)})) == 0,
+        "SetClassWord(GCW_HCURSOR); another index or no window: 0");
+
+  // An application task's window created hidden and then shown is all
+  // invalid: UpdateWindow sends WM_PAINT (the player's start), once.
+  std::vector<uint16_t> msgs;
+  Shim16Entry& vp = m.rt.shims().add("TESTCB", 7, "VIEWPROC", Conv16::pascal_, false, 10, [&](Call16& c) {
+    c.w();
+    msgs.push_back(c.w());
+    c.w();
+    c.l();
+    c.ret32(0);
+  });
+  const uint32_t vcls = str(0x2A0, "VIEWCLS");
+  for (uint32_t i = 0; i < 26; i += 2) m.rt.wr16(d + 0x280 + i, 0);
+  m.rt.wr32(d + 0x280 + 2, m.rt.thunk_far(vp));
+  m.rt.wr32(d + 0x280 + 22, vcls);
+  api(m, "USER", "RegisterClass", {l16(d + 0x280)});
+  user16_set_app_task(m.rt, true);
+  const uint16_t vw = uint16_t(api(m, "USER", "CreateWindow", {l16(vcls), l16(vcls), l16(0x83000000), w16(0), w16(0),
+                                                                 w16(10), w16(10), w16(0), w16(0), w16(0), l16(0)}));
+  msgs.clear();
+  api(m, "USER", "UpdateWindow", {w16(vw)});
+  CHECK(msgs.empty(), "hidden: no WM_PAINT");
+  api(m, "USER", "ShowWindow", {w16(vw), w16(SW_SHOW)});
+  api(m, "USER", "UpdateWindow", {w16(vw)});
+  CHECK(std::count(msgs.begin(), msgs.end(), uint16_t(WM_PAINT)) == 1, "shown: UpdateWindow sends WM_PAINT (%zu)",
+        msgs.size());
+  api(m, "USER", "DestroyWindow", {w16(vw)});
+  user16_set_app_task(m.rt, false);
+
+  // GetViewportOrg and DPtoLP.
+  const uint16_t hdc = gdi16_screen_dc(m.rt, user16_saver_window(m.rt));
+  api(m, "GDI", "SetViewportOrg", {w16(hdc), w16(10), w16(20)});
+  CHECK(api(m, "GDI", "GetViewportOrg", {w16(hdc)}) == ((20u << 16) | 10), "GetViewportOrg: SetViewportOrg's");
+  m.rt.wr16(d + 0x2C0, 15), m.rt.wr16(d + 0x2C2, 25), m.rt.wr16(d + 0x2C4, 10), m.rt.wr16(d + 0x2C6, 20);
+  CHECK(lo(api(m, "GDI", "DPtoLP", {w16(hdc), l16(d + 0x2C0), w16(2)})) == 1 && m.rt.rd16(d + 0x2C0) == 5 &&
+            m.rt.rd16(d + 0x2C2) == 5 && m.rt.rd16(d + 0x2C4) == 0 && m.rt.rd16(d + 0x2C6) == 0,
+        "DPtoLP: device points less the viewport origin, in place");
+  api(m, "GDI", "SetViewportOrg", {w16(hdc), w16(0), w16(0)});
+
+  // A window of a program the host stands in for: found, no instance, sends return 0.
+  const uint16_t hw = user16_host_window(m.rt, "Host Class", "Host Title", WS_POPUP);
+  CHECK(lo(api(m, "USER", "FindWindow", {l16(str(0x300, "Host Class")), l16(str(0x340, "Host Title"))})) == hw &&
+            lo(api(m, "USER", "GetWindowWord", {w16(hw), w16(uint16_t(-6))})) == 0 &&
+            api(m, "USER", "SendMessage", {w16(hw), w16(0x783), w16(1), l16(0)}) == 0,
+        "user16_host_window: FindWindow finds it, GWW_HINSTANCE 0, SendMessage 0");
+
+  // Another task's sends: at the app task's PeekMessage, not re-entered.
+  int received = 0;
+  user16_set_app_task(m.rt, true);
+  user16_set_receive_hook(m.rt, [&] {
+    received++;
+    api(m, "USER", "PeekMessage", {l16(d + 0x380), w16(0), w16(0), w16(0), w16(0)});
+  });
+  api(m, "USER", "PeekMessage", {l16(d + 0x380), w16(0), w16(0), w16(0), w16(0)});
+  CHECK(received == 1, "the receive hook runs at PeekMessage, once (%d)", received);
+  user16_set_receive_hook(m.rt, nullptr);
+  user16_set_app_task(m.rt, false);
+  api(m, "USER", "PeekMessage", {l16(d + 0x380), w16(0), w16(0), w16(0), w16(0)});
+  CHECK(received == 1, "none once it is gone");
+
+  // An application task that takes the input (user16_set_app_input): a key
+  // to its shown window (no focus set), a click to the window under it in
+  // its client coordinates; off, the saver window's. Its end
+  // (user16_end_task): its windows, class, timers and queued messages go,
+  // the saver window's stay.
+  {
+    user16_set_app_task(m.rt, true);
+    const uint32_t acls = str(0x3C0, "APPCLS");
+    for (uint32_t i = 0; i < 26; i += 2) m.rt.wr16(d + 0x280 + i, 0);
+    m.rt.wr32(d + 0x280 + 2, m.rt.thunk_far(vp));
+    m.rt.wr16(d + 0x280 + 10, 0x3333);
+    m.rt.wr32(d + 0x280 + 22, acls);
+    api(m, "USER", "RegisterClass", {l16(d + 0x280)});
+    const uint16_t aw = uint16_t(api(m, "USER", "CreateWindow", {l16(acls), l16(acls), l16(0x83000000), w16(0x8000),
+                                                                   w16(0x8000), w16(0x8000), w16(0x8000), w16(0),
+                                                                   w16(0), w16(0x3333), l16(0)}));
+    api(m, "USER", "ShowWindow", {w16(aw), w16(SW_SHOW)});
+    m.rt.wr16(d + 0x3E0, 0), m.rt.wr16(d + 0x3E2, 0), m.rt.wr16(d + 0x3E4, 0), m.rt.wr16(d + 0x3E6, 0);
+    api(m, "USER", "GetWindowRect", {w16(aw), l16(d + 0x3E0)});
+    CHECK(m.rt.rd16(d + 0x3E4) == lo(api(m, "USER", "GetSystemMetrics", {w16(SM_CXSCREEN)})) &&
+              m.rt.rd16(d + 0x3E6) == lo(api(m, "USER", "GetSystemMetrics", {w16(SM_CYSCREEN)})),
+          "an app task's WS_MAXIMIZE window with Win16's CW_USEDEFAULT covers the screen (%u x %u)", m.rt.rd16(d + 0x3E4),
+          m.rt.rd16(d + 0x3E6));
+    api(m, "USER", "SetTimer", {w16(aw), w16(5), w16(100), l16(0)});
+    auto take = [&](uint16_t* hwnd, uint16_t* msg, uint32_t* lp) {
+      bool got = lo(api(m, "USER", "PeekMessage", {l16(d + 0x380), w16(0), w16(WM_KEYFIRST), w16(WM_MOUSELAST), w16(PM_REMOVE)})) != 0;
+      *hwnd = m.rt.rd16(d + 0x380), *msg = m.rt.rd16(d + 0x382), *lp = m.rt.rd32(d + 0x386);
+      return got;
+    };
+    uint16_t hw0 = 0, msg0 = 0;
+    uint32_t lp0 = 0;
+    user16_post_input(m.rt, WM_KEYDOWN, 'K', key_lparam('K', true, false), 41);
+    CHECK(take(&hw0, &msg0, &lp0) && hw0 == user16_saver_window(m.rt) && msg0 == WM_KEYDOWN,
+          "app input off: the saver window's (%04X)", hw0);
+    user16_set_app_input(m.rt, true);
+    user16_post_input(m.rt, WM_KEYDOWN, 'K', key_lparam('K', true, false), 42);
+    CHECK(take(&hw0, &msg0, &lp0) && hw0 == aw && msg0 == WM_KEYDOWN, "a key: the task's shown window (%04X)", hw0);
+    user16_post_input(m.rt, WM_LBUTTONDOWN, MK_LBUTTON, (30u << 16) | 20, 43);
+    CHECK(take(&hw0, &msg0, &lp0) && hw0 == aw && msg0 == WM_LBUTTONDOWN && lp0 == ((30u << 16) | 20),
+          "a click: the window under it, client coordinates (%04X, %08X)", hw0, lp0);
+    user16_set_app_input(m.rt, false);
+    user16_post_message(m.rt, aw, WM_USER + 7, 0, 0);
+    Class16View cv;
+    user16_end_task(m.rt, [](uint16_t hinst, uint32_t) { return hinst == 0x3333; });
+    CHECK(!user16_window_exists(m.rt, aw) && !user16_class(m.rt, "APPCLS", &cv) &&
+              user16_window_exists(m.rt, user16_saver_window(m.rt)) &&
+              lo(api(m, "USER", "PeekMessage", {l16(d + 0x380), w16(0), w16(0), w16(0), w16(PM_REMOVE)})) == 0 &&
+              lo(api(m, "USER", "KillTimer", {w16(aw), w16(5)})) == 0,
+          "user16_end_task: the task's window, class, timer and posted message are gone; the saver window stays");
+    user16_set_app_task(m.rt, false);
+  }
+
+  // WEP(WEP_FREE_DLL) at unload, when asked for (Windows 3.1's loader).
+  char tmp[MAX_PATH], dir[MAX_PATH];
+  GetTempPathA(MAX_PATH, dir);
+  for (bool wep : {false, true}) {
+    snprintf(tmp, sizeof(tmp), "%sadw_win16_wep_%lu.dll", dir, GetCurrentProcessId());
+    const std::string img = build_ne(false, 10, 7, std::string_view(kTestResource, sizeof(kTestResource)), ds);
+    FILE* fh = fopen(tmp, "wb");
+    fwrite(img.data(), 1, img.size(), fh);
+    fclose(fh);
+    m.rt.wr16(d, 0);
+    m.rt.wr16(d + 2, 0xFFFF);
+    m.rt.modules().set_call_wep(wep);
+    uint16_t err = 0;
+    Module16* mod = m.rt.modules().load_host(tmp, &err);
+    CHECK(mod && mod->initialized, "the DLL with a WEP loads (error %u)", err);
+    if (mod) m.rt.modules().free(mod);
+    CHECK(wep ? m.rt.rd16(d) == 1 && m.rt.rd16(d + 2) == 0 : m.rt.rd16(d) == 0,
+          "WEP: %s (%u calls, argument %u)", wep ? "called once with WEP_FREE_DLL" : "not called unless asked",
+          m.rt.rd16(d), m.rt.rd16(d + 2));
+    DeleteFileA(tmp);
+  }
+  m.rt.modules().set_call_wep(false);
+}
+
 // GetKeyState's toggle bit (bit 0): Caps Lock's from the CAPS line, Num
 // Lock's from the NUMLOCK line (Final Exam starts its exam when it changes);
 // GetAsyncKeyState's bit 0 stays "pressed since the last call".
@@ -4569,6 +4825,8 @@ void test_app_task() {
           "InitTask: AX 1, BX the command line past its blank (%04X), CX pStackTop (%04X), DX nCmdShow, SI 0, DI "
           "hInstance, ES the PSP",
           m.rt.rd16(ds + 0x12), m.rt.rd16(ds + 0x14));
+    CHECK(m.rt.rd8(psp + 0x80) == 3 && m.rt.read_str(psp + 0x82) == "/s" && m.rt.rd8(psp + 0x84) == 0,
+          "InitTask: the command line a C string, the tail's CR its NUL (%02X)", m.rt.rd8(psp + 0x84));
     CHECK(m.rt.rd16(ds + 0x20) == mod->dgroup && m.rt.rd16(ds + 0x1E) == 0x440 - 4,
           "the program runs on its own stack (SS %04X SP %04X)", m.rt.rd16(ds + 0x20), m.rt.rd16(ds + 0x1E));
     CHECK(m.rt.rd16(ds + 0x0A) == 0x40 + 150 && m.rt.rd16(ds + 0x0C) == 0x440 && m.rt.rd16(ds + 0x0E) == 0x440 &&
@@ -4787,6 +5045,7 @@ int run_unit() {
   test_selector_calls();
   test_freed_selector_rule();
   test_toolhelp_walk();
+  test_seventh_level_calls();
   test_toggle_keys();
   test_dir_list_drives();
   test_configure_placement();

@@ -85,6 +85,24 @@
 //                  SCREENSAVERCONFIGUREDIALOG (its own dialog, /c)
 //     entry        "SCREENSAVERPROC"
 //     abi          "scrnsave"
+//   7th Level scenes (lane ne16; a cdcopy package's module folders, which
+//   list *.BIN: Take Your Best Shot's BESTACT\*.BIN): a 7th Level resource
+//   file (the magic "7L" 2 0, the ne16 lane's rule), data its package's
+//   Runtime Player (BESTSHOT\PLYMPTON.EXE, a program) plays. A file named
+//   for the product its header names (BESTSHOT.BIN, "BestShot": the
+//   customizer's own UI) is no scene; left out, logged.
+//     displayName  the title in its header (byte 4 the header's length, then
+//                  the product's name, NUL, the title, NUL or 0xFB and a
+//                  library's name, NUL; read strictly), else the registry's
+//                  name for the file (a name override, which never replaces
+//                  a title), else the file stem
+//     about        "" (no controls either)
+//     entry        "" (data; the player is a program, run with the scene on
+//                  its command line)
+//     abi          "7thlevel"
+//     game         true, written last, on the registry's games
+//                  (Package::games: Head Shot, Hot Shot, Line Shot); absent
+//                  on every other entry
 //   Any lane, from the registry: "screen" ("640x480"), the fixed screen every
 //   module of a package is shown at (Package::screen: Star Trek: The Screen
 //   Saver's, several of whose modules compose a fixed scene for it), written
@@ -158,11 +176,15 @@ struct CatalogModule {
   std::string same_as;                  // id of the first entry with the same md5 ("" = none)
   // The module ABI when it is not After Dark's: "intermission" for an
   // Intermission module, IMX, ASA or IMQ, "scrnsave" for a Windows 3.1
-  // screen-saver program ("" = After Dark; the JSON then has no "abi").
+  // screen-saver program, "7thlevel" for a 7th Level scene ("" = After
+  // Dark; the JSON then has no "abi").
   std::string abi;
   // The fixed screen the module is shown at, "WxH", from its package's
   // registry entry ("" = any screen; the JSON then has no "screen").
   std::string screen;
+  // A 7th Level scene that is a game too (Package::games; the JSON then has
+  // "game": true, last).
+  bool game = false;
 };
 
 // An installed package's box cover as the catalog lists it (COVERS.md §2.7).
@@ -226,6 +248,10 @@ inline constexpr char kIntermissionConfigure[] = "Configure...";
 // The name of the button a Windows 3.1 screen-saver program's own dialog is
 // behind (Control Panel's Desktop dialog's "S&etup...", without the mnemonic).
 inline constexpr char kScrnsaveSetup[] = "Setup...";
+// The ABI of a 7th Level scene, data its package's Runtime Player plays
+// (Take Your Best Shot's; named for the engine, which 7th Level's other
+// desktop products share).
+inline constexpr char k7thLevelAbi[] = "7thlevel";
 
 // The Speed control: a host control (CatalogControl::host) that the merge
 // gives each module of Package::speed_modules after its own controls, at
@@ -252,8 +278,9 @@ bool is_intermission_reader(std::string_view file_name);
 // "<package>.<base>". The package fields and md5 are filled; module_name is
 // the trimmed display name (overrides are the merge's job). Throws
 // ImportError(source_invalid) for a file that is neither PE32 nor NE nor an
-// ASA animation, or an NE the ne16 lane would refuse to run (the message is
-// the lane's reason; an IMQ named as Intermission's readers are, a reader),
+// ASA animation nor a 7th Level scene (a 7th Level program's own scene, named
+// for its product, is none), or an NE the ne16 lane would refuse to run (the
+// message is the lane's reason; an IMQ named as Intermission's readers are, a reader),
 // and adw::loader::LoaderError for a damaged image.
 CatalogModule catalog_module(const std::filesystem::path& file, const std::string& rel_path,
                              const Package* package = nullptr);
@@ -279,7 +306,7 @@ struct CatalogDoc {
 // order. Per package, its module dirs in registry order (Deluxe: AD40\*.AD
 // sorted, ENGINE\STARRYNI.AD, CLASSIC\*.AD sorted; every other package: each
 // module dir's *.AD and *.IMX — a Delrina release's also *.ASA, *.IMQ,
-// *.FLI, *.MRF and *.MSV —
+// *.FLI, *.MRF and *.MSV, an is1 package's *.SCR, a cdcopy package's *.BIN —
 // sorted together, then ENGINE's *.AD and *.IMX; never WINDOWS),
 // paths "<package root>/<dir>/<file>" whatever the directory is called now. Ids are unique (a second file with a taken id is skipped
 // and logged); name overrides apply, and an Intermission module of

@@ -3,8 +3,9 @@
 // Star Wars Screen Entertainment (LucasArts'), The Far Side Screen Saver
 // Collection, Scott Adams' Dilbert Screen Saver Collection, the Opus 'n Bill
 // Screen Saver, Opus 'n Bill: On the Road Again!, The Flintstones Screen
-// Saver Collection and Intermission 4.0 itself — and Sierra's Screen Antics:
-// Johnny Castaway, a Windows 3.1 screen-saver program.
+// Saver Collection and Intermission 4.0 itself — Sierra's Screen Antics:
+// Johnny Castaway, a Windows 3.1 screen-saver program, and 7th Level's Take
+// Your Best Shot, scenes of 7th Level's Runtime Player.
 // Registry order is the catalog's module order and the precedence order for
 // display-name disambiguation (§6); the catalog's packages list goes by
 // `released` instead.
@@ -32,6 +33,7 @@
 //   flintstones The Flintstones Screen Saver Collection
 //                                                 intermission  -> <win>\packages\flintstones\{SAVER,ENGINE}
 //   intermission Intermission 4.0                 intermission  -> <win>\packages\intermission\{SAVER,ENGINE}
+//   bestshot  Take Your Best Shot                 cdcopy        -> <win>\packages\bestshot\{BESTACT,BESTSHOT}
 //
 // Each entry carries what identifies the release (known image md5s — of one
 // image, or of every install disk of a set — and fingerprints), how to
@@ -44,7 +46,8 @@
 // A package root holds its module folders and ENGINE (never a module
 // folder; snoopy has none: Snoopy's Screen Savers are modules for an After
 // Dark already installed, and ship no engine; nor has castaway, a program
-// that is its own engine). An optional WINDOWS folder
+// that is its own engine, nor bestshot, whose player is in its BESTSHOT
+// folder beside the scenes' BESTACT). An optional WINDOWS folder
 // holds the files the original installer put in C:\WINDOWS (swse:
 // SWSE.INI); it is never a module folder either, and the 16-bit lane lays it
 // under the guest's C:\WINDOWS.
@@ -100,7 +103,8 @@ struct Fixup {
 // Package::speed_modules is); for Intermission modules the name itself
 // ("SAVER/VADER.IMX": the one SAVERINIT returns, which no resource holds);
 // for Johnny Castaway's program the name it is known by (its description
-// names it Screen Antics).
+// names it Screen Antics). For a 7th Level scene, whose own title names it,
+// the name for a scene file without a title the catalog can read.
 struct NameOverride {
   const char* module;
   const char* name;
@@ -138,10 +142,15 @@ struct SpeedModule {
 // floppy, beside the installer's own INSTALL.INS, SETUP.EXE and INSTALL.EX$,
 // which name the release with its first file; nothing is read to identify
 // it), every file it installs a loose file, the placement baked in from the
-// installer's script (no IS-script interpreter).
-enum class Recipe { tree, ad3zip, intermission, ad2kwaj, islib, is1 };
-// "tree", "ad3zip", "intermission", "ad2kwaj", "islib" or "is1" (import.json's
-// package.recipe).
+// installer's script (no IS-script interpreter). cdcopy: a CD whose
+// installer copies plain files from its folders and leaves the rest on the
+// disc for the program to read there (7th Level's Setup: Take Your Best
+// Shot), every file a loose file named by its path on the disc, the
+// installer's copies and the disc's own files the program reads baked into
+// one table; nothing is read to identify it.
+enum class Recipe { tree, ad3zip, intermission, ad2kwaj, islib, is1, cdcopy };
+// "tree", "ad3zip", "intermission", "ad2kwaj", "islib", "is1" or "cdcopy"
+// (import.json's package.recipe).
 const char* recipe_name(Recipe r);
 
 // How a loose file is stored on the install medium: as it is, compressed by
@@ -157,7 +166,8 @@ enum class Codec { plain, szdd, kwaj, is1 };
 // never installed under its own; Delrina's compressed its files under their
 // installed names; InstallShield 1's script names each one's (the name an
 // "$" file records need not be it: SCRANTIC.SC$ holds SCRANTIC.EXE,
-// installed as SCRANTIC.SCR).
+// installed as SCRANTIC.SCR). cdcopy's `from` is a path from the disc's root
+// ("BESTSHOT/PLYMPTON.EXE"), every one plain.
 struct LooseFile {
   const char* from;
   const char* to;
@@ -321,7 +331,10 @@ struct Package {
   // module folder, and every volume of the libraries the recipe reads (every
   // install disk's; disk 1's first, the fingerprint's), which must all be
   // present. is1: the module folder, and every file the recipe reads (the
-  // first, the fingerprint's), which must all be present.
+  // first, the fingerprint's), which must all be present. cdcopy: the module
+  // folder, and the disc's files whose names together are the fingerprint
+  // (paths from its root: the release's own programs and a scene), side by
+  // side; every loose file must be there too.
   const char* module_dir;
   const char* engine_dll;
   const char* folder_afi;
@@ -341,8 +354,8 @@ struct Package {
   // (the fingerprint, with required_archives[0] beside INSTALL.DAT), and the
   // files taken from outside the archives, under their installed names;
   // nullptr for a release Delrina's installer installs (delrina_installer()),
-  // every file of which is a loose file. ad2kwaj and is1: every file it
-  // installs is a loose file.
+  // every file of which is a loose file. ad2kwaj, is1 and cdcopy: every file
+  // it installs is a loose file.
   const char* install_name = nullptr;
   std::span<const LooseFile> loose_files = {};
   // ad2kwaj: the SETUP.LST [Params] WndTitle that names the package (the
@@ -386,6 +399,11 @@ struct Package {
   // listed. Intermission 4.0's alone; empty for every other release, whose
   // entries have no Speed control.
   std::span<const SpeedModule> speed_modules = {};
+  // The 7th Level scenes that are games (its installer's [Games] list: Take
+  // Your Best Shot's Head Shot, Hot Shot and Line Shot), keyed as a name
+  // override is ("BESTACT/HEADSHOT.BIN"): the catalog marks each "game"
+  // (catalog.h). Empty for every other release.
+  std::span<const char* const> games = {};
 
   bool is_deluxe() const;
   // An Intermission release installed by Delrina's own Intermission

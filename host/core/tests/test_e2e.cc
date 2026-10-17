@@ -1207,11 +1207,11 @@ TEST(capabilities_line) {
   for (const char* l : {"pe32", "ne16"})
     if (kv["configure"].find(l) != std::string::npos) CHECK(lanes.find(l) != std::string::npos);
   // abis: the union of the linked lanes' module ABIs, in lane order (pe32
-  // runs After Dark's; ne16 After Dark's, Intermission's and Windows 3.1's
-  // screen-saver programs').
+  // runs After Dark's; ne16 After Dark's, Intermission's, Windows 3.1's
+  // screen-saver programs' and 7th Level's Runtime Player scenes).
   CHECK(kv.count("abis"));
   std::string abis = (ADW_HAVE_LANE_PE32 || ADW_HAVE_LANE_NE16) ? "afterdark" : "";
-  if (ADW_HAVE_LANE_NE16) abis += ",intermission,scrnsave";
+  if (ADW_HAVE_LANE_NE16) abis += ",intermission,scrnsave,7thlevel";
   CHECK_EQ(kv["abis"], abis);
   CHECK(out.find(" abis=") > out.find("configure="));  // after configure=, before the core features
   CHECK_EQ(kv["status"], std::string("1"));

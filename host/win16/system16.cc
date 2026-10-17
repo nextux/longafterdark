@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <map>
 
 #include "adw/core/log.h"
 #include "win16/dos16.hh"
@@ -27,6 +28,8 @@
 #include "win16/modules16.hh"
 #include "win16/shim_families16.hh"
 #include "win16/sound16.hh"
+#include "win32/heap.hh"
+#include "win32/vfs.hh"
 
 namespace adw::win16 {
 
@@ -72,6 +75,108 @@ void register_system16(Runtime16& rt) {
   r.impl(M, "timeKillEvent", [](Call16& c) { c.ret(timer16_kill(c.rt, c.w()) ? 0 : kTimerrNoCanDo); });
   // The sound half: sound16.cc (sndPlaySound, waveOut, midiOut, aux, mixer, MCI).
   register_sound16(rt);
+
+  // Multimedia file I/O over DOS files (the DOS I/O procedure, MMSYSTEM's
+  // default): mmioOpen(szFilename, lpmmioinfo, dwOpenFlags) opens the file as
+  // OpenFile did — a bare name searched for in the current, Windows and System
+  // directories, MMIO_CREATE making or truncating it — and returns its HMMIO,
+  // NULL on failure (lpmmioinfo's wErrorRet, +0x0C, MMIOERR_CANNOTOPEN);
+  // MMIO_EXIST and MMIO_DELETE open nothing and return TRUE or FALSE (no
+  // mmioClose follows). MMIO_ALLOCBUF's buffer changes nothing a caller of
+  // mmioRead/Write/Seek sees. 7th Level's Runtime Player reads its scenes
+  // this way (PLYMR001's resource reader: mmioOpen(name, NULL, MMIO_ALLOCBUF)),
+  // and writes the screen it captured as a .BMP (MMIO_CREATE | MMIO_WRITE).
+  struct Mmio16 : RuntimeState16 {
+    std::map<uint16_t, uint16_t> files;  // HMMIO -> DOS handle
+    uint16_t next = 0x0100;
+  };
+  constexpr uint32_t kMmioWrite = 0x0001, kMmioReadWrite = 0x0002, kMmioCreate = 0x1000, kMmioDelete = 0x0200,
+                     kMmioExist = 0x4000;
+  constexpr uint16_t kMmioErrCannotOpen = 257;  // MMIOERR_CANNOTOPEN (MMIOERR_BASE 256 + 1)
+  r.impl(M, "mmioOpen", [](Call16& c) {
+    uint32_t name_p = c.ptr(), info = c.ptr(), flags = c.l();
+    DosFiles& d = c.rt.state<DosFiles>();
+    const std::string name = name_p ? c.rt.read_str(name_p) : std::string();
+    const std::string path = (flags & kMmioCreate) ? c.rt.vfs().full_path(name) : search_file16(c.rt, name);
+    auto fail = [&]() {
+      if (info) c.rt.wr16(info + 0x0C, kMmioErrCannotOpen);
+      trace("file16", "mmioOpen(%s, %08X): cannot open", name.c_str(), flags);
+      c.ret(0);
+    };
+    if (name.empty()) return fail();
+    if (flags & kMmioDelete) return c.ret(d.remove(path) == 0 ? 1 : 0);
+    if (flags & kMmioExist) return c.ret(d.exists(path) ? 1 : 0);
+    const int mode = (flags & kMmioReadWrite) ? 2 : (flags & kMmioWrite) ? 1 : 0;
+    const int h = d.open(path, mode, (flags & kMmioCreate) != 0);
+    if (h < 0) return fail();
+    Mmio16& m = c.rt.state<Mmio16>();
+    const uint16_t hmmio = m.next;
+    m.next += 2;
+    m.files[hmmio] = uint16_t(h);
+    if (info) c.rt.wr16(info + 0x0C, 0);
+    trace("file16", "mmioOpen(%s, %08X) -> %04X", path.c_str(), flags, hmmio);
+    c.ret(hmmio);
+  });
+  // mmioClose(hmmio, wFlags): 0, or MMSYSERR_INVALHANDLE (5).
+  r.impl(M, "mmioClose", [](Call16& c) {
+    uint16_t h = c.w();
+    c.w();
+    Mmio16& m = c.rt.state<Mmio16>();
+    auto it = m.files.find(h);
+    if (it == m.files.end()) return c.ret(5);
+    c.rt.state<DosFiles>().close(it->second);
+    m.files.erase(it);
+    c.ret(0);
+  });
+  // mmioRead/mmioWrite(hmmio, pch, cch): the bytes moved (huge buffers), -1 on an error.
+  for (bool write : {false, true}) {
+    r.impl(M, write ? "mmioWrite" : "mmioRead", [write](Call16& c) {
+      uint16_t h = c.w();
+      uint32_t buf = c.ptr();
+      int32_t n = c.sl();
+      Mmio16& m = c.rt.state<Mmio16>();
+      auto it = m.files.find(h);
+      if (it == m.files.end() || n < 0) return c.ret32(0xFFFFFFFF);
+      DosFiles& d = c.rt.state<DosFiles>();
+      int32_t r = n == 0 ? 0 : write ? d.write(it->second, buf, uint32_t(n)) : d.read(it->second, buf, uint32_t(n));
+      c.ret32(r < 0 ? 0xFFFFFFFF : uint32_t(r));
+    });
+  }
+  // mmioSeek(hmmio, lOffset, iOrigin): the new position, -1 on an error.
+  r.impl(M, "mmioSeek", [](Call16& c) {
+    uint16_t h = c.w();
+    int32_t off = c.sl();
+    uint16_t origin = c.w();
+    Mmio16& m = c.rt.state<Mmio16>();
+    auto it = m.files.find(h);
+    if (it == m.files.end() || origin > 2) return c.ret32(0xFFFFFFFF);
+    int64_t p = c.rt.state<DosFiles>().seek(it->second, off, origin);
+    c.ret32(p < 0 ? 0xFFFFFFFF : uint32_t(p));
+  });
+
+  // Joysticks: none plugged in. joySetCapture and joyGetPos answer
+  // JOYERR_UNPLUGGED, what MMSYSTEM told a program on a machine without one
+  // (7th Level's Runtime Player tries sticks 0 and 1 and plays without either:
+  // 1:9E08); joyReleaseCapture with nothing captured succeeds; joyGetNumDevs
+  // finds no device.
+  constexpr uint16_t kJoyErrUnplugged = 167;  // JOYERR_BASE 160 + 7
+  r.impl(M, "joyGetNumDevs", [](Call16& c) { c.ret(0); });
+  r.impl(M, "joySetCapture", [](Call16& c) {
+    c.w();
+    c.w();
+    c.w();
+    c.w();
+    c.ret(kJoyErrUnplugged);
+  });
+  r.impl(M, "joyGetPos", [](Call16& c) {
+    c.w();
+    c.ptr();
+    c.ret(kJoyErrUnplugged);
+  });
+  r.impl(M, "joyReleaseCapture", [](Call16& c) {
+    c.w();
+    c.ret(0);
+  });
 
   // ---- WIN87EM: __fpMath (BX = function) ----
   // With OSFIXUPs left as real x87 opcodes nothing calls the emulator's
@@ -167,6 +272,28 @@ void register_system16(Runtime16& rt) {
     c.ret(1);
   });
   // ---- TOOLHELP ----
+  // MemManInfo(lpInfo): the memory manager's picture of memory in 4 KB pages
+  // (MEMMANINFO, dwSize 0x2A): here the arena is all of it, physical memory
+  // with no swap file — dwTotalPages and dwTotalLinearSpace its size,
+  // dwFreePages, dwMaxPagesAvailable/Lockable, dwTotalUnlockedPages and
+  // dwFreeLinearSpace its free bytes, dwLargestFreeBlock (bytes) its largest
+  // free block, dwSwapFilePages 0 —, the numbers GetFreeSpace and
+  // GlobalCompact report. FALSE when dwSize is not 0x2A. 7th Level's Runtime
+  // Player (1:73B2) weighs free pages and GetFreeSpace against what a scene
+  // needs, and with less than 3.4 MB plays it in its low-memory mode.
+  r.impl("TOOLHELP", "MemManInfo", [](Call16& c) {
+    uint32_t p = c.ptr();
+    if (!p || c.rt.rd32(p) != 0x2A) return c.ret(0);
+    const win32::GuestHeap& a = c.rt.arena();
+    const uint32_t total = a.size() / 4096, free_pages = a.bytes_free() / 4096;
+    c.rt.wr32(p + 0x04, a.largest_free());
+    for (uint32_t off : {0x08u, 0x0Cu, 0x14u, 0x18u, 0x20u}) c.rt.wr32(p + off, free_pages);
+    c.rt.wr32(p + 0x10, total);
+    c.rt.wr32(p + 0x1C, total);
+    c.rt.wr32(p + 0x24, 0);
+    c.rt.wr16(p + 0x28, 4096);
+    c.ret(1);
+  });
   // GlobalEntryModule(lpGlobal, hModule, wSeg): ADTOOL's BADTOOLSTUFF /
   // BADTOOLUNSTUFF walk segments 1..99 of a module and save/restore the
   // GT_DATA ones (the module's non-automatic data segments) by

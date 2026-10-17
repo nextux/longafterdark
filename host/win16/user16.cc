@@ -68,7 +68,9 @@
 #include <array>
 #include <cstring>
 #include <deque>
+#include <functional>
 #include <map>
+#include <set>
 
 #include "adw/core/log.h"
 #include "win16/dialogs16.hh"
@@ -77,6 +79,7 @@
 #include "win16/input16.hh"
 #include "win16/modules16.hh"
 #include "win16/shim_families16.hh"
+#include "win32/ini_store.hh"
 #include "win32/vfs.hh"
 
 namespace adw::win16 {
@@ -199,13 +202,23 @@ struct UserState : RuntimeState16 {
   uint16_t progman = 0;  // the synthetic Program Manager, once the desktop exists
   // An application task's message loop (user16_set_app_task).
   bool app_task = false;
+  // Its windows take the input messages (user16_set_app_input).
+  bool app_input = false;
   uint64_t waits = 0;  // GetMessage/WaitMessage waits that ended a frame or moved time on
   // The cursor's emulated state (never the host's): SetCursor's handle,
-  // ShowCursor's count, ClipCursor's rectangle.
+  // ShowCursor's count, ClipCursor's rectangle, SetCursorPos's position
+  // (GetCursorPos's until the next input line: cursor_seq).
   uint16_t cursor = 0;
   bool clipped = false;
   RECT16 clip{0, 0, 0, 0};
+  bool cursor_set = false;
+  POINT16 cursor_at{0, 0};
+  uint64_t cursor_seq = 0;
   std::string last_box;  // the last MessageBox's caption and text (user16_last_message_box)
+  // Another task's sends, received at the app task's GetMessage, PeekMessage
+  // and WaitMessage (user16_set_receive_hook).
+  std::function<void()> receive_hook;
+  bool in_receive_hook = false;
 };
 
 UserState& us(Runtime16& rt) {
@@ -856,6 +869,20 @@ uint16_t user16_saver_window(Runtime16& rt) {
   return s.saver;
 }
 
+uint16_t user16_host_window(Runtime16& rt, const std::string& cls, const std::string& title, uint32_t style) {
+  UserState& s = us(rt);
+  Wnd16 w;
+  w.cls = cls;
+  w.title = title;
+  w.style = style;
+  w.visible = (style & WS_VISIBLE) != 0;
+  const uint16_t h = s.next_hwnd;
+  s.next_hwnd += 4;
+  s.windows[h] = w;
+  trace("user16", "host window %04X: class \"%s\", \"%s\", style %08X", h, cls.c_str(), title.c_str(), style);
+  return h;
+}
+
 void user16_own_dc(Runtime16& rt, uint16_t hwnd) {
   UserState& s = us(rt);
   auto it = s.windows.find(hwnd);
@@ -893,10 +920,42 @@ bool user16_keyboard_hooks(Runtime16& rt, uint16_t vk, uint32_t lparam, uint64_t
   return r != 0;
 }
 
+// Where an application task that takes input (user16_set_app_input) gets an
+// input message, as Windows 3.1 sent it: a key to the focus window (else the
+// active window, else the last-made visible top-level window: the one
+// ShowWindow activated); a mouse message to the capture window, else the
+// last-made visible top-level window under the cursor — with lParam in its
+// client coordinates. 0: none of its windows (the saver window takes it).
+uint16_t app_input_window(UserState& s, uint16_t msg, uint32_t* lparam) {
+  auto live = [&](uint16_t h) { return h && h != s.saver && h != s.desktop && s.windows.count(h) ? h : uint16_t(0); };
+  const bool mouse = msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST;
+  const int x = int16_t(*lparam & 0xFFFF), y = int16_t(*lparam >> 16);
+  uint16_t h = mouse ? live(s.capture) : live(s.focus) ? s.focus : live(s.active);
+  for (auto it = s.windows.rbegin(); it != s.windows.rend() && !h; ++it) {
+    const Wnd16& w = it->second;
+    if (live(it->first) && w.proc && w.visible && !(w.style & WS_CHILD) &&
+        (!mouse || (x >= w.rect.left && x < w.rect.right && y >= w.rect.top && y < w.rect.bottom))) {
+      h = it->first;
+    }
+  }
+  if (!mouse) return h;
+  if (h) {
+    const RECT& r = s.windows[h].rect;
+    *lparam = (uint32_t(uint16_t(y - r.top)) << 16) | uint16_t(x - r.left);
+  }
+  return h;
+}
+
 void user16_post_input(Runtime16& rt, uint16_t msg, uint16_t wparam, uint32_t lparam, uint64_t seq) {
   UserState& s = us(rt);
   uint16_t saver = user16_saver_window(rt);
-  s.input.push_back({saver, msg, wparam, lparam, seq});
+  const uint16_t app = s.app_input ? app_input_window(s, msg, &lparam) : 0;
+  s.input.push_back({app ? app : saver, msg, wparam, lparam, seq});
+  if (app) {
+    trace("input16", "input seq %llu posted to the task's window %04X: msg %04X, %04X, %08X", (unsigned long long)seq, app,
+          msg, wparam, lparam);
+    return;
+  }
   trace("input16", "input seq %llu posted to the saver window: msg %04X, %04X, %08X", (unsigned long long)seq, msg,
         wparam, lparam);
 }
@@ -940,10 +999,84 @@ bool user16_window_exists(Runtime16& rt, uint16_t hwnd) { return hwnd && us(rt).
 
 void user16_set_app_task(Runtime16& rt, bool on) { us(rt).app_task = on; }
 
+void user16_set_app_input(Runtime16& rt, bool on) { us(rt).app_input = on; }
+
+bool user16_cursor_shown(Runtime16& rt) { return us(rt).cursor_count >= 0; }
+
+void user16_end_task(Runtime16& rt, const std::function<bool(uint16_t hinst, uint32_t proc)>& owned) {
+  UserState& s = us(rt);
+  size_t windows = 0, classes = 0, timers = 0, hooks = 0, msgs = 0;
+  std::set<uint16_t> gone;
+  for (auto it = s.windows.begin(); it != s.windows.end();) {
+    if (it->first != s.saver && it->first != s.desktop && owned(it->second.hinst, it->second.proc)) {
+      if (it->second.own_dc) rt.state<Gdi16>().release_dc(it->second.own_dc);
+      gone.insert(it->first);
+      it = s.windows.erase(it);
+      windows++;
+    } else {
+      ++it;
+    }
+  }
+  for (auto it = s.classes.begin(); it != s.classes.end();) {
+    if (owned(it->second.hinst, it->second.proc)) {
+      it = s.classes.erase(it);
+      classes++;
+    } else {
+      ++it;
+    }
+  }
+  const size_t t0 = s.timers.size(), h0 = s.hooks.size();
+  s.timers.erase(std::remove_if(s.timers.begin(), s.timers.end(),
+                                [&](const Timer16& t) { return gone.count(t.hwnd) || (t.proc && owned(0, t.proc)); }),
+                 s.timers.end());
+  s.hooks.erase(std::remove_if(s.hooks.begin(), s.hooks.end(), [&](const Hook16& k) { return owned(0, k.proc); }),
+                s.hooks.end());
+  timers = t0 - s.timers.size();
+  hooks = h0 - s.hooks.size();
+  for (std::deque<Msg16>* q : {&s.queue, &s.input}) {
+    const size_t q0 = q->size();
+    q->erase(std::remove_if(q->begin(), q->end(),
+                            [&](const Msg16& m) { return (m.hwnd && gone.count(m.hwnd)) || (!m.hwnd && !m.seq); }),
+             q->end());
+    msgs += q0 - q->size();
+  }
+  s.host_posted = uint32_t(std::count_if(s.queue.begin(), s.queue.end(), [](const Msg16& m) { return m.host; }));
+  for (uint16_t* h : {&s.focus, &s.active, &s.capture}) {
+    if (gone.count(*h)) *h = 0;
+  }
+  trace("user16", "the task ended: %zu window(s), %zu class(es), %zu timer(s), %zu hook(s), %zu message(s) went with it",
+        windows, classes, timers, hooks, msgs);
+}
+
 void user16_post_message(Runtime16& rt, uint16_t hwnd, uint16_t msg, uint16_t wparam, uint32_t lparam) {
   us(rt).queue.push_back({hwnd, msg, wparam, lparam});
   trace("user16", "posted msg %04X (%04X, %08X) to %04X for the guest", msg, wparam, lparam, hwnd);
 }
+
+void user16_set_receive_hook(Runtime16& rt, std::function<void()> hook) { us(rt).receive_hook = std::move(hook); }
+
+uint32_t user16_send_message(Runtime16& rt, uint16_t hwnd, uint16_t msg, uint16_t wparam, uint32_t lparam) {
+  trace("user16", "host sends msg %04X (%04X, %08X) to %04X", msg, wparam, lparam, hwnd);
+  return send(rt, hwnd, msg, wparam, lparam);
+}
+
+namespace {
+// Where the app task receives another task's sends (user16_set_receive_hook):
+// its GetMessage, PeekMessage and WaitMessage, before they look at the queue.
+void receive_sent(Runtime16& rt) {
+  UserState& s = us(rt);
+  if (!s.app_task || !s.receive_hook || s.in_receive_hook) return;
+  s.in_receive_hook = true;
+  try {
+    std::function<void()> hook = s.receive_hook;
+    hook();
+  } catch (...) {
+    s.in_receive_hook = false;
+    throw;
+  }
+  s.in_receive_hook = false;
+}
+}  // namespace
 
 std::string user16_last_message_box(Runtime16& rt) { return us(rt).last_box; }
 
@@ -1053,8 +1186,10 @@ void register_user16(Runtime16& rt) {
   r.impl(U, "GetCursorPos", [](Call16& c) {
     uint32_t p = c.ptr();
     const InputState& in = c.rt.input();
-    POINT16 pt = in.mouse_seen ? POINT16{int16_t(in.mouse_x), int16_t(in.mouse_y)}
-                               : POINT16{int16_t(screen_w(c.rt) / 2), int16_t(screen_h(c.rt) / 2)};
+    const UserState& s = us(c);
+    POINT16 pt = s.cursor_set && s.cursor_seq == in.input_seq ? s.cursor_at
+                 : in.mouse_seen ? POINT16{int16_t(in.mouse_x), int16_t(in.mouse_y)}
+                                 : POINT16{int16_t(screen_w(c.rt) / 2), int16_t(screen_h(c.rt) / 2)};
     write16(c.rt, p, pt);
   });
   r.impl(U, "GetMessagePos", [](Call16& c) {
@@ -1086,6 +1221,19 @@ void register_user16(Runtime16& rt) {
     uint32_t p = c.ptr();
     UserState& s = us(c);
     wrect(c, p, s.clipped ? s.clip : RECT16{0, 0, int16_t(screen_w(c.rt)), int16_t(screen_h(c.rt))});
+  });
+  // SetCursorPos(x, y): moves the emulated cursor, kept inside ClipCursor's
+  // rectangle (else the screen) as Windows kept it; GetCursorPos reports it
+  // until the next input line. The host's cursor never moves.
+  r.impl(U, "SetCursorPos", [](Call16& c) {
+    int16_t x = c.sw(), y = c.sw();
+    UserState& s = us(c);
+    const RECT16 b = s.clipped ? s.clip : RECT16{0, 0, int16_t(screen_w(c.rt)), int16_t(screen_h(c.rt))};
+    s.cursor_at = POINT16{std::clamp<int16_t>(x, b.left, int16_t(std::max<int>(b.left, b.right - 1))),
+                          std::clamp<int16_t>(y, b.top, int16_t(std::max<int>(b.top, b.bottom - 1)))};
+    s.cursor_set = true;
+    s.cursor_seq = c.rt.input().input_seq;
+    trace("user16", "SetCursorPos(%d, %d): emulated state only", x, y);
   });
   // InitApp(hInstance): the task's message queue (USER made it here): there.
   r.impl(U, "InitApp", [](Call16& c) {
@@ -1475,6 +1623,16 @@ void register_user16(Runtime16& rt) {
     wn.visible = style & WS_VISIBLE;
     if (x == int16_t(CW_USEDEFAULT)) x = 0, y = 0;
     if (w == int16_t(CW_USEDEFAULT)) w = int16_t(screen_w(c.rt)), h = int16_t(screen_h(c.rt));
+    // An application task's top-level window as Windows 3.1 placed it:
+    // Win16's CW_USEDEFAULT (0x8000) at 0,0 with the screen's size, and a
+    // WS_MAXIMIZE one over the whole screen (7th Level's Runtime Player).
+    if (s.app_task && !(style & WS_CHILD)) {
+      if (x == int16_t(0x8000)) x = 0, y = 0;
+      if (w == int16_t(0x8000) || (style & WS_MAXIMIZE)) {
+        if (style & WS_MAXIMIZE) x = 0, y = 0;
+        w = int16_t(screen_w(c.rt)), h = int16_t(screen_h(c.rt));
+      }
+    }
     RECT pr{0, 0, 0, 0};
     if (Wnd16* p = wnd(c, parent); p && (style & WS_CHILD)) pr = p->rect;
     wn.rect = RECT{pr.left + x, pr.top + y, pr.left + x + w, pr.top + y + h};
@@ -1534,6 +1692,10 @@ void register_user16(Runtime16& rt) {
     Wnd16* w = wnd(c, h);
     bool was = w && w->visible;
     if (w) w->visible = cmd != SW_HIDE;
+    // An application task's window that appears is all invalid, as Windows
+    // made it: UpdateWindow or GetMessage brings its WM_PAINT (7th Level's
+    // Runtime Player creates its window hidden and shows it).
+    if (w && !was && w->visible && us(c).app_task) w->invalid = w->erase = true;
     c.ret_bool(was);
   });
   r.impl(U, "MoveWindow", [](Call16& c) {
@@ -1784,6 +1946,25 @@ void register_user16(Runtime16& rt) {
         return c.ret(0);
     }
   });
+  // SetClassWord(hwnd, index, value): sets the window class's GCW_* field
+  // and returns what it was (0 for an index it has no field for). 7th Level's
+  // Runtime Player sets its VIEW_CLASS's GCW_STYLE and GCW_HCURSOR.
+  r.impl(U, "SetClassWord", [](Call16& c) {
+    uint16_t h = c.w();
+    int16_t i = c.sw();
+    uint16_t v = c.w();
+    Wnd16* w = wnd(c, h);
+    if (!w) return c.ret(0);
+    auto it = us(c).classes.find(upper16(w->cls));
+    if (it == us(c).classes.end()) return c.ret(0);
+    Class16& k = it->second;
+    uint16_t* f = i == -14 ? &k.icon : i == -12 ? &k.cursor : i == -10 ? &k.background : i == -16 ? &k.hinst
+                  : i == -26 ? &k.style : nullptr;
+    if (!f) return c.ret(0);
+    const uint16_t old = *f;
+    *f = v;
+    c.ret(old);
+  });
   r.impl(U, "GetWindowPlacement", [](Call16& c) {
     uint16_t h = c.w();
     uint32_t p = c.ptr();
@@ -1923,11 +2104,13 @@ void register_user16(Runtime16& rt) {
     uint32_t out = c.ptr();
     uint16_t hwnd = c.w(), lo = c.w(), hi = c.w();
     uint16_t flags = c.w();
+    receive_sent(c.rt);
     c.ret_bool(take(c, out, hwnd, lo, hi, flags & PM_REMOVE));
   });
   r.impl(U, "GetMessage", [take](Call16& c) {
     uint32_t out = c.ptr();
     uint16_t hwnd = c.w(), lo = c.w(), hi = c.w();
+    receive_sent(c.rt);
     while (!take(c, out, hwnd, lo, hi, true)) {
       if (!us(c).app_task) {
         // Nothing queued and nothing can arrive while we wait: a WM_NULL.
@@ -1943,6 +2126,7 @@ void register_user16(Runtime16& rt) {
   // WaitMessage: an application task waits until a message is there
   // (app_wait); for anything else it returns at once, as GetMessage's WM_NULL does.
   r.impl(U, "WaitMessage", [](Call16& c) {
+    receive_sent(c.rt);
     while (us(c).app_task && !app_message_ready(c.rt)) app_wait(c.rt);
   });
   // WM_KEYDOWN/WM_SYSKEYDOWN → WM_CHAR/WM_SYSCHAR ahead of everything else
@@ -2355,6 +2539,39 @@ void register_user16(Runtime16& rt) {
     uint16_t bmp = gdi16_bitmap_from_dib(c.rt, 0, uint32_t(b->sel) << 16);
     c.rt.global().free(hb);
     c.ret(bmp);
+  });
+
+  // ---- installable drivers ----
+  // OpenDriver(lpDriverName, lpSectionName, lParam2): Windows 3.1 looked the
+  // name up in SYSTEM.INI's [drivers] (or the section named), loaded that
+  // driver and sent it DRV_LOAD, DRV_ENABLE and DRV_OPEN; no line, no driver:
+  // NULL. Installable drivers do not load here (the multimedia devices are
+  // the host's: sound16.cc), so every name answers NULL, as for a machine
+  // without that driver — 7th Level's Runtime Player opens "joystick" for its
+  // calibration (1:6C58) and, as on a PC with no joystick driver, skips it.
+  // SendDriverMessage and CloseDriver on no driver: 0.
+  r.impl(U, "OpenDriver", [](Call16& c) {
+    uint32_t name_p = c.ptr(), section_p = c.ptr();
+    c.l();
+    const std::string name = name_p ? c.rt.read_str(name_p) : std::string();
+    const std::string section = section_p ? c.rt.read_str(section_p) : std::string("drivers");
+    std::optional<std::string> line = profiles16(c.rt).get(c.rt.options().windows_dir + "\\SYSTEM.INI", section, name);
+    trace("user16", "OpenDriver(\"%s\", [%s]): %s: NULL", name.c_str(), section.c_str(),
+          line ? ("SYSTEM.INI names " + *line + ", which does not load here").c_str() : "no such driver");
+    c.ret(0);
+  });
+  r.impl(U, "SendDriverMessage", [](Call16& c) {
+    c.w();
+    c.w();
+    c.l();
+    c.l();
+    c.ret32(0);
+  });
+  r.impl(U, "CloseDriver", [](Call16& c) {
+    c.w();
+    c.l();
+    c.l();
+    c.ret32(0);
   });
 }
 

@@ -22,7 +22,8 @@
 //      Tunes', ScreamSavers' and the Disney Collection's known images) or
 //      "files" (the Simpsons ZIP), nothing missing, every file a manifest
 //      match; the catalog lists the package's 84 / 46 / 44 / 13 / 15 / 14 /
-//      16 / 1 / 8 / 12 / 15 / 16 / 14 / 16 / 13 / 1 / 16 / 16 / 15 / 54 modules.
+//      16 / 1 / 8 / 12 / 15 / 16 / 14 / 16 / 13 / 1 / 16 / 16 / 15 / 54 / 17
+//      modules.
 //   2. Every package's other copies with other bytes (another file name: the
 //      Simpsons' second ZIP; Star Wars Screen Entertainment's Redump BIN and
 //      flat ZIP; Marvel Comics Screen Posters' ZIP of both disks' folders)
@@ -83,6 +84,8 @@ const std::map<std::string, Expect> kExpect = {
     // Road Again), the ZIP of the three floppy images (Intermission 4.0).
     {"opus", {16, "image"}},     {"opusroad", {16, "image"}}, {"flintstones", {15, "image"}},
     {"intermission", {54, "image"}},
+    // The CD (Take Your Best Shot).
+    {"bestshot", {17, "image"}},
 };
 
 // Every file of a copy: its own, then the images of further install disks.
