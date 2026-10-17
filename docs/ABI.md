@@ -724,6 +724,22 @@ nothing to deliver (`Runtime::yield_frame`) — and the next frame resumes it
 there. Deterministic headless (two runs of 900 frames of each toy give the
 same frames). An API-free stretch of `ADCALLBUDGET` instructions is a hang.
 
+**Its pace: Windows 95's `GetTickCount`.** The toys move a fixed step each
+time they are stepped (the elapsed time 0x430c70 hands 0x42dba0 is stored
+and never read), and the limiter's rate is fixed at 30 a second (`fps` =
+0x1e, written at 0x418c81 and 0x4306c4; 0x42d91a adds the ticks since the
+last call and steps once the sum reaches 33 ms, keeping the remainder). On
+Windows 95, `GetTickCount` moved only at the system timer's interrupts, the
+PIT's 1193182 Hz / 65536 = 18.2 Hz ("Windows Me/98/95: The system timer
+runs at approximately 55ms", its documentation), so the sum grew 54 or 55 ms
+at a time and the toys were stepped once per tick: about 18 times a second,
+never 30. A program's `GetTickCount` is that count (kernel32.cc, a program's
+own shim): the virtual clock rounded down to the last tick. With a 1 ms
+count the toys ran at the full 30, two thirds faster than on Windows 95
+(measured: 30.2 steps a second before, 18.3 after, in a real-time run).
+Everything else keeps the 1 ms count; After Dark's modules read
+`timeGetTime`, which Windows 95's multimedia timer kept to the millisecond.
+
 **Input.** In ghost mode nothing reaches the program: it sees an empty
 input state (`GetAsyncKeyState`, which it polls, reports no key; the
 emulated pointer never moves) and the saver ends the run on input itself.

@@ -2949,6 +2949,11 @@ screen-saver programs' and 7th Level's.
   it, at the frame's share of the modelled machine's work, and the next
   frame goes on from there; two runs give the same frames. A program that
   ends (`ExitProcess`, an unhandled exception) ends the run with exit 1.
+* **The pace.** A program's `GetTickCount` moves at Windows 95's system
+  timer ticks, 18.2 a second, as it did on Windows 95: the toys step at
+  most 30 times a second by that count, which Windows 95 held to about 18
+  (ABI.md §2.15, "Its pace"). With a count by the millisecond they had run
+  at the full 30, two thirds too fast.
 * **The mode.** Ghost mode for the screen saver, its preview and
   thumbnails, `/window`, and the living wallpaper (`ADWALLPAPER=1`,
   INTERACTION.md §4.7). With Caps Lock on in the screen saver, play:

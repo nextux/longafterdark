@@ -1313,6 +1313,17 @@ void register_kernel32_program(ShimRegistry& r) {
     ks(c.rt).error_mode = c.arg(0);
     c.ret(prev);
   });
+  r.impl(K, "GetTickCount", [](Call& c) {
+    // Windows 95's: the system timer's count, which moves only at its
+    // interrupts, the PIT's 1193182 Hz / 65536 = 18.2 Hz ("Windows Me/98/95:
+    // The system timer runs at approximately 55ms", GetTickCount's
+    // documentation). A program pacing itself by it got one step per tick:
+    // the Desktop Toys' 30 Hz limiter ran its toys about 18 times a second.
+    // After Dark modules keep the 1 ms count: they read timeGetTime, as
+    // Windows 95's multimedia timer gave it.
+    uint64_t ticks = c.rt.clock().read_us() * 1193182ull / 65536000000ull;
+    c.ret(uint32_t(VirtualClock::kBootOffsetMs + ticks * 65536000ull / 1193182ull));
+  });
   r.impl(K, "GetCurrentThread", [](Call& c) { c.ret(0xFFFFFFFE); });  // the pseudo-handle
   r.impl(K, "GetProcessVersion", [](Call& c) {
     // The Windows version the process expects (0 = this one): Windows 95's 4.0.

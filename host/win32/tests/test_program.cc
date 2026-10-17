@@ -345,6 +345,32 @@ TEST(program_kernel32) {
   CHECK_EQ(p.cstr(p.api(K, "GetCommandLineA", {})), std::string("C:\\TOYS\\toy.exe /s /t2"));
 }
 
+// GetTickCount moves at the Windows 95 system timer's interrupts (18.2 Hz,
+// 54.925 ms) for a program, and by the millisecond for everything else.
+TEST(program_get_tick_count) {
+  Program p;
+  p.clock.begin_frame();  // frame 0: virtual time 0
+  const uint32_t t0 = p.api(K, "GetTickCount", {});
+  CHECK_EQ(t0, VirtualClock::kBootOffsetMs);
+  for (int i = 0; i < 3; i++) p.clock.begin_frame();  // 50 ms: still the first tick
+  CHECK_EQ(p.api(K, "GetTickCount", {}), t0);
+  p.clock.begin_frame();  // 66.7 ms: the second tick, 54 ms on
+  CHECK_EQ(p.api(K, "GetTickCount", {}), t0 + 54);
+  for (int i = 4; i < 60; i++) p.clock.begin_frame();  // 1.0 s: 18 ticks
+  CHECK_EQ(p.api(K, "GetTickCount", {}), t0 + 988);
+
+  VirtualClock clock{VirtualClock::Mode::fixed_step, 16667};
+  RuntimeOptions o;
+  o.heap_size = 16u << 20;
+  o.call_budget = 50'000'000;
+  Runtime rt(o, clock);
+  register_all_shims(rt.shims());
+  clock.begin_frame();
+  clock.begin_frame();
+  ShimEntry& e = rt.shims().get(K, "GetTickCount");
+  CHECK_EQ(rt.call_guest(rt.shims().thunk_address(e), {}), VirtualClock::kBootOffsetMs + 16);
+}
+
 // CreateWindowExA's messages and the WH_CBT hook; ShowWindow's activation;
 // a popup with a client edge.
 TEST(program_create_window_messages) {
