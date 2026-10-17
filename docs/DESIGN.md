@@ -7,7 +7,7 @@ x86 code under emulation: it loads the *real*
 engine and the module into one emulated address space, traps every call
 they make into the operating system, and supplies that OS surface from the
 host. A Windows screen saver (`LongAfterDark.scr`) presents the frames.
-Twenty-three releases are supported (§7): After Dark 4.0 Deluxe, After Dark 10th
+Twenty-four releases are supported (§7): After Dark 4.0 Deluxe, After Dark 10th
 Anniversary, After Dark 3.2, Totally Twisted After Dark, The Simpsons
 Screen Saver, Star Trek: The Screen Saver (After Dark 2.0b), Star Trek: The
 Next Generation Screen Saver, Marvel Comics Screen Posters, The Looney Tunes
@@ -17,9 +17,10 @@ Snoopy's Screen Savers), Star Wars Screen Entertainment, Intermission 4.0,
 the Opus 'n Bill Screen Saver, Opus 'n Bill: On the Road Again!, The
 Flintstones Screen Saver Collection, The Far Side Screen Saver Collection,
 Scott Adams' Dilbert Screen Saver Collection, Sierra On-Line's Screen
-Antics: Johnny Castaway, and 7th Level's Take Your Best Shot, Monty
+Antics: Johnny Castaway, 7th Level's Take Your Best Shot, Monty
 Python's Flying Circus Desktop Pythonizer and its Limited Edition Desktop
-Extras, 470 modules in all. The seven from Star Wars
+Extras, and Viacom New Media's Beavis and Butt-head Screen Wreckers, 479
+modules in all. The seven from Star Wars
 Screen Entertainment to Dilbert are not After Dark releases: their modules
 were written for Delrina's Intermission screen saver engine (Intermission
 4.0 is the engine's own release), and speak its own protocol (ABI.md
@@ -34,7 +35,11 @@ program that started it, through a fourth (`PACKAGES.md` §7.7, ABI.md
 §3.16); so are the Desktop Pythonizer's 22 and its Desktop Extras' two,
 played by the Pythonizer's own, older player, which the scene's header
 names (the Extras have none of their own, so their entries say they
-require the Pythonizer).
+require the Pythonizer). Screen Wreckers' nine toys are one Windows 95
+program, Cyclops Software's Desktop Toys engine, `DTTY3203.EXE`, which
+the host runs whole in the 32-bit lane, the first Win32 program it runs,
+with the command line the set's screen saver gave it for a toy ("ghost
+mode"), through a fifth (`PACKAGES.md` §7.8, ABI.md §2.15).
 
 Nothing here is a reimplementation of After Dark. The engine DLLs
 (`ADXPL510.DLL`, `ADXPL300.DLL`) and Berkeley's own classic-module bridge
@@ -53,7 +58,7 @@ engine application, `INTERMIS.EXE`, as it stands in for After Dark's
 
 ## The corpus
 
-The work started from one release; the other twenty-two came later (§7,
+The work started from one release; the other twenty-three came later (§7,
 `PACKAGES.md`), and the same host runs them all. The first corpus, the PC
 side of a hybrid Mac/PC CD,
 `After Dark 4.0 Deluxe (1996)(Berkeley Systems)[Mac-PC].iso`
@@ -93,6 +98,7 @@ LongAfterDark.scr (x64)     ── spawns ──►  adhostwin.exe (x64)   one p
                                     SCRANTIC.SCR, a whole program (16-bit lane, a Windows 3.1 screen saver)
                                     PLYMPTON.EXE + PLYM*001.DLL + DISPDIB.DLL, playing a scene .BIN (16-bit lane, 7th Level)
                                     PYTHON.EXE + PYTH*001.DLL, playing a version-1 scene .BIN (16-bit lane, 7th Level)
+                                    DTTY3203.EXE, a whole Win32 program, playing a toy (32-bit lane, Desktop Toys)
 ```
 
 * **One CPU core for both lanes.** `adw::cpu` is resource_dasm's `X86Emulator`
@@ -124,7 +130,7 @@ LongAfterDark.scr (x64)     ── spawns ──►  adhostwin.exe (x64)   one p
   docs/DESIGN.md          this file
   docs/ABI.md             module/engine ABI as we verify it (our own findings)
   docs/API_SURFACE.md     every function the Deluxe disc's binaries import, counted and classified
-  docs/PACKAGES.md        the twenty-three releases: registry, import, catalog merge, lane rules (§7)
+  docs/PACKAGES.md        the twenty-four releases: registry, import, catalog merge, lane rules (§7)
   docs/INTERACTION.md     input, module buttons, per-user state, desktop seed (§8)
   docs/COVERS.md          the box-cover strip, the cover pipeline, the shared UI library (§9)
   docs/AUDIO.md           sound: census, engine, lane mappings, saver settings (§10)
@@ -306,7 +312,7 @@ drives the whole protocol with a synthetic animated, palette-cycling image
 (with `ADTESTAUDIO=1`, sound too), so front-ends can be built and tested
 without a module. `adhostwin.exe --capabilities` prints one line naming
 what the build has (`lanes=pe32,ne16 configure=pe32,ne16
-abis=afterdark,intermission,scrnsave,7thlevel status=1 state=1 seed=1 audio=1 numlock=1`,
+abis=afterdark,desktoptoys,intermission,scrnsave,7thlevel status=1 state=1 seed=1 audio=1 numlock=1`,
 where `abis` lists the module ABIs its lanes run and `numlock=1` says it
 takes the `NUMLOCK` line and `ADNUMLOCK`), which the settings dialog reads
 instead of probing a module.
@@ -510,6 +516,13 @@ leaves out, as "Coming soon", an entry whose `abi` the host's
 `"pythonizer"`): while the catalog lists no such package, a front-end
 shows the module as "Needs <requiresTitle>" where "Coming soon" would
 show, never starts it, and leaves it out of Random (INTERACTION.md §4.8).
+Since the eleventh round `abi` may be `"desktoptoys"`: a toy of Cyclops
+Software's Desktop Toys engine (Screen Wreckers'), lane `pe32`, every one
+of the nine with the same `path`, the set's program `DTTY3203.EXE`,
+`entry` `""` (the program runs whole), `screen` `"640x480"`, no buttons,
+`"game": true`, and a last field, `"hostEnv": {"ADTOY": "<n>"}`, host
+variables a front-end sets for every run of the entry, after its host
+controls' (the toy's number, 1 to 9; PACKAGES.md §6).
 
 `screen` (optional, since the seventh release, under the same `adimport
 1.3`) is a fixed screen, `"WxH"`, that the module gets whatever the display:
@@ -561,7 +574,7 @@ Each `packages[]` entry also carries `cover` (COVERS.md §2.7):
 chosen, `-` = nothing checked; the saver ignores it), `DurationMin=<n>|0` (0 = forever),
 `Scale=1.0|1.5` (the Resolution setting, 480 or 720 lines, for the other
 modules; an Intermission module, and one whose catalog entry gives a
-`screen` — Star Trek, ScreamSavers, Marvel, Johnny Castaway, the 7th Level scenes —, always gets 640×480, scaled
+`screen` — Star Trek, ScreamSavers, Marvel, Johnny Castaway, the 7th Level scenes, the Desktop Toys —, always gets 640×480, scaled
 to fit the monitor in its 4:3 shape: `scr/README.md`), `Monitors=all|primary`,
 `DifferentPerMonitor=1|0` (default 0: a rotation plays the same module on
 every monitor and switches them together; 1: each monitor has a rotation of
@@ -681,17 +694,18 @@ is, and for every user the three programs are copied together to
 
 ### 7. Packages
 
-The host runs modules from twenty-three releases: ten of Berkeley Systems'
+The host runs modules from twenty-four releases: ten of Berkeley Systems'
 After Dark, two of other companies' modules for After Dark (ScreamSavers,
 Snoopy's Screen Savers), seven for Delrina's Intermission (Intermission
 4.0 itself, LucasArts' Star Wars Screen Entertainment, and Delrina's own
 Opus 'n Bill Screen Saver, Opus 'n Bill: On the Road Again!, The
 Flintstones Screen Saver Collection, The Far Side Screen Saver Collection
 and Scott Adams' Dilbert Screen Saver Collection), Sierra On-Line's
-Screen Antics: Johnny Castaway, a Windows 3.1 screen-saver program, and
+Screen Antics: Johnny Castaway, a Windows 3.1 screen-saver program,
 three of 7th Level's, scenes of its Runtime Player: Take Your Best Shot,
 Monty Python's Flying Circus Desktop Pythonizer and its Limited Edition
-Desktop Extras.
+Desktop Extras, and Viacom New Media's Beavis and Butt-head Screen
+Wreckers, nine toys of one Windows 95 program.
 The full specification is `docs/PACKAGES.md`: registry,
 identification, extraction formats, per-package layouts, the catalog merge,
 the lane contract, and the three work packages that implement it. The
@@ -861,15 +875,30 @@ contract in brief:
   until then. The Pythonizer's program had no game mode: under Caps Lock
   every scene runs its interactive screen saver, where its three games
   are played. (`PACKAGES.md` §2, §3, §4.3, §6, §7.7; ABI.md §3.16.)
-* **Status: implemented.** All twenty-three releases import (from a disc,
+* **Desktop Toys (Screen Wreckers).** Since the eleventh round. The CD's
+  InstallShield 3 setup copied two compressed libraries, with their
+  folders, into one install folder; the importer does the same (the `is3`
+  recipe), never the set's screen saver or toy selector. All nine toys are
+  one Win32 program, `DTTY3203.EXE`: the pe32 lane knows it as a program
+  because it is an EXE (every After Dark module is a DLL), and runs it
+  whole, as the emulated PC's one Win32 process, with the command line the
+  set's screen saver gave it, `/s /t<toy - 1>` ("ghost mode"), and an
+  emulated registry seeded as the installer left it, through a fifth
+  protocol. The catalog lists the program once per toy, each entry naming
+  its toy in `hostEnv` (`ADTOY`), which the front-ends pass to the host.
+  The toy plays itself over the desktop seed and wrecks it; after Caps
+  Lock it is the player's (§8); with `ADWALLPAPER=1` it plays over the
+  wallpaper. (`PACKAGES.md` §2, §3, §4.3, §6, §7.8, §8.9; ABI.md §2.15.)
+* **Status: implemented.** All twenty-four releases import (from a disc,
   an image, a ZIP or a 7z, a folder or the Internet Archive) into
-  self-contained package roots (470 catalog modules, 73 of them `sameAs` an
+  self-contained package roots (479 catalog modules, 73 of them `sameAs` an
   earlier one). The 283 modules of the twelve After Dark releases run
   headless and deterministically, each release on its own; the 145 of the
   seven Intermission releases run through the Intermission protocol above,
-  Johnny Castaway through the screen-saver protocol, and the 41 scenes of
+  Johnny Castaway through the screen-saver protocol, the 41 scenes of
   Take Your Best Shot, the Desktop Pythonizer and its Desktop Extras
-  through the 7th Level protocol (the Extras' with the Pythonizer). The
+  through the 7th Level protocol (the Extras' with the Pythonizer), and
+  Screen Wreckers' nine toys through the pe32 lane's program mode. The
   survey-time numbers (before this work, with every AD 3.x module leaning on
   Deluxe's `ENGINE` files, and before each later release) are in
   `PACKAGES.md` §1.
@@ -892,7 +921,11 @@ modules in our host. In brief:
   game ran), and so does switching away. Star Trek: The Screen Saver's Final
   Exam is a Num Lock game: Num Lock starts its exam, and a mouse move ends
   it, the module then asking to wake the saver (its result 5, reported as
-  the status's wake).
+  the status's wake). A Desktop Toy (Screen Wreckers) can't be played in
+  its ghost mode: Caps Lock starts the program again for play, as the
+  set's toy selector started it, its status interactive and its input the
+  program's; Caps Lock off, or the program's own end, gives ghost mode
+  back (INTERACTION.md §4.4, §5.1).
 * **Host → saver status.** stdout stays frames only. Each host publishes a
   64-byte status record (interactive, cursor, rotate-ok, key-filter, wake,
   frames, and input sequence numbers) in a shared-memory section the `.scr`
@@ -938,8 +971,10 @@ modules in our host. In brief:
   module whose screen got none starts on black): the whole monitor for an After Dark module,
   the part its 640×480 frame covers for one with a screen of its own, an
   Intermission module or one whose catalog entry gives a screen (Star
-  Trek, ScreamSavers, Marvel, Johnny Castaway, the 7th Level scenes) (INTERACTION.md §8). Respawns,
-  rotations, `/p` and headless runs start black.
+  Trek, ScreamSavers, Marvel, Johnny Castaway, the 7th Level scenes, the
+  Desktop Toys) (INTERACTION.md §8). Respawns,
+  rotations, `/p` and headless runs start black. A Desktop Toy reads the
+  seed back as the desktop it wrecks.
 * **Living wallpaper** (since the ninth round, opt-in).
   `LongAfterDark.exe /wallpaper [/module …] [/random]` plays the modules on
   the Windows desktop, in a window per monitor that is a child of

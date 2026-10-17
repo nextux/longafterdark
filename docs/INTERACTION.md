@@ -34,7 +34,7 @@ into `research/win/dis`.
 | Exit gestures | Not playing: any key except Shift/Ctrl/Caps Lock/Num Lock, any click or wheel, a move past 10 px, switching away. Playing: Caps Lock toggles the game off (then any input exits), **Alt or F10 exits at once**, switching away exits. |
 | Multi-monitor | One **input owner**: the primary monitor's window. Only its host gets `KEY`/`CAPS`/`NUMLOCK`/`MOUSE`; only its status is read. The cursor is confined to it while playing. |
 | Module buttons | `adhostwin --configure <module> --button <slot> --owner <hwnd>` runs the module's own button handler; its `DialogBox*`/`MessageBox`/`GetOpenFileName` become **real** dialogs owned by the settings window, forwarding to the guest dialog procedure (§6). |
-| Host controls | Since the twenty releases a catalog control may carry `host`, the name of an environment variable of the host's: every host started for that module gets it, set to the control's value, and the value never goes out as `ADCVSET` or `SET`. The one there is: Intermission 4.0's **Speed** slider, `ADNE16IMXSPEED`, the pace of the emulated PC for a module whose speed was the PC's (§6.7). |
+| Host controls | Since the twenty releases a catalog control may carry `host`, the name of an environment variable of the host's: every host started for that module gets it, set to the control's value, and the value never goes out as `ADCVSET` or `SET`. The one there is: Intermission 4.0's **Speed** slider, `ADNE16IMXSPEED`, the pace of the emulated PC for a module whose speed was the PC's (§6.7). Since the eleventh round an entry may also fix host variables of its own, `hostEnv`: Screen Wreckers' toys, one program, each name their toy as `ADTOY` (§6.7). |
 | Module state | A per-user, per-package **writable overlay** over the guest's `C:\WINDOWS` and `C:\AFTERDRK` (`C:\SAVER` for the Intermission modules: Star Wars Screen Entertainment's and those of Delrina's own six releases) in `ADSTATE`, which the `.scr` always passes (`state\` next to `settings.ini`); without it a host keeps the overlay in memory, so headless runs stay deterministic and write nothing (§7). |
 | Desktop seed | The `.scr` captures each monitor before its windows appear, writes a delete-on-close P6 at the emulated size and passes `ADSEEDIMG` to that window's first host only (§8). |
 | Living wallpaper | Since the ninth round, opt-in: `LongAfterDark.exe /wallpaper` puts the modules on the desktop behind its icons. No input reaches them and none ends it, no game, no power request; the hosts pause while a screen saver runs, the session is locked or the display is off; every host gets `ADWALLPAPER=1` and the user's wallpaper as its seed (§4.7, §8). |
@@ -250,7 +250,8 @@ Flintstones and Intermission 4.0 has one, **Configure...**. With Take Your
 Best Shot, twenty-one releases (446 modules), it still has 196: its 17
 scenes have none. With the Desktop Pythonizer and its Desktop Extras,
 twenty-three releases (470 modules), it still has 196: their 24 scenes
-have none. Marvel's
+have none. With Screen Wreckers, twenty-four releases (479 modules), it
+still has 196: its nine toys have none. Marvel's
 thumbnails (ids 1007–1015) are children of
 the Images window (1006), so a configure script's `CLICK`, which goes to
 the dialog, can't reach them, but `PRESS 1006 <x> <y>` clicks the thumbnail
@@ -327,6 +328,7 @@ Added with the seventh release (`ABI.md` §3.9; listings in
 | `ADSEEDIMG=<spec>` | Already implemented in both lanes (`win32/display.hh`, "desktop seed"). The `.scr` now passes it (§8). | unset = black |
 | `ADCONFIG*` | Configure-mode test hooks (§6.6). | off |
 | `ADNE16IMXSPEED=<1..100>` | Since the twenty releases: the pace of the machine the ne16 lane emulates for an Intermission module, in percent of its model (`PACKAGES.md` §7.5, "Pacing"). The front ends pass the module's **Speed** control (§6.7). | 100 |
+| `ADTOY=<1..9>` | Since the eleventh round: the toy a Desktop Toys program plays (Screen Wreckers), in its toy list's order; the lane starts the program with `/t<n - 1>` (`PACKAGES.md` §7.8). The front ends pass it from the entry's catalog `hostEnv` (§6.7). | the registry's `ScrToy` + 1 (3) |
 
 ### 3.2 Command changes
 
@@ -370,10 +372,11 @@ adhostwin.exe --configure <module> --button <slot> [--owner <hwnd>] [NAME=VALUE 
   (PACKAGES.md §7.5), and, since the seventh release, `numlock=1`: the host
   takes the `NUMLOCK` line and `ADNUMLOCK` (§3.1, §3.2); with Johnny
   Castaway, `scrnsave` in `abis` (PACKAGES.md §7.6); with Take Your Best
-  Shot, `7thlevel` (PACKAGES.md §7.7). Today's line reads
+  Shot, `7thlevel` (PACKAGES.md §7.7); with Screen Wreckers,
+  `desktoptoys` (PACKAGES.md §7.8). Today's line reads
   `lanes=pe32,ne16 configure=pe32,ne16
-  abis=afterdark,intermission,scrnsave,7thlevel status=1 state=1 seed=1
-  audio=1 numlock=1`. The saver takes `numlock=1`
+  abis=afterdark,desktoptoys,intermission,scrnsave,7thlevel status=1
+  state=1 seed=1 audio=1 numlock=1`. The saver takes `numlock=1`
   exactly: `numlock=0`, another spelling or nothing means no Num Lock
   toggle.
 * `--configure`: §6.1.
@@ -557,7 +560,15 @@ while a hold is pending. The decision logic is a pure function
   interactive screen saver, Caps Lock's role in Best Shot's other scenes
   and, since the tenth round, in every scene of the Desktop Pythonizer and
   its Desktop Extras, whose three games (The Chicken Game, The Gopher
-  Game, The Pig Game) are played there (§5.2).
+  Game, The Pig Game) are played there (§5.2). Since the eleventh round
+  it holds for Screen Wreckers' toys too: Caps Lock takes the toy out of
+  ghost mode and makes it the player's, the lane ending the ghost-mode
+  program and starting it again as the set's toy selector did (the toy at
+  once), and Caps Lock off starts it in ghost mode again (`PACKAGES.md`
+  §7.8). The program's own end while it is played (Esc on its screen of
+  toys, Ctrl+Q, its EXIT) is a game's end, as a 7th Level game's is:
+  ghost mode again, not interactive, so the next key or move ends the
+  saver, until Caps Lock goes off and on (§5.1).
 * **Final Exam** (Star Trek: The Screen Saver, since the seventh release)
   is a Num Lock game: Num Lock starts the Starfleet Academy exam, whose
   answers are the number keys (the exam is interactive through the status
@@ -566,6 +577,13 @@ while a hold is pending. The decision logic is a pure function
   (result 5, §5.2): the saver ends through the status's `ADWS_WAKE`
   (`input: wake`), as After Dark 2.0 ended. **Alt** ends it at once, as any
   game.
+* **Karate Beavis** (Screen Wreckers, since the eleventh round) is played,
+  under Caps Lock, with clicks or on the numeric keypad with Num Lock on,
+  as the set's help says: 1, 4 and 7 strike low, middle and high to the
+  left, 3, 6 and 9 to the right. Num Lock is no game switch here, and
+  never ends the saver: the keypad's keys reach the program as the keys
+  the keyboard sends, `VK_NUMPAD1` and the rest only while the user's Num
+  Lock is on, as in 1996; the `NUMLOCK` lines the saver sends play no part.
 * Only the primary monitor plays; the others keep running on their own.
 
 ### 4.5 The Linux player (`scr/linux`)
@@ -723,8 +741,10 @@ them. None of the saver's rules above apply:
 * **`ADWALLPAPER=1`**, a new host variable, goes to every host the mode
   starts (every other mode passes it empty, which removes an inherited
   one; a catalog host control may not name it, §6.7). A 7th Level scene
-  runs its living-wallpaper form with it (PACKAGES.md §7.7); every other
-  module ignores it and runs as in the screen saver.
+  runs its living-wallpaper form with it (PACKAGES.md §7.7); a Desktop
+  Toy plays in ghost mode, as in the screen saver, and never plays for
+  the user (PACKAGES.md §7.8); every other module ignores it and runs as
+  in the screen saver.
 * **Every host is seeded with the wallpaper** (§8): the first, each
   rotation's and each respawn's, never with a capture of the screen.
 * **No power request.** The screen saver, display sleep and the lock come
@@ -808,6 +828,27 @@ covered by unit tests of their logic only.
   rotate-ok = bit 2; source 1; key-filter 0; wake if the guest posted
   `WM_CLOSE`/`SC_CLOSE` to `host_window()`.
 * Scaled small screens (§9.2): mouse coordinates scale with the guest display.
+* **A Win32 program** (Screen Wreckers' toys, since the eleventh round;
+  `PACKAGES.md` §7.8, ABI.md §2.15) is no module and has no block: in
+  ghost mode (the screen saver, `/p`, `/window`, and with `ADWALLPAPER=1`
+  always) nothing reaches it, `GetAsyncKeyState`, which it polls, reports
+  no key, the emulated pointer never moves, and the saver ends the run on
+  input itself. With Caps Lock on (the `CAPS` line, or `ADCAPS=1` at the
+  start) the lane starts the program again for play (`PACKAGES.md` §7.8):
+  from then on the status is interactive, with the cursor (the toys' is
+  always on), source AD4, never rotate-ok, and every input line is eaten.
+  `KEY` lines become `WM_KEYDOWN`/`WM_KEYUP` to the focus window
+  (`WM_SYSKEYDOWN`/`WM_SYSKEYUP` with Alt or F10), and `TranslateMessage`
+  makes `WM_CHAR`; `MOUSE` lines become `WM_MOUSEMOVE` (coalesced) and the
+  button messages (double clicks for a `CS_DBLCLKS` class) to the window
+  under the pointer or the one with the capture, in client coordinates;
+  `GetAsyncKeyState`, which the program polls for all 256 keys, reads the
+  saver's keys, and `GetCursorPos` the emulated pointer. When the played
+  program ends itself the status is no longer interactive, and ghost mode
+  runs again. Cursor, hook and clip calls are
+  emulated: `SetCursorPos` moves only the emulated pointer, hooks are
+  guest procedures the runtime calls, and the real cursor is never moved
+  or confined by the program.
 
 ### 5.2 ne16
 
@@ -913,7 +954,7 @@ covered by unit tests of their logic only.
   The Butt Boys and Skating, and the Flintstones' DictaBird, Drive-In,
   Fred & The Pterodactyls, Bowling, Bronto Crane, The Flintmobile and
   Paper Boy (their May build's four of those too); none of the other
-  modules of the twenty-three releases does.
+  modules of the twenty-four releases does.
 * **A Windows 3.1 screen-saver program** (Johnny Castaway, `PACKAGES.md`
   §7.6) is never interactive, and keys and the mouse never reach it: the
   lane posts no key or mouse message to its window (a `MOUSE` line moves
@@ -1422,6 +1463,17 @@ when it starts a host for that module. The module never sees it.
   else as 100, either logged, and a set value is logged at the start. The
   protocols of After Dark's modules and of Johnny Castaway have no such
   knob and log it as ignored.
+* **Fixed host variables** (`hostEnv`, since the eleventh round): a
+  catalog entry may also fix host variables of its own, which no setting
+  changes: each of Screen Wreckers' nine entries names the same program
+  and gives its toy as `{"ADTOY": "<n>"}` (`PACKAGES.md` §6). Every host a
+  front end starts for the module gets them, after its host controls'
+  variables: the screen saver, `/p`, the live preview, thumbnails, module
+  buttons, `/window`, `/wallpaper` and the Linux player alike
+  (`host_control_values`, `Module::host_env`). Each name must pass the
+  rule above and name no host control of the module, and each value be 1
+  to 64 printable ASCII characters; the parser drops any other. A module
+  without `hostEnv` starts as before.
 
 ---
 
@@ -1441,7 +1493,10 @@ at a scratch folder gets scratch state with it.
                                          marvel, snoopy, looney, screams, disney, farside, dilbert, tng,
                                          castaway, opus, opusroad, flintstones, intermission, bestshot,
                                          pythonizer (the Desktop Extras' scenes, in their package's root, have
-                                         no module dir under it, so they come under a legacy- name),
+                                         no module dir under it, so they come under a legacy- name, as
+                                         Screen Wreckers' program in its package's root does: its upper
+                                         layers are WINDOWS\ (REGISTRY.INI, the emulated registry's writes)
+                                         and DTTOYS\, over C:\DTToys; in ghost mode it writes neither),
                                          or legacy-<fnv32 of the module dir, 8 hex> for anything else
     WINDOWS\                             upper layer of the guest's C:\WINDOWS (both lanes of a package share it)
     <MODDIR>\                            upper layer of the guest's C:\AFTERDRK = the module dir
@@ -1643,6 +1698,15 @@ What remains:
   the desktop's own wallpaper. The Desktop Pythonizer's player fills its
   window black before its first frame (frame 0 of a seeded run hashes as
   an unseeded one's), so the seed never shows behind its scenes.
+* **The Desktop Toys** (Screen Wreckers, since the eleventh round) never
+  erase their windows and read the screen back before the toy starts: the
+  seed is the desktop the toy wrecks, in the screen saver (the first
+  host's capture), and the wallpaper under `/wallpaper`. A run without a
+  seed (a respawn, a rotation, `/p`, headless) wrecks a black screen.
+  Each start for Caps Lock, and each return to ghost mode, starts a new
+  process over the same seed, the clean desktop (the ended program's
+  windows gave the real desktop back as they went), so play starts on the
+  unwrecked desktop, and so does ghost mode after it.
 
 ---
 

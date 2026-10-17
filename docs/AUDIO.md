@@ -20,8 +20,9 @@ Entertainment's music (§10.6), Star Trek: The Screen Saver's AD_SND 1.0
 Looney Tunes' and the Disney Collection's music paths (§2.9), the host's
 own AD_SND for Snoopy's Screen Savers (§2.10) and their results (§10.8),
 Johnny Castaway's (§10.9), the Opus 'n Bill, Flintstones and
-Intermission 4.0 releases' (§10.10), Take Your Best Shot's (§10.11), and
-the Desktop Pythonizer's and its Desktop Extras' (§10.12).
+Intermission 4.0 releases' (§10.10), Take Your Best Shot's (§10.11), the
+Desktop Pythonizer's and its Desktop Extras' (§10.12), and Screen
+Wreckers' (§10.13).
 Evidence is marked as in the
 other documents: **VERIFIED** (our disassembly, with addresses), **EMPIRICAL**
 (observed in runs or measured on the files) and **UNVERIFIED** (leads still
@@ -2261,6 +2262,47 @@ Pythonizer's player being theirs.
   made none, in 60 s of the saver's mode or 12 s with clicks.
 * Not exercised: live output, the living wallpaper's and the games' sound
   as they are played, and the Pythonizer's own mute and volume settings.
+
+### 10.13 Screen Wreckers' sound (2026-10-17)
+
+Screen Wreckers' program, `DTTY3203.EXE` (PACKAGES.md §7.8), imports
+`DSOUND.DLL` directly (Windows 95 without DirectX could not even load it;
+the CD offered DirectX 3) and plays every voice and effect as a
+DirectSound buffer: it reads each toy's `.WAV` files with `mmio*` (RIFF
+descent, `mmioRead`, `mmioGetInfo`, `mmioAdvance`, `mmioSetInfo`) and
+loads them into secondary buffers, 8-bit mono at 11,025 or 22,050 Hz. The
+pe32 lane's DirectSound (§7.2) serves it unchanged, so the engine plays
+it as an After Dark 4 module's effects. It reads the registry's
+`ScrnSaverSnd` (else `Sound`), both `on` as the installer wrote them.
+
+* **Sound off** (no `ADSOUND`): `DirectSoundCreate` answers
+  `DSERR_NODRIVER`, as on a PC without a sound card, where an After Dark
+  module's dynamic load of `dsound.dll` fails instead (§7.1). The program
+  calls it again for each sound it loads (about 45 times) and runs silent.
+* **Sound on**: one device, a primary buffer
+  (`CreateSoundBuffer`, `SetCooperativeLevel`) and about 45 secondary
+  buffers; every method it calls is one of §7.2's,
+  `IDirectSoundBuffer::SetCurrentPosition` among them, outside ADXPL510's
+  verified set and logged once as an "unverified DirectSound method"
+  (implemented from the DirectSound 3 documentation). A 10.5 s capture of
+  Cornholio with `ADSOUND=1` and `ADAUDIOOUT` is not silent
+  (`research/bbsw/lane1`, gitignored).
+* `sndPlaySoundA` is imported and implemented (an engine voice), but no
+  toy called it in ghost mode.
+* **Play** (Caps Lock on, PACKAGES.md §7.8) sounds as ghost mode does;
+  the program reads `Sound` there (`ScrnSaverSnd` in ghost mode). While
+  the saver's sound is on the lane seeds both `on` at every start of the
+  program, whatever a past Ctrl+S left; the toys' own Ctrl+S mutes the
+  program until its next start (in a scripted run, silent from 3 to 5 s
+  in, back after Caps Lock off). At each switch between ghost mode and
+  play the ended process's sounds stop and are freed
+  (`audio_end_process`).
+* All nine toys captured in ghost mode and in play (`ADAUDIOOUT`,
+  `ADAUDIOLIVE=0`, about 15.5 s each): deterministic, two runs
+  byte-identical, each with 9 to 15 s that are not silence
+  (`research/bbsw/lane2`, gitignored).
+* Not exercised: live output, and the living wallpaper's sound (ghost
+  mode's).
 
 ---
 

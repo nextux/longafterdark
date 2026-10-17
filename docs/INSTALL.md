@@ -3,9 +3,10 @@
 **Long After Dark** is a screen saver for Windows that runs the original
 modules of After Dark, of LucasArts' Star Wars Screen Entertainment, of
 Delrina's Intermission and its Opus 'n Bill, Flintstones, Far Side and
-Dilbert collections, of Sierra's Johnny Castaway and of 7th Level's Take
-Your Best Shot and Monty Python's Desktop Pythonizer, unchanged, under x86
-emulation. It knows twenty-three releases, 470 modules:
+Dilbert collections, of Sierra's Johnny Castaway, of 7th Level's Take
+Your Best Shot and Monty Python's Desktop Pythonizer, and of Beavis and
+Butt-head Screen Wreckers, unchanged, under x86 emulation. It knows
+twenty-four releases, 479 modules:
 
 | id | Release | Internet Archive download |
 |---|---|---|
@@ -32,6 +33,7 @@ emulation. It knows twenty-three releases, 470 modules:
 | `bestshot` | Take Your Best Shot (1995) | CD image, 89.1 MB |
 | `pythonizer` | Monty Python's Flying Circus Desktop Pythonizer (1995) | CD image, 181.4 MB |
 | `pythonle` | Monty Python's Limited Edition Desktop Extras (1995) | floppy image, 1.4 MB |
+| `wreckers` | Beavis and Butt-head Screen Wreckers (1996) | CD image, 46.1 MB |
 
 Star Trek: The Screen Saver is After Dark 2.0 (version 2.0b) with 16 Star
 Trek modules, on two floppies. Marvel Comics Screen Posters (After Dark
@@ -81,6 +83,17 @@ Desktop Pythonizer's. Both are scenes of 7th Level's Runtime Player too,
 the Pythonizer's own `PYTHON.EXE`, an earlier version than Best Shot's,
 which Long After Dark runs unchanged, starting each scene as the Desktop
 Pythonizer program did.
+
+Beavis and Butt-head Screen Wreckers (1996) is Viacom New Media's, one of
+MTV's "Cheap Clicks", made by Cyclops Software as the third set of its
+Desktop Toys, on one CD: nine toys in which Beavis and Butt-head wreck
+your desktop, Cornholio, Tire Trouble, Karate Beavis, Painting Dudes, Kick
+The Can, Chuckfest, Soda Jerks, Shoot 'Em and Digger. The set's screen
+saver played a toy in "ghost mode", the toy playing itself over the
+desktop. They are no modules of any engine: each is the set's Windows 95
+program, `DTTY3203.EXE`, playing that toy, which Long After Dark runs
+unchanged, starting it as the set's screen saver did. It is the first
+32-bit program Long After Dark runs whole.
 
 Star Wars Screen Entertainment is not an After Dark release, though it is
 sometimes listed as "After Dark Star Wars": its 14 modules were made for
@@ -146,7 +159,7 @@ Double-click `adimport.exe`, or open the screen saver's settings and click
 - **A drive or folder:** the CD itself, or a folder copied from it (for
   floppies, one folder holding the files of every disk, or one holding
   nothing but a `DISK1`, `DISK2`, … folder per disk).
-- **A download from the Internet Archive:** a list of the twenty-three releases
+- **A download from the Internet Archive:** a list of the twenty-four releases
   with their sizes, plus one entry that fetches every release not imported
   yet. An interrupted download resumes, and each file is checked against its
   published MD5 before it is used.
@@ -240,6 +253,16 @@ too, the settings window shows Foot and Penguins as needing it ("Needs
 Monty Python's Flying Circus Desktop Pythonizer") and never plays them,
 and Random leaves them out.
 
+Beavis and Butt-head Screen Wreckers came on one CD. Import the CD itself,
+its ISO image (`Screen Wreckers.iso`, which `adimport --download wreckers`
+fetches) or a folder copied from it. The CD's InstallShield setup expanded
+the program and the toys' pictures, sounds and help texts from two
+compressed libraries on the CD into one folder; the importer does the
+same, folders and all (457 files), and checks them against the release.
+It never runs the setup, and leaves out what only the rest of the set
+used: its screen saver and toy selector (the third library), DirectX, and
+the CD's videos and their player.
+
 Delrina's four other releases came on floppies too. The Opus 'n Bill
 Screen Saver is online only as bulletin-board copies of its three
 floppies, a ZIP of each disk's files: `OPUS1NTA.ZIP` to `OPUS3NTA.ZIP`
@@ -276,6 +299,7 @@ adimport --image "Intermission 4.0.zip"
 adimport --image BESTSHOT.iso
 adimport --image MontyPythonFlyingCircus_Pythonizer-1995.bin
 adimport --image Monty_Pythons_Flying_Circus.img
+adimport --image "Screen Wreckers.iso"
 adimport --from E:\
 adimport --from C:\Copies\Snoopy
 adimport --download ad10
@@ -466,6 +490,32 @@ Killer Cars); in some, such as Silly Walk, Train or Penguins, clicks
 scattered over the screen showed no change. Caps Lock again goes back to
 the screen saver.
 
+Screen Wreckers' toys always get 640×480 too, scaled to fit: the program
+covers whatever screen it is given, and at 640×480 the toys are as large
+as they were on a 1996 VGA desktop. They have no buttons. Each plays in
+ghost mode, as the set's screen saver ran it, over the picture of your
+desktop the screen saver starts on; in most of them the damage stays and
+builds up. With Caps Lock on, the toy is yours to play: the screen saver
+starts it again as the set's toy selector started a toy, at once, over
+the picture of your desktop, and the keys and the mouse are its own. In
+Cornholio the mouse moves Beavis and a left click eats; in Tire Trouble
+the arrow keys steer the tire; in Karate Beavis a left click strikes
+where the pointer is, and so does the numeric keypad with Num Lock on (1,
+4 and 7 low, middle and high to the left, 3, 6 and 9 to the right); in
+Painting Dudes a left drag sprays or brushes and a right click changes
+the colour; in Kick The Can a left click kicks the can; in Chuckfest the
+mouse slides the thrower, holding the left button longer throws farther,
+and a right click picks what to throw; in Soda Jerks a left click shakes
+the bottle and a right click changes the drink; in Shoot 'Em the mouse
+aims, a left click shoots, a right click changes the weapon and Space
+resets the score; in Digger the arrow keys drive and Space mows or plows.
+F2 switches between Beavis and Butt-head in the toys that have both, and
+1 to 9 (0 for a random one) switch to another toy. Esc ends the toy and
+shows the set's own screen of toys; Esc again, Ctrl+Q or its EXIT ends
+the game, and the toy goes back to ghost mode until you press Caps Lock
+off and on (meanwhile the next key or move ends the screen saver). Caps
+Lock again goes back to ghost mode, with the module's own toy.
+
 Several ScreamSavers modules and Marvel's poster module compose their
 pictures for 640×480 too, so all the ScreamSavers modules and Marvel's
 always get 640×480, scaled to fit. Marvel's
@@ -498,7 +548,10 @@ from the first seconds. The Monty Python scenes play wave sound through
 the Pythonizer's own, older one: most from their first seconds, Foot after
 about half a minute; No Time to Lose Woman, Hopping Green Man, Many Mouths
 and Story Time only when you click them (with Caps Lock on), and Hopping
-Man and Rolling Man none that was heard. **Preview** plays sound with the values you have not saved yet; the
+Man and Rolling Man none that was heard. Screen Wreckers' toys play their
+voices and effects through DirectSound, in ghost mode and while you play
+them; the toys' own Ctrl+S turns a toy's sound off until it starts again.
+**Preview** plays sound with the values you have not saved yet; the
 small live preview never does.
 
 The **Look** menu changes how the screen saver draws the modules' pictures.
@@ -540,7 +593,7 @@ that doesn't fill the screen: **Black** (the default), or **Ambient glow**,
 a blurred, dimmed copy of the picture. It is for the modules that always
 get 640×480 (Intermission's, Star Wars' among them, both Star Trek
 releases', ScreamSavers', Marvel's, Johnny Castaway, Best Shot's and the
-Monty Python scenes) on a widescreen
+Monty Python scenes, and Screen Wreckers' toys) on a widescreen
 monitor, and for After Dark's own on an ultrawide or portrait one; with
 **Stretch to fit the screen** checked, the 640×480 modules have no bars.
 
@@ -564,7 +617,11 @@ Trivia, Officer's Review, Mime Hunt, Frankenscreen, Marbles, Pinocchio
 Head Shot, Hot Shot and Line Shot. In Best Shot's other scenes and in all
 of the Monty Python scenes it lets clicks and keys reach the scene, as
 their programs' interactive screen savers did; the Desktop Pythonizer's
-games (The Chicken Game, The Gopher Game, The Pig Game) are played so.
+games (The Chicken Game, The Gopher Game, The Pig Game) are played so. In
+Screen Wreckers it takes the toy out of ghost mode and makes it yours to
+play, with the mouse and the keys its own help names (see
+[Choose what it shows](#4-choose-what-it-shows)); the toy's own end (Esc
+twice, Ctrl+Q, its EXIT) sends it back to ghost mode.
 
 While a game is playing, keys, clicks and the mouse belong to it, and the
 pointer stays on the primary monitor. Press Caps Lock again to stop playing
@@ -632,8 +689,9 @@ Resizing the window scales the picture to the new size. Once the size
 settles, a module whose screen follows the display's shape (After Dark's)
 starts again in the new shape; a module with a 640x480 screen of its own
 (Intermission's, both Star Trek releases', ScreamSavers', Marvel's, Johnny
-Castaway, Best Shot's, the Monty Python scenes) keeps its shape, with bars,
-unless **Stretch to fit the screen** is checked. `/module` with a Desktop
+Castaway, Best Shot's, the Monty Python scenes, Screen Wreckers' toys)
+keeps its shape, with bars, unless **Stretch to fit the screen** is
+checked. `/module` with a Desktop
 Extras scene while the Desktop Pythonizer is not imported opens a message
 saying that it needs that release, and nothing runs.
 
@@ -690,6 +748,8 @@ original did; its three games show their menu. The Monty Python scenes
 play as the Desktop Pythonizer's living wallpapers, the same pictures as
 its screen savers, and paint their own backdrop over the whole desktop
 before their first picture, so your wallpaper doesn't show behind them.
+Screen Wreckers' toys play in ghost mode, as in the screen saver, and
+wreck the picture of your wallpaper; they never become playable there.
 When you change your wallpaper, the modules started after that start on the
 new one.
 
@@ -811,4 +871,7 @@ program's Properties → Details in Explorer.
   it. Its Wallpaper Zapper (Shift+Ctrl+click, a picture of the screen made
   your wallpaper) has not been tried, and could only change the emulated
   PC's wallpaper, never yours.
+- **Screen Wreckers' own settings** aren't offered: its toy selector (with
+  the set's sound switches and favourite toy) isn't imported, and each toy
+  runs with the settings the CD's setup wrote.
 - No installer or code signing yet.

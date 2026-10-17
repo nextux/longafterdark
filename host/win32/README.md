@@ -9,17 +9,20 @@ display model, the file system (`Vfs`) and the profile store that the Win16
 shims of the Classic lane reuse. Design and contract:
 `docs/DESIGN.md`, `docs/ABI.md` §2/§4 (verified on the
 Deluxe binaries), `docs/API_SURFACE.md` §1, and
-`docs/PACKAGES.md` §7.2.
+`docs/PACKAGES.md` §7.2. Since Screen Wreckers it also runs a whole Win32
+**program** — Cyclops' Desktop Toys engine, `DTTY3203.EXE`, an MFC 4.2
+application — as the process (the `desktoptoys` ABI, `docs/ABI.md` §2.15,
+`host/pe32/program.cc`); see "Whole programs" below.
 
 | File | What it owns |
 |---|---|
 | `layout.hh` | The address space: null guard, system area (PEB/TEB/strings), thunk area, 1 MB stack, the fake host EXE at 0x400000, images from 0x410000 (relocated), the heap arena at 0x20000000, shim-module handles at 0x7F000000. |
-| `runtime.hh/.cc` | `Runtime`: CPU in flat mode, TEB/PEB (FS:[0] = -1, [4]/[8] stack, [0x18] self, [0x2C] TLS, [0x30] PEB), trap/fault routing, `call_guest`, `state<T>()`; the work counters the pe32 lane's DRAWFRAME budget reads (instructions, API calls, and the pixels a blit or fill wrote: `charge_pixels`), and the call hook its long calls suspend at (`set_call_hook`; `AbandonGuestCall` unwinds a suspended call, restoring registers and the SEH chain at every level). |
-| `shims.hh/.cc` | Thunks (`int 0xFE` + id), `ShimRegistry`, `Call` argument/result helpers, the unimplemented census. |
-| `signatures.cc` | Calling convention + stack bytes of **every** Win32-lane import (API_SURFACE.md §1, plus the 49 imports the After Dark 10th Anniversary's pe32 modules added: PACKAGES.md §10 B). |
+| `runtime.hh/.cc` | `Runtime`: CPU in flat mode, TEB/PEB (FS:[0] = -1, [4]/[8] stack, [0x18] self, [0x2C] TLS, [0x30] PEB), trap/fault routing, `call_guest`, `state<T>()`; the work counters the pe32 lane's DRAWFRAME budget reads (instructions, API calls, and the pixels a blit or fill wrote: `charge_pixels`), and the call hook its long calls suspend at (`set_call_hook`; `AbandonGuestCall` unwinds a suspended call, restoring registers and the SEH chain at every level); for a whole program, the yield hook its `GetMessageA` waits in (`set_yield_hook`/`yield_frame`) and the slice hook that gets control between slices of code making no API call (`set_slice_hook`). |
+| `shims.hh/.cc` | Thunks (`int 0xFE` + id), `ShimRegistry`, `Call` argument/result helpers, the unimplemented census; `add_signatures` (a program's extra rows) and `known`. |
+| `signatures.cc` | Calling convention + stack bytes of **every** Win32-lane import (API_SURFACE.md §1, plus the 49 imports the After Dark 10th Anniversary's pe32 modules added: PACKAGES.md §10 B); `program_signatures()`: the 148 more Screen Wreckers' `DTTY3203.EXE` imports (API_SURFACE.md §1.1), added to a program's registry only. |
 | `seh.hh/.cc` | Win32 x86 SEH: CPU faults / `int n` / RaiseException through the FS:[0] chain, dispositions, nested exceptions, RtlUnwind, unhandled → `GuestError`. |
 | `heap.hh/.cc` | The single guest allocator (Global/Local/Heap*/Virtual*), all in one file-mapped arena so DIB sections can alias guest memory. |
-| `modules.hh/.cc` | PE image table: load + relocate via `adw::loader::pe`, bind imports (shim thunks or loaded-DLL exports), DllMain order (one PROCESS_ATTACH ever — ABI.md §8), resources. |
+| `modules.hh/.cc` | PE image table: load + relocate via `adw::loader::pe`, bind imports (shim thunks or loaded-DLL exports), DllMain order (one PROCESS_ATTACH ever — ABI.md §8), resources; `load_exe` maps a program's EXE as the process image (at 0x400000: no stand-in host EXE when `RuntimeOptions::program`), which `exe_handle()`, `GetModuleHandleA(NULL)` and the PEB then name. |
 | `vfs.hh/.cc` | The guest's file system, shared by both lanes (INTERACTION.md §7, §10): plain mounts, **copy-on-write overlays** (a read-only lower host folder and/or virtual files under an upper layer that is the per-user state `ADSTATE\<pkg>\…` or memory), and `H:\<L>\…` for the host's drives (read-only, 8.3 names on request). `open()` → `VfsFile` (reads from the upper, virtual or lower layer; any write access copies up into a byte buffer committed on flush/close by temp file + `MoveFileExW(REPLACE_EXISTING | WRITE_THROUGH)` under the state mutex `Local\LongAfterDark-state-<fnv64>`), `remove`/`rename`/`make_dir`/`remove_dir` (upper only; the lower's files refuse with `ERROR_ACCESS_DENIED`), a merged `list()` (upper wins, `.`/`..` first, sorted, 8.3 aliases), `stat`, `read_file`/`write_file`, `host_to_guest` (a mount form, else `H:`), `written()` (what the run wrote, for `--configure`'s JSON), and DOS's current directory: a current drive and one current directory per drive (`cwd`, `set_cwd` for Win32's `SetCurrentDirectory` and `DlgDirList`, `set_drive_cwd` for DOS's chdir, `drive_cwd`, `set_drive`), against which `name`, `\name` and `X:name` resolve (DOS's limits on top: win16's `dos16.hh`). A memory upper stamps a fixed 1996 clock, so headless runs stay deterministic and write nothing. |
 | `ini_store.hh/.cc` | `IniStore`: the profile functions of both lanes over the Vfs. Reads = the lane's seeds ⊕ the file (the file wins per key); writes = read-modify-write of the upper file under the state mutex, line-preserving, CRLF; parses cached per file and re-validated by layer, size, write time and version. |
 | `config_script.hh/.cc` | The configure-mode test hooks shared by both lanes (INTERACTION.md §6.6): `ADCONFIGSCRIPT` (TEXT/CHECK/SELECT/PICK/MULTI/CLICK on the real controls — PICK selects a list or combo item by its text, wherever a sorted list put it —, and PRESS, a click where a user's lands: the system's hit test from the dialog down, through any window answering `HTTRANSPARENT`, as `hit_window`; blocks split by NEXT; FILE and ANSWER queues), `ADCONFIGHIDDEN` (parked off-screen, cloaked, never activated; unanswered boxes cancel), `ADCONFIGDUMP`, `ADCONFIGTIMEOUTMS`. A lane calls `attach(dlg)` once a real dialog exists and asks `message_box()`/`file_dialog()` before showing one. |
@@ -31,7 +34,39 @@ Deluxe binaries), `docs/API_SURFACE.md` §1, and
 | `dsound.cc` | DirectSound 3 over the engine, registered only while it is enabled (so `dsound.dll` is otherwise not found, and configure mode keeps RealUi's `DSERR_ALLOCATED`): objects `{vtbl, refcount, id}` on the guest heap with 11 `IDirectSound` and 21 `IDirectSoundBuffer` stdcall thunk slots; the guest backing store is the truth (Lock hands out pointers into it, Unlock copies exactly the given ranges into the engine buffer); duplicates share store and engine buffer; slots outside ADXPL510's verified set log once as "unverified DirectSound method" (`ADTRACE=sound`). |
 | `winmm.cc` sound | Sound on: one waveOut device (engine streams; `WHDR_DONE` applied by `audio_pump`; window/function/event callbacks), the MCI sequencer over the engine's MIDI player (`mciSendCommandA`: open/set/play/stop/pause/resume/seek/status/getdevcaps/info/close, `MM_MCINOTIFY`, the real error texts), aux 0 (CD, stored) and 1 (the MIDI bus). `mciSendStringA` (CD audio), the mixer and waveIn stay absent. |
 | `msacm32.cc` | ACM emulated with core's decoders (no host codec): the standard IMA/MS-ADPCM formats in the codecs' order, the enumeration callback into guest code, ADPCM → PCM16 streams. |
+| `user32_state.hh` | USER32's state (windows, classes, the queue, timers, menus, accelerators, hooks), shared by its files. |
+| `user32_program.cc` | The window manager a whole program needs, on in program mode only (`user32_set_program`): parents and z-order, Windows 95's frame metrics, CreateWindowEx/ShowWindow/SetWindowPos/DestroyWindow with the messages Windows 95 sent (the WH_CBT hook, WM_NCCALCSIZE, activation, focus, WM_WINDOWPOSCHANGED → WM_MOVE/WM_SIZE), painting (update rectangles, WM_PAINT after posted messages, WM_ERASEBKGND), GetMessageA's wait (the frame ends in `Runtime::yield_frame`), emulated hooks, menus from RT_MENU, accelerators, focus/capture/activation, the desktop window, coordinates, GetDlgItem by child ID. It replaces some of user32.cc's handlers in program mode and hands them the call otherwise. |
+| `advapi32.cc` | The registry, emulated (a program's only): keys and values in a tree seeded by the lane (`registry_seed`), writes into it and, as REGEDIT4 text, into a file in the state overlay (`registry_attach_file`); never the host's. |
+| `mmio.cc` | WINMM's multimedia file I/O (`mmioOpenA` read-only over the Vfs, RIFF descent, the whole file as the I/O buffer for `mmioGetInfo`/`mmioAdvance`) and `sndPlaySoundA` (one engine voice; FALSE with sound off); a program's only. |
 | `user32_real.cc` | Registered after the families: wraps the USER32/COMDLG32 handlers so a real-window guest handle acts on the real window (the emulated path is untouched), turns DialogBox*/MessageBoxA/GetOpenFileNameA real in configure mode, and declares the dialog entry points no module imports (DialogBoxParamW, DialogBoxIndirectParamA/W, CreateDialog(Indirect)ParamA, Get/SetDlgItemInt, GetDlgItemTextA, CheckRadioButton, MessageBeep, GetSaveFileNameA). |
+
+## Whole programs (`docs/ABI.md` §2.15)
+
+A lane that runs a program (`host/pe32/program.cc`) makes its runtime with
+`RuntimeOptions::program`, registers `register_all_shims` and then
+`register_program_shims` (the program's extra signature rows, KERNEL32's
+atoms/strings/paths, ADVAPI32's registry, the program window manager,
+WINMM's mmio), turns on `user32_set_program`, seeds the registry, loads the
+EXE with `ModuleTable::load_exe` and calls its entry point on a fiber.
+Nothing of this exists for a module: `ADVAPI32.DLL`, `DSOUND.DLL` (with
+sound off), `WINSPOOL.DRV` and `COMCTL32.DLL` stay "not found" and the new
+names stay unknown to `GetProcAddress`, so After Dark's runs are unchanged
+(the frozen baselines say so). With sound off a program that imports
+`DSOUND.DLL` statically gets `register_dsound_absent`: `DirectSoundCreate`
+answers `DSERR_NODRIVER`. KERNEL32's `GetStartupInfoA` reports
+`SW_SHOWNORMAL` in program mode (the toys' screen saver started them with
+`ShellExecuteA(..., SW_SHOWNORMAL)`).
+
+Caps Lock play (`ABI.md` §2.15): the lane starts the program again for play
+and hands it the saver's input as Windows 95's input queue held it —
+`user32_program_key`/`user32_program_mouse` queue key messages for the focus
+window and mouse messages for the capture window or the window under the
+pointer (client coordinates, coalesced moves, double clicks on a
+`CS_DBLCLKS` class), read after posted messages; `TranslateMessage` posts
+`WM_CHAR`; `user32_cursor_shown` says whether the program's cursor is on
+(`ADWS_CURSOR`). Ending a process while the audio engine lives on,
+`audio_end_process` stops and frees everything it played (DirectSound
+buffers, `sndPlaySoundA`'s voice, waveOut streams, MCI songs).
 
 ## Extension recipe: adding or finishing a shim
 

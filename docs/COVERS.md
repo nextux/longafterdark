@@ -52,9 +52,11 @@ Castaway), and as the seventeenth to the twentieth Delrina's `opus`,
 `opusroad`, `flintstones` and `intermission` (Opus 'n Bill Screen Saver,
 Opus 'n Bill: On the Road Again!, The Flintstones Screen Saver Collection,
 Intermission 4.0), as the twenty-first 7th Level's `bestshot` (Take
-Your Best Shot), and as the twenty-second and twenty-third 7th Level's
+Your Best Shot), as the twenty-second and twenty-third 7th Level's
 `pythonizer` and `pythonle` (Monty Python's Flying Circus Desktop
-Pythonizer, Monty Python's Limited Edition Desktop Extras). The UI calls a release by
+Pythonizer, Monty Python's Limited Edition Desktop Extras), and as the
+twenty-fourth Viacom New Media's `wreckers` (Beavis and Butt-head Screen
+Wreckers). The UI calls a release by
 its `title`, or by its `shortTitle` where space is tight. A **cover** is the
 art that stands for a release. A **tile** is the cover rendered as a 4:5
 portrait PNG for display. The **filter** is the set of releases whose tiles
@@ -134,7 +136,9 @@ control and the details card) moves down by the band's height.
   fourteenth, after the Next Generation. With all twenty-three, the
   Desktop Extras (1995-01) come fourteenth, after the Next Generation,
   Best Shot fifteenth and the Desktop Pythonizer (1995-03) sixteenth,
-  before the Looney Tunes. A release without a date comes
+  before the Looney Tunes. With all twenty-four, Screen Wreckers (1996-11)
+  comes twenty-third, after Deluxe (1996-10) and before the 10th
+  Anniversary. A release without a date comes
   last. (As built for twelve: a row that
   scrolls starts after the left chevron's place, §1.3.)
 * **Status box.** A status box 200 DIP wide sits at the column's right
@@ -226,12 +230,13 @@ so every cover now shows, on as many rows as they need
 * **Rows.** As few as hold every cover. Regular covers fill each row left
   to right, up to what a row holds and at most eight (`kStripMaxCols`): ten
   are 8 and 2 even where a row holds nine, fifteen 8 and 7, sixteen 8 and
-  8, twenty 8, 8 and 4, twenty-one 8, 8 and 5, twenty-three 8, 8 and 7.
+  8, twenty 8, 8 and 4, twenty-one 8, 8 and 5, twenty-three 8, 8 and 7,
+  twenty-four 8, 8 and 8.
   Compact covers,
   which only a short window gets, are as even as can be, so a cap never
   costs it a row: fourteen where a row holds ten are 7 and 7, sixteen 8
   and 8, twenty 10 and 10, twenty-one two rows too, twenty-three three
-  (8, 8 and 7). The rows are left-aligned on the
+  (8, 8 and 7), twenty-four three (8, 8 and 8). The rows are left-aligned on the
   column and `kStripRowGap` (8 DIP) apart, the gap between two covers of a
   row; only the last row may be shorter. The band is the rows of cells and
   the 12-DIP gap under them: 236 DIP for two regular rows, 352 for three,
@@ -703,6 +708,7 @@ photos are those two releases' covers of choice, through `--set-cover`).
 | `bestshot` (added as the twenty-first release) | download `https://archive.org/download/takeyourbestshot/bestshot.jpg` (the box front, 432×547, in the Internet Archive's item of the CD), md5 `a225962a4e242347a056f0b356ab920b`, 58082 B, saved as `takeyourbestshot_bestshot.jpg`, art `box` ("Box front", Internet Archive) | — | — | — |
 | `pythonizer` (added as the twenty-second release) | download `https://archive.org/download/monty-python-flying-circus-pythonizer/MontyPythonFlyingCircus_Pythonizer-1995.jpg` (the Internet Archive's scan of the disc, 3060×3109, in the item of the CD image; a JPEG the Internet Archive derived from the item's `.tif`), md5 `e39961fc73b617bab4c59837b81ad761`, 1526928 B, **crop 85,97,2880,2880** (the disc), stored at 2048×2048, art `disc` ("Disc label", Internet Archive) | — | — | — |
 | `pythonle` (added as the twenty-third release) | download `https://archive.org/download/monty-pythons-flying-circus/img20250111_20571690.jpg` (the Internet Archive's photo of the floppy, 2115×2172, in the item of its image), md5 `2fc7df5ce1e34602127c2fec31c5bcdd`, 2047677 B, saved as `monty-pythons-flying-circus_img20250111_20571690.jpg`, **crop 216,40,1654,1202** (the label), art `panel` ("Disk label", Internet Archive) | — | — | — |
+| `wreckers` (added as the twenty-fourth release) | download `https://archive.org/download/screen-wreckers/Cover.jpg` (the box front, 136×148, in the Internet Archive's item of the CD), md5 `a87c89162b3cec95c286f914f750a158`, 6587 B, saved as `screen-wreckers_Cover.jpg`, no crop, art `box` ("Box front", Internet Archive) | — | — | — |
 
 Notes:
 * **ad32** starts with its disc art because the user chose it: no box scan
@@ -823,6 +829,17 @@ Notes:
   offer (their pictures are the desktop program's wallpapers and icons),
   so an import made offline shows the generated cover until
   `--refresh-covers` fetches the picture.
+* **wreckers.** Screen Wreckers' art belongs to Viacom and MTV (Beavis and
+  Butt-head, Mike Judge's creation) and Cyclops Software, and is handled
+  like the others': fetched onto the user's machine at import time and
+  never bundled, committed or redistributed. Its cover is the box front in
+  the Internet Archive's item of the CD (MTV's "Cheap Clicks", "Beavis and
+  Butt-head ... Screen Wreckers", "desktop destruction"), the only one
+  found. It is small, 136×148, but above §2.6's minimum of 32 pixels a
+  side, so it is used whole, uncropped, and scaled up into the tile. The
+  CD has no cover of its own to offer (its pictures are icons and the
+  installer's sprites), so an import made offline shows the generated
+  cover until `--refresh-covers` fetches the box.
 * **Delrina's four more releases.** The Opus 'n Bill releases' art belongs
   to Berkeley Breathed and Delrina, the Flintstones' to Hanna-Barbera and
   Delrina, Intermission's to Delrina; all of it is handled like the
@@ -1824,6 +1841,12 @@ sections above stay the contract; this records the differences.
   rows). The settings dialog's strip takes them on three rows too (8, 8
   and 7) at the first-open size, and on three compact rows in a window too
   short for three regular ones.
+* **As built for twenty-four releases: nothing new.** Screen Wreckers
+  fills the third row's last place: the Sources grid takes the
+  twenty-four on three rows of eight at the same 924 DIP, and the settings
+  dialog's strip on three rows too (8, 8 and 8), regular or compact. The
+  layout is pinned by the unit tests of `strip_grid` and the importer's
+  GUI tests; `import.gui_shots` was not run for it.
 * **As built for twenty releases: the Downloads list held to Sources'
   height.** Its twenty cards (and Every release not imported yet) took the
   whole height of the work area, a screen-tall column at 150% on a 4K

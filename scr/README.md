@@ -21,7 +21,7 @@ files together in either of these places:
 Screen Saver Settings lists it as "Long After Dark": the `.scr`'s string
 resource 1 (`IDS_DESCRIPTION`), which Windows shows instead of the file name.
 
-The modules come from your own discs: any of the twenty-three releases (twelve of
+The modules come from your own discs: any of the twenty-four releases (twelve of
 After Dark modules: After Dark 4.0 Deluxe, After Dark 3.2, Totally Twisted
 After Dark, After Dark 10th Anniversary, The Simpsons Screen Saver, Star Trek:
 The Screen Saver, which is After Dark 2.0b on two floppies, Marvel Comics
@@ -33,10 +33,12 @@ LucasArts' Star Wars Screen Entertainment, and Delrina's Opus 'n Bill
 Screen Saver, Opus 'n Bill: On the Road Again!, The Flintstones Screen
 Saver Collection, The Far Side Screen Saver Collection and Scott Adams'
 Dilbert Screen Saver Collection; Sierra On-Line's Screen Antics:
-Johnny Castaway, a Windows 3.1 screen saver program of its own; and three
+Johnny Castaway, a Windows 3.1 screen saver program of its own; three
 of 7th Level's, scenes of its Runtime Player: Take Your Best Shot's 17,
 Monty Python's Flying Circus Desktop Pythonizer's 22 and its Limited
-Edition Desktop Extras' two, which play with the Pythonizer's player), from
+Edition Desktop Extras' two, which play with the Pythonizer's player; and
+Beavis and Butt-head Screen Wreckers' nine toys, one Windows 95 program
+that plays each), from
 the disc (or the floppies), an image of it, a copy of its files, or the
 Internet Archive download. Click **Import…** in the settings dialog (or run `adimport.exe`) to
 copy them to `%LOCALAPPDATA%\LongAfterDark\assets\win`. Until then the saver
@@ -71,7 +73,7 @@ mode**; one per session: the mutex `Local\LongAfterDarkWallpaper`),
 with a module that follows the display (an After Dark module) and
 `…-<window>-640x480.ppm` for one that may start with a module that has a
 640×480 screen of its own (an Intermission, Star Trek, ScreamSavers or
-Marvel module, Johnny Castaway or a 7th Level scene; the first
+Marvel module, Johnny Castaway, a 7th Level scene or a Desktop Toy; the first
 file serves both where the two pictures are the same: **Starting from the
 desktop**), and `/wallpaper`'s pictures of the wallpaper,
 `…-<window>-<W>x<H>-w<n>.ppm`.
@@ -320,8 +322,9 @@ picture of the wallpaper) are in `src/wallpaper_mode.h`, the rest in
   and no game); the cursor is never hidden, changed or clipped. Every host
   also gets `ADWALLPAPER=1` (the other modes remove an inherited one): the
   7th Level scenes (Take Your Best Shot's, the Desktop Pythonizer's and
-  its Desktop Extras') run their living-wallpaper form with it, and every
-  other module ignores it. They run at below-normal priority. Sound:
+  its Desktop Extras') run their living-wallpaper form with it, Screen
+  Wreckers' toys play in ghost mode over the wallpaper, as in the screen
+  saver, and every other module ignores it. They run at below-normal priority. Sound:
   the primary monitor's window's host, as `Sound` and `Volume` say.
 * **Starting on the wallpaper:** every host, the first, each rotation's and
   each respawn's, starts on the user's wallpaper (`ADSEEDIMG`, **Starting
@@ -382,7 +385,7 @@ column at most 1240 DIP wide, centred.
   Intermission, Marvel, Flintstones, Far Side, Simpsons, Star Wars, On the
   Road Again, Snoopy, Dilbert, Star Trek TNG, Desktop Extras, Best Shot,
   Desktop Pythonizer, Looney Tunes, ScreamSavers,
-  3.2, Totally Twisted, Disney, Deluxe, 10th Anniversary), each with its short title under it (64×80 DIP covers; 48×60
+  3.2, Totally Twisted, Disney, Deluxe, Screen Wreckers, 10th Anniversary), each with its short title under it (64×80 DIP covers; 48×60
   without captions when the window is under 760 DIP tall). Seven fit the
   first-open window side by side, and eight compact ones the smallest. The
   twelve's regular covers never all fit side by side (they need 1240 DIP;
@@ -425,10 +428,10 @@ column at most 1240 DIP wide, centred.
   fit on one row wrap onto more, as few rows as hold them: regular covers
   fill each row, at most eight (ten: 8 and 2; fifteen: 8 and 7; sixteen: 8
   and 8; twenty: 8, 8 and 4; twenty-one: 8, 8 and 5; twenty-three: 8, 8
-  and 7), compact
+  and 7; twenty-four: 8, 8 and 8), compact
   ones as even as can be (fourteen: 7 and 7; twenty, where a row holds
   ten, 10 and 10; twenty-one on two rows too; twenty-three on three, 8, 8
-  and 7), regular
+  and 7; twenty-four on three, 8, 8 and 8), regular
   while the window has the height for their rows, else compact (`ui_model.h`: `strip_grid`, `strip_band`). Only a
   window too short even for the compact rows (the smallest, with eight
   releases and more) gets one compact row that scrolls by whole
@@ -550,7 +553,7 @@ column at most 1240 DIP wide, centred.
 * **Resolution** and **Monitors**, each at the start of its half of the card
   (dropdowns at most 280 DIP wide; Resolution, 480 or 720 lines, is for the
   modules that follow the display alone: an Intermission, Star Trek,
-  ScreamSavers or Marvel module, Johnny Castaway or a 7th Level scene, always runs at its own 640×480, see
+  ScreamSavers or Marvel module, Johnny Castaway, a 7th Level scene or a Desktop Toy, always runs at its own 640×480, see
   **Emulated screen**), then across the card **Stretch to fit the screen
   (no black bars)** (`StretchToFit`: those 640×480 modules fill each monitor,
   stretched, in `/s` and the settings window's live preview, never in `/p`;
@@ -593,8 +596,8 @@ column at most 1240 DIP wide, centred.
   `IDM_BARS_*` in `res/resource.h`) are taken as the dialog's `WM_COMMAND`
   too, so a test can post them. The link adds nothing else: the window's
   sizes and every other control's place are 1.5.1's.
-* The footer: **Import…** with a line saying what is imported ("470
-  modules from 23 releases", or "84 modules from After Dark 4.0 Deluxe"),
+* The footer: **Import…** with a line saying what is imported ("479
+  modules from 24 releases", or "84 modules from After Dark 4.0 Deluxe"),
   then the credit, then **Preview** (full screen, of the module the details show; greyed for
   a module this host can't run yet, or whose file is missing, and while the
   details show none), **OK** and **Cancel**. The credit, "Made With Love by
@@ -607,7 +610,7 @@ column at most 1240 DIP wide, centred.
   hover cue high contrast keeps, whose hover fill is the window colour). It
   sits in the free space between the assets line's text and Preview, centred
   there and on the buttons, and shows only when its whole box fits with
-  24 DIP clear of both: beside "470 modules from 23 releases" (as long as
+  24 DIP clear of both: beside "479 modules from 24 releases" (as long as
   the twelve releases' "284 modules from 12 releases") it fits the
   first-open window at every scale, and the narrowest one at 100% only (at
   the other scales it gives way there: the line is a digit longer than the
@@ -630,13 +633,13 @@ column at most 1240 DIP wide, centred.
 Until the modules are imported the details card is one welcome: a picture
 across its top (the night sky, the moon and two flying toasters), "Welcome to
 Long After Dark", what importing does (the original modules of After Dark and
-Star Wars Screen Entertainment, from any of the twenty-three releases' discs, an image,
+Star Wars Screen Entertainment, from any of the twenty-four releases' discs, an image,
 or the Internet Archive; `welcome_text` in `ui_model.h`) and an **Import a
 release…** button (the importer's window is "Import a release"). The
 footer's Import is hidden meanwhile (it is the same command), its line reads
 "Nothing imported yet" (the credit beside it as ever), Single/Random are greyed, and the list shows a few
 faint placeholder rows and "Your modules appear here after import". "Long
-After Dark" stays the product's name; the words for the releases fit all twenty-three
+After Dark" stays the product's name; the words for the releases fit all twenty-four
 (not every one is After Dark's, and Star Trek, the Simpsons, Marvel, Snoopy's
 Screen Savers, the Looney Tunes (also on a CD), ScreamSavers, the Disney
 Collection, Johnny Castaway, Delrina's six releases and the Desktop
@@ -929,6 +932,21 @@ else, one naming a variable an earlier control took, and a host control
 without a value (`host_variable_ok`). The Linux player, which has no
 settings window, gives every host each host control's default.
 
+**Fixed host variables** (catalog `hostEnv`, since the twenty-four
+releases). An entry may also fix variables of the host's that no setting
+changes: each of Screen Wreckers' nine toys is the same program,
+`DTTY3203.EXE`, and names its toy as `"hostEnv": {"ADTOY": "<n>"}`
+(`Module::host_env`). `host_control_values` appends them, by name, after
+the host controls' variables, so every start of the module's host gets
+them, wherever it starts: `/s` and its rotations, `/p`, Preview, the
+live preview, thumbnails, module buttons, `/window` and `/wallpaper`; the
+spawn lines show them with the host controls' (`host=ADTOY=3`). The
+parser takes a name only as `host_variable_ok` takes a host control's,
+and not one a host control of the module names, and a value of 1 to 64
+printable ASCII characters (`host_variable_value_ok`); it drops any
+other. A module without `hostEnv` starts as before. The Linux player
+passes them the same way.
+
 The dialog updates the file in place. Keys, sections and comments it doesn't
 know about are left alone. `Sound`, `Volume`, `DifferentPerMonitor` and
 `AmbientBars` are read leniently (`on`, `off`, `075`; a volume outside
@@ -1030,7 +1048,7 @@ running. Only files named that way are ever deleted.
   monitor changed mode or position but kept its aspect ratio (so the host's
   emulated screen size is the same) is moved, and its host carries on; so is
   one whose host runs a module with a screen of its own (an Intermission,
-  Star Trek, ScreamSavers or Marvel module, Johnny Castaway or a 7th Level scene), whose 640×480 is the same on
+  Star Trek, ScreamSavers or Marvel module, Johnny Castaway, a 7th Level scene or a Desktop Toy), whose 640×480 is the same on
   every monitor (such
   windows go last, after the ones whose size matches a monitor, so neither
   kind restarts for the other). A
@@ -1204,7 +1222,7 @@ running. Only files named that way are ever deleted.
   Dark module (one that follows the display) it is the whole monitor at its
   After Dark size, in `LongAfterDark-seed-<pid>-<window>.ppm`, as ever; for a
   module with a screen of its own (an Intermission, Star Trek, ScreamSavers
-  or Marvel module, Johnny Castaway or a 7th Level scene), the part of the monitor its 640×480 frame will cover, shrunk to 640×480,
+  or Marvel module, Johnny Castaway, a 7th Level scene or a Desktop Toy), the part of the monitor its 640×480 frame will cover, shrunk to 640×480,
   in `…-<window>-640x480.ppm`, one picture for both (a screen of another size
   would have its own, `…-<window>-<W>x<H>.ppm`). A window that can only
   start with such a module (it chosen alone, or the only releases imported

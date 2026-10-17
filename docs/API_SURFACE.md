@@ -20,6 +20,8 @@ Take Your Best Shot, the twenty-first release, is not counted here either: its s
 
 Monty Python's Desktop Pythonizer and its Limited Edition Desktop Extras (the twenty-second and twenty-third releases) are not counted either: their 24 scenes are version-1 7th Level resource files played by the Pythonizer's older player, `PYTHON.EXE` with `PYTHU001`, `PYTHA001`, `PYTHS001` and `PYTHR001` (no `DISPDIB`; `ABI.md` §3.16). No call was added: the five binaries' system imports are `PLYMPTON`'s and its libraries' but `GDI.91 GetTextExtent` and `USER.50 FindWindow`, which the runtime already had (`research/monty/lane/imports.txt`, gitignored), and all 24 scenes in all three roles (the screen saver, Caps Lock's interactive saver with clicks and keys, the living wallpaper) and for 7,200 frames call 78 to 106 functions, none unimplemented. The rows below marked "only: PLYMPTON" are the Pythonizer player's too where it imports them (`mmio*`, `SetClassWord`, `MemManInfo`, `waveOutGetID`, `GetViewportOrg`, `DPtoLP`); it imports no `joy*`, no installable-driver call and no `SetCursorPos`.
 
+Beavis and Butt-head Screen Wreckers, the twenty-fourth release, is not counted in the Deluxe tables either: its nine toys are one MFC 4.2 program, Cyclops' Desktop Toys engine `DTTY3203.EXE` (the `desktoptoys` ABI, `ABI.md` §2.15), which the pe32 lane runs unchanged as the Win32 runtime's process. Its 340 imports (KERNEL32, USER32, GDI32, ADVAPI32, WINMM, DSOUND, SHELL32, COMDLG32, WINSPOOL, COMCTL32) were checked against the shims (`research/bbsw/lane1/imports.txt`, gitignored) and all nine toys run for 900 frames twice and 7,200 frames with the census on: none unimplemented. The 148 imports the tables lacked are listed in §1.1 below ("0 binaries": the Deluxe disc imports none); they are registered for a program only (`host/win32/shim_families.hh` `register_program_shims`), so a module's surface is unchanged (`ADVAPI32`, `DSOUND`, `WINSPOOL` and `COMCTL32` stay DLLs nobody emulates for After Dark). Some rows below also behave differently for a program (and only then): `CreateWindowExA`, `DestroyWindow`, `DefWindowProcA`, `ShowWindow`, `SetWindowPos`, `MoveWindow`, `GetClientRect`, `GetParent`, `IsWindowVisible`, `EnableWindow`, `GetActiveWindow`, `SetFocus`, `GetDlgItem`, `SendDlgItemMessageA`, `SetDlgItemTextA`, `CheckDlgButton`, `IsDlgButtonChecked`, `GetSystemMetrics`, `GetCursorPos`, `BeginPaint`, `EndPaint`, `InvalidateRect`, `UpdateWindow`, `GetDC`, `PeekMessageA`, `TranslateMessage` (`host/win32/user32_program.cc`), and `GetStartupInfoA`. While the program is played (Caps Lock, `ABI.md` §2.15) the lane queues the saver's keys and mouse as window messages (`user32_program_key`/`_mouse`): `GetMessageA` and `PeekMessageA` read them after posted messages, `TranslateMessage` posts their `WM_CHAR`, and `GetCursorPos` follows the mouse; in ghost mode that queue stays empty.
+
 Sound is the largest change since that plan. With sound on (`ADSOUND=1` or `ADAUDIOOUT`; the saver turns it on for the primary monitor's host), DirectSound, MSACM32, the WINMM MCI sequencer, `waveOut` and aux calls, and MMSYSTEM's `sndPlaySound`, `waveOut*`, `midiOut*`, `aux*` and `mciSendString` are **emulated** over the host audio engine (`AUDIO.md` §7, §8); those rows are classed `emulate` below, and their notes say what the sound-off host answers, which is exactly what the silent host of before answered. `waveIn*`, the mixer and CD audio stay without a device either way.
 
 Lanes (what runs as emulated code):
@@ -348,6 +350,209 @@ Lanes (what runs as emulated code):
 Win32 lane totals by class: emulate 140, passthrough 82, stub 58 (the plan had emulate 126 and stub 72; the 14 sound rows above moved).
 
 Also loaded **dynamically** (not in any import table): `dsound.dll!DirectSoundCreate` (ADXPL510 `XNoiseMaker::Open`, then `IDirectSound::SetCooperativeLevel(block.hWnd, DSSCL_NORMAL)` and `IDirectSoundBuffer` methods) — **emulate** with sound on: an emulated DirectSound 3 over the audio engine (AUDIO.md §7.2); with sound off `LoadLibraryExA("dsound.dll")` fails and the module runs silent; `IMM32.DLL!ImmAssociateContext` and `MPR.DLL`/`PASSWORD.CPL` are only used by `AFTERDAR.SCR`.
+
+### 1.1 What a whole program adds (Screen Wreckers' `DTTY3203.EXE`, `ABI.md` §2.15)
+
+Registered for a program only. "never reached (unimplemented)": imported, never called by the nine toys in ghost mode (no handler; the census would name it).
+
+#### ADVAPI32.DLL (11 functions)
+
+| function | binaries | class | notes |
+|---|---|---|---|
+| `GetFileSecurityA` | 0 | stub | FALSE, ERROR_CALL_NOT_IMPLEMENTED (Windows 95 had no file security) — only: DTTY3203 |
+| `RegCloseKey` | 0 | emulate | ERROR_INVALID_HANDLE for a closed key — only: DTTY3203 |
+| `RegCreateKeyA` | 0 | emulate | creates in the emulated tree — only: DTTY3203 |
+| `RegCreateKeyExA` | 0 | emulate | creates in the emulated tree; disposition — only: DTTY3203 |
+| `RegOpenKeyA` | 0 | emulate | the emulated registry (advapi32.cc), seeded as the installer left it; never the host's — only: DTTY3203 |
+| `RegOpenKeyExA` | 0 | emulate | as RegOpenKeyA; reached by CReg (0x417d80) — only: DTTY3203 |
+| `RegQueryValueA` | 0 | emulate | a subkey's default value ("" when unset, as Windows 95) — only: DTTY3203 |
+| `RegQueryValueExA` | 0 | emulate | size queries, ERROR_MORE_DATA, ERROR_FILE_NOT_FOUND — only: DTTY3203 |
+| `RegSetValueA` | 0 | emulate | REG_SZ default value of a subkey it creates — only: DTTY3203 |
+| `RegSetValueExA` | 0 | emulate | into the tree and REGISTRY.INI (REGEDIT4) in the state overlay — only: DTTY3203 |
+| `SetFileSecurityA` | 0 | stub | as GetFileSecurityA — only: DTTY3203 |
+
+#### COMCTL32.DLL (2 functions)
+
+| function | binaries | class | notes |
+|---|---|---|---|
+| `#17` | 0 | stub | InitCommonControls: never reached (unimplemented) — only: DTTY3203 |
+| `ImageList_Destroy` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+
+#### COMDLG32.DLL (1 functions)
+
+| function | binaries | class | notes |
+|---|---|---|---|
+| `GetFileTitleA` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+
+#### DSOUND.DLL (1 functions)
+
+| function | binaries | class | notes |
+|---|---|---|---|
+| `DirectSoundCreate` | 0 | emulate | statically imported: sound on, dsound.cc; sound off, DSERR_NODRIVER (register_dsound_absent) — only: DTTY3203 |
+
+#### GDI32.DLL (14 functions)
+
+| function | binaries | class | notes |
+|---|---|---|---|
+| `CreateDIBitmap` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `Escape` | 0 | stub | never reached (unimplemented; printing) — only: DTTY3203 |
+| `GetClipBox` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `GetNearestColor` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `GetTextExtentPointA` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `IntersectClipRect` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `OffsetViewportOrgEx` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `PtVisible` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `RectVisible` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `ScaleViewportExtEx` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `ScaleWindowExtEx` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `SetMapMode` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `SetViewportExtEx` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `SetWindowExtEx` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+
+#### KERNEL32.DLL (26 functions)
+
+| function | binaries | class | notes |
+|---|---|---|---|
+| `DuplicateHandle` | 0 | emulate | the process/thread pseudo-handles only — only: DTTY3203 |
+| `GetCurrentDirectoryA` | 0 | emulate | the Vfs current directory (C:\DTToys) — only: DTTY3203 |
+| `GetCurrentThread` | 0 | emulate | 0xFFFFFFFE — only: DTTY3203 |
+| `GetDiskFreeSpaceA` | 0 | emulate | a fixed 1996 disk — only: DTTY3203 |
+| `GetFullPathNameA` | 0 | emulate | Vfs full path, file part — only: DTTY3203 |
+| `GetProcessVersion` | 0 | emulate | 0x00040000 — only: DTTY3203 |
+| `GetShortPathNameA` | 0 | emulate | the path as it exists — only: DTTY3203 |
+| `GetStringTypeExA` | 0 | passthrough | en-US — only: DTTY3203 |
+| `GetTempFileNameA` | 0 | emulate | created in the Vfs when unique is 0 — only: DTTY3203 |
+| `GetThreadLocale` | 0 | emulate | 0x0409 — only: DTTY3203 |
+| `GlobalAddAtomA` | 0 | emulate | the global atom table, counted, integer atoms — only: DTTY3203 |
+| `GlobalDeleteAtom` | 0 | emulate |  — only: DTTY3203 |
+| `GlobalGetAtomNameA` | 0 | emulate |  — only: DTTY3203 |
+| `InterlockedDecrement` | 0 | emulate | the new value — only: DTTY3203 |
+| `InterlockedIncrement` | 0 | emulate | the new value — only: DTTY3203 |
+| `IsBadCodePtr` | 0 | emulate | mapped or not — only: DTTY3203 |
+| `IsBadReadPtr` | 0 | emulate | mapped or not — only: DTTY3203 |
+| `IsBadWritePtr` | 0 | emulate | mapped or not — only: DTTY3203 |
+| `LockFile` | 0 | emulate | TRUE (one process) — only: DTTY3203 |
+| `lstrcmpA` | 0 | passthrough | CompareStringA en-US — only: DTTY3203 |
+| `lstrcmpiA` | 0 | passthrough | CompareStringA en-US, ignoring case — only: DTTY3203 |
+| `lstrcpynA` | 0 | emulate |  — only: DTTY3203 |
+| `MulDiv` | 0 | emulate | rounded half away from zero; -1 on overflow or 0 — only: DTTY3203 |
+| `SetErrorMode` | 0 | emulate | the previous mode — only: DTTY3203 |
+| `SetUnhandledExceptionFilter` | 0 | emulate | kept and handed back — only: DTTY3203 |
+| `UnlockFile` | 0 | emulate | TRUE — only: DTTY3203 |
+
+#### SHELL32.DLL (2 functions)
+
+| function | binaries | class | notes |
+|---|---|---|---|
+| `DragFinish` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `DragQueryFileA` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+
+#### USER32.DLL (79 functions)
+
+| function | binaries | class | notes |
+|---|---|---|---|
+| `AdjustWindowRectEx` | 0 | emulate | Windows 95's frame metrics — only: DTTY3203 |
+| `BeginDeferWindowPos` | 0 | emulate |  — only: DTTY3203 |
+| `BringWindowToTop` | 0 | emulate | SetWindowPos HWND_TOP — only: DTTY3203 |
+| `CallNextHookEx` | 0 | emulate | the next older hook of the type — only: DTTY3203 |
+| `CallWindowProcA` | 0 | emulate | call_guest — only: DTTY3203 |
+| `CharLowerA` | 0 | emulate |  — only: DTTY3203 |
+| `CharNextA` | 0 | emulate |  — only: DTTY3203 |
+| `CharUpperA` | 0 | emulate |  — only: DTTY3203 |
+| `CheckMenuItem` | 0 | emulate |  — only: DTTY3203 |
+| `ClientToScreen` | 0 | emulate |  — only: DTTY3203 |
+| `DefDlgProcA` | 0 | emulate | DefWindowProcA — only: DTTY3203 |
+| `DeferWindowPos` | 0 | emulate |  — only: DTTY3203 |
+| `DestroyMenu` | 0 | emulate |  — only: DTTY3203 |
+| `DrawFocusRect` | 0 | passthrough |  — only: DTTY3203 |
+| `EnableMenuItem` | 0 | emulate |  — only: DTTY3203 |
+| `EndDeferWindowPos` | 0 | emulate | SetWindowPos each — only: DTTY3203 |
+| `EqualRect` | 0 | emulate |  — only: DTTY3203 |
+| `ExcludeUpdateRgn` | 0 | stub | NULLREGION — only: DTTY3203 |
+| `GetCapture` | 0 | emulate |  — only: DTTY3203 |
+| `GetClassInfoA` | 0 | emulate | MFC asks before registering its classes — only: DTTY3203 |
+| `GetDesktopWindow` | 0 | emulate | a desktop window over the screen — only: DTTY3203 |
+| `GetDlgCtrlID` | 0 | emulate |  — only: DTTY3203 |
+| `GetFocus` | 0 | emulate |  — only: DTTY3203 |
+| `GetForegroundWindow` | 0 | emulate | the active window — only: DTTY3203 |
+| `GetMenu` | 0 | emulate |  — only: DTTY3203 |
+| `GetMenuCheckMarkDimensions` | 0 | stub | 13 x 13 — only: DTTY3203 |
+| `GetMenuItemCount` | 0 | emulate |  — only: DTTY3203 |
+| `GetMenuItemID` | 0 | emulate |  — only: DTTY3203 |
+| `GetMenuState` | 0 | emulate |  — only: DTTY3203 |
+| `GetMessageA` | 0 | emulate | posted messages, then the input queue (Caps Lock play), WM_PAINT, timers; waits in Runtime::yield_frame (the frame ends there); audio pumped first — only: DTTY3203 |
+| `GetMessagePos` | 0 | emulate | the last message retrieved — only: DTTY3203 |
+| `GetMessageTime` | 0 | emulate | the last message retrieved — only: DTTY3203 |
+| `GetNextDlgTabItem` | 0 | stub | 0 — only: DTTY3203 |
+| `GetSubMenu` | 0 | emulate |  — only: DTTY3203 |
+| `GetSysColorBrush` | 0 | emulate | a stock-like solid brush — only: DTTY3203 |
+| `GetTopWindow` | 0 | emulate | z-order — only: DTTY3203 |
+| `GetWindow` | 0 | emulate | z-order, owner, child — only: DTTY3203 |
+| `GetWindowDC` | 0 | emulate | the screen DC — only: DTTY3203 |
+| `GetWindowTextLengthA` | 0 | emulate |  — only: DTTY3203 |
+| `GrayStringA` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `HideCaret` | 0 | stub | TRUE — only: DTTY3203 |
+| `InflateRect` | 0 | emulate |  — only: DTTY3203 |
+| `IntersectRect` | 0 | emulate |  — only: DTTY3203 |
+| `IsChild` | 0 | emulate |  — only: DTTY3203 |
+| `IsDialogMessageA` | 0 | stub | FALSE: no dialogs — only: DTTY3203 |
+| `IsIconic` | 0 | emulate |  — only: DTTY3203 |
+| `IsRectEmpty` | 0 | emulate |  — only: DTTY3203 |
+| `IsWindow` | 0 | emulate |  — only: DTTY3203 |
+| `IsWindowEnabled` | 0 | emulate |  — only: DTTY3203 |
+| `IsWindowUnicode` | 0 | emulate | FALSE — only: DTTY3203 |
+| `LoadAcceleratorsA` | 0 | emulate | RT_ACCELERATOR tables — only: DTTY3203 |
+| `LoadMenuA` | 0 | emulate | RT_MENU templates — only: DTTY3203 |
+| `MapWindowPoints` | 0 | emulate |  — only: DTTY3203 |
+| `ModifyMenuA` | 0 | emulate |  — only: DTTY3203 |
+| `OffsetRect` | 0 | emulate |  — only: DTTY3203 |
+| `PtInRect` | 0 | emulate |  — only: DTTY3203 |
+| `RegisterWindowMessageA` | 0 | emulate | 0xC000 + n, case-insensitive — only: DTTY3203 |
+| `ReleaseCapture` | 0 | emulate | WM_CAPTURECHANGED — only: DTTY3203 |
+| `ReuseDDElParam` | 0 | stub | MAKELONG — only: DTTY3203 |
+| `ScreenToClient` | 0 | emulate |  — only: DTTY3203 |
+| `SetActiveWindow` | 0 | emulate |  — only: DTTY3203 |
+| `SetCapture` | 0 | emulate | emulated only — only: DTTY3203 |
+| `SetCursorPos` | 0 | emulate | the emulated pointer only; never the host cursor — only: DTTY3203 |
+| `SetForegroundWindow` | 0 | emulate | activates — only: DTTY3203 |
+| `SetMenu` | 0 | emulate | the frame changes (client area) — only: DTTY3203 |
+| `SetMenuItemBitmaps` | 0 | stub | TRUE — only: DTTY3203 |
+| `SetRectEmpty` | 0 | emulate |  — only: DTTY3203 |
+| `SetWindowsHookExA` | 0 | emulate | emulated hooks (never real); WH_CBT called at create/destroy — only: DTTY3203 |
+| `ShowCaret` | 0 | stub | TRUE — only: DTTY3203 |
+| `ShowOwnedPopups` | 0 | stub | TRUE — only: DTTY3203 |
+| `TabbedTextOutA` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `TrackPopupMenu` | 0 | stub | 0: no menu is ever shown — only: DTTY3203 |
+| `TranslateAcceleratorA` | 0 | emulate | key messages -> WM_COMMAND — only: DTTY3203 |
+| `UnhookWindowsHookEx` | 0 | emulate |  — only: DTTY3203 |
+| `UnionRect` | 0 | emulate |  — only: DTTY3203 |
+| `UnpackDDElParam` | 0 | stub | low and high word — only: DTTY3203 |
+| `ValidateRect` | 0 | emulate | the update rectangle — only: DTTY3203 |
+| `WindowFromPoint` | 0 | emulate |  — only: DTTY3203 |
+| `WinHelpA` | 0 | stub | FALSE — only: DTTY3203 |
+
+#### WINMM.DLL (10 functions)
+
+| function | binaries | class | notes |
+|---|---|---|---|
+| `mmioAdvance` | 0 | emulate |  — only: DTTY3203 |
+| `mmioAscend` | 0 | emulate |  — only: DTTY3203 |
+| `mmioClose` | 0 | emulate |  — only: DTTY3203 |
+| `mmioDescend` | 0 | emulate | MMIO_FINDCHUNK/FINDRIFF/FINDLIST — only: DTTY3203 |
+| `mmioGetInfo` | 0 | emulate | the whole file as the I/O buffer — only: DTTY3203 |
+| `mmioOpenA` | 0 | emulate | read-only over the Vfs (mmio.cc) — only: DTTY3203 |
+| `mmioRead` | 0 | emulate |  — only: DTTY3203 |
+| `mmioSeek` | 0 | emulate |  — only: DTTY3203 |
+| `mmioSetInfo` | 0 | emulate |  — only: DTTY3203 |
+| `sndPlaySoundA` | 0 | emulate | sound on: one engine voice; off: FALSE; not called by the toys in ghost mode — only: DTTY3203 |
+
+#### WINSPOOL.DRV (3 functions)
+
+| function | binaries | class | notes |
+|---|---|---|---|
+| `ClosePrinter` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `DocumentPropertiesA` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
+| `OpenPrinterA` | 0 | stub | never reached (unimplemented) — only: DTTY3203 |
 
 ## 2. Win16 lane (ne16)
 

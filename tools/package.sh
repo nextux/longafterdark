@@ -213,9 +213,10 @@ Long After Dark for Linux
 Long After Dark is a screen saver that runs the original modules of After
 Dark, of LucasArts' Star Wars Screen Entertainment, of Delrina's
 Intermission and its Opus 'n Bill, Flintstones, Far Side and Dilbert
-collections, of Sierra's Johnny Castaway and of 7th Level's Take Your
-Best Shot and Monty Python's Desktop Pythonizer, unchanged, under x86
-emulation. It knows twenty-three releases, 470 modules:
+collections, of Sierra's Johnny Castaway, of 7th Level's Take Your Best
+Shot and Monty Python's Desktop Pythonizer, and of Beavis and Butt-head
+Screen Wreckers, unchanged, under x86 emulation. It knows twenty-four
+releases, 479 modules:
 
 id        Release                                      Internet Archive download
 deluxe    After Dark 4.0 Deluxe (1996)                 CD image, 381.7 MB
@@ -249,6 +250,7 @@ pythonizer
             Pythonizer (1995)
 pythonle  Monty Python's Limited Edition Desktop       floppy image, 1.4 MB
             Extras (1995)
+wreckers  Beavis and Butt-head Screen Wreckers (1996)  CD image, 46.1 MB
 
 Star Trek: The Screen Saver is After Dark 2.0 (version 2.0b) with 16 Star
 Trek modules, and Star Trek: The Next Generation Screen Saver After Dark
@@ -277,7 +279,12 @@ Gilliam's style, its screen savers and living wallpapers, three of them
 Caps Lock on; they are scenes of the Pythonizer's own, older Runtime
 Player. Monty Python's Limited Edition Desktop Extras adds two more scenes,
 Foot and Penguins, which play with the Desktop Pythonizer's player: import
-that release too.
+that release too. Beavis and Butt-head Screen Wreckers (Viacom New Media,
+MTV's "Cheap Clicks", made by Cyclops Software) is nine desktop toys in
+which Beavis and Butt-head wreck your desktop, all played by one Windows 95
+program, which runs unchanged, the toy playing itself over the desktop
+("ghost mode") as the set's screen saver ran it; with Caps Lock on, the
+toy is yours to play.
 
 No file of any of these releases is included: you import them from your
 own copies (and are responsible for sourcing them legally).
@@ -341,7 +348,7 @@ What you need
        floppies, one folder of every disk's files, or one holding nothing
        but DISK1, DISK2, ... folders).
      - --download: a release's Internet Archive copy, by its id; "all"
-       imports all twenty-three, one after another (1076 MB, those imported
+       imports all twenty-four, one after another (1122 MB, those imported
        already too). Downloads resume if interrupted, and each one is
        checked against its published MD5 before it is used.
    The importer works out which release it was given, checks every file
@@ -438,10 +445,10 @@ Updating
 
 Status
 
-   The 470 modules of the twenty-three releases, with their sound, their
+   The 479 modules of the twenty-four releases, with their sound, their
    Caps Lock games and Final Exam's Num Lock exam (the scenes of Take Your
-   Best Shot, the Desktop Pythonizer and its Desktop Extras have been run
-   only on Windows so far). The living wallpaper
+   Best Shot, the Desktop Pythonizer and its Desktop Extras, and Screen
+   Wreckers' toys, have been run only on Windows so far). The living wallpaper
    (LongAfterDark.exe /wallpaper) is for Windows only. Still being
    finished, as on Windows:
      - Speed: each module's pace follows a model of a mid-1990s PC; not
@@ -475,9 +482,10 @@ Long After Dark
 Long After Dark is a screen saver for Windows that runs the original modules
 of After Dark, of LucasArts' Star Wars Screen Entertainment, of Delrina's
 Intermission and its Opus 'n Bill, Flintstones, Far Side and Dilbert
-collections, of Sierra's Johnny Castaway and of 7th Level's Take Your
-Best Shot and Monty Python's Desktop Pythonizer, unchanged, under x86
-emulation. It knows twenty-three releases, 470 modules:
+collections, of Sierra's Johnny Castaway, of 7th Level's Take Your Best
+Shot and Monty Python's Desktop Pythonizer, and of Beavis and Butt-head
+Screen Wreckers, unchanged, under x86 emulation. It knows twenty-four
+releases, 479 modules:
 
 id        Release                                      Internet Archive download
 deluxe    After Dark 4.0 Deluxe (1996)                 CD image, 381.7 MB
@@ -511,6 +519,7 @@ pythonizer
             Pythonizer (1995)
 pythonle  Monty Python's Limited Edition Desktop       floppy image, 1.4 MB
             Extras (1995)
+wreckers  Beavis and Butt-head Screen Wreckers (1996)  CD image, 46.1 MB
 
 Star Trek: The Screen Saver is After Dark 2.0 (version 2.0b) with 16 Star
 Trek modules, and Star Trek: The Next Generation Screen Saver After Dark
@@ -539,7 +548,12 @@ Gilliam's style, its screen savers and living wallpapers, three of them
 Caps Lock on; they are scenes of the Pythonizer's own, older Runtime
 Player. Monty Python's Limited Edition Desktop Extras adds two more scenes,
 Foot and Penguins, which play with the Desktop Pythonizer's player: import
-that release too.
+that release too. Beavis and Butt-head Screen Wreckers (Viacom New Media,
+MTV's "Cheap Clicks", made by Cyclops Software) is nine desktop toys in
+which Beavis and Butt-head wreck your desktop, all played by one Windows 95
+program, which runs unchanged, the toy playing itself over the desktop
+("ghost mode") as the set's screen saver ran it; with Caps Lock on, the
+toy is yours to play.
 
 No file of any of these releases is included: you import them from your
 own copies (and are responsible for sourcing them legally). Requires 64-bit
@@ -570,7 +584,7 @@ adhostwin.exe and adimport.exe next to itself.
      - A drive or folder: the CD itself, or a folder copied from it (for
        floppies, one folder of every disk's files, or one holding nothing
        but DISK1, DISK2, ... folders).
-     - A download from the Internet Archive: the twenty-three releases with their
+     - A download from the Internet Archive: the twenty-four releases with their
        sizes, plus one entry that fetches every release not imported yet.
        Downloads resume if interrupted, and each one is checked against its
        published MD5 before it is used.
@@ -636,6 +650,11 @@ adhostwin.exe and adimport.exe next to itself.
    are there, the settings window shows Foot and Penguins as needing the
    Desktop Pythonizer and never plays them.
 
+   Screen Wreckers verifies as its CD, its ISO image (Screen Wreckers.iso,
+   which the download fetches) or a folder copied from the CD. The
+   importer expands the program and the toys' files from the CD's
+   InstallShield libraries, as its setup did, and never runs the setup.
+
    From a command prompt, with the ids above:
      adimport --image "C:\Images\After Dark 3.2.iso"
      adimport --image disk1.img --image disk2.img
@@ -648,7 +667,7 @@ adhostwin.exe and adimport.exe next to itself.
      adimport --download all
      adimport --list-packages
      adimport --remove tt
-   "adimport --download all" imports all twenty-three, one after another (those
+   "adimport --download all" imports all twenty-four, one after another (those
    imported already too). adimport --help lists every option.
 
 2. Covers
@@ -692,8 +711,9 @@ adhostwin.exe and adimport.exe next to itself.
    choose its posters and "Posters..." to make one a wallpaper, which stays
    inside the emulated PC: your own desktop never changes. The resolution
    applies to the other modules: the Intermission modules, both Star Trek
-   releases', ScreamSavers and Marvel modules, Johnny Castaway, and Best
-   Shot's and the Monty Python scenes always get 640x480, scaled up to fit
+   releases', ScreamSavers and Marvel modules, Johnny Castaway, Best
+   Shot's and the Monty Python scenes, and Screen Wreckers' toys always get
+   640x480, scaled up to fit
    the screen, with bars
    at the sides on a
    widescreen monitor unless "Stretch to fit the screen" is checked.
@@ -728,7 +748,8 @@ adhostwin.exe and adimport.exe next to itself.
    Shot, Caps Lock starts the arcade game; in the Desktop Pythonizer's
    scenes it lets clicks and keys reach the scene, which is how its three
    games are played (The Pig Game with the keys: Enter or Space puts in a
-   coin, the arrows move, Space fires). Num Lock starts Star Trek's
+   coin, the arrows move, Space fires); in Screen Wreckers it makes the
+   toy yours to play. Num Lock starts Star Trek's
    Final Exam: type the number of your answer; moving the mouse ends the
    exam and the screen saver. Locking the computer (Win+L) always ends it.
 
@@ -777,7 +798,7 @@ adhostwin.exe and adimport.exe next to itself.
    gives it. /wallpaper /stop ends it, and your wallpaper shows again.
    Every module starts on a picture of your own wallpaper; Best Shot's
    and the Monty Python scenes play their living-wallpaper form, over a
-   backdrop of their own.
+   backdrop of their own, and Screen Wreckers' toys wreck your wallpaper.
 
    Keys and the mouse never reach the modules, and Caps Lock starts no
    game. It doesn't keep the display on: the screen saver, the lock and
@@ -806,7 +827,7 @@ Updating
 
 Status
 
-   470 modules from the twenty-three releases, with their sound, their Caps Lock
+   479 modules from the twenty-four releases, with their sound, their Caps Lock
    games, Final Exam's Num Lock exam and their own option buttons. Still
    being finished:
      - Speed: each module's pace follows a model of a mid-1990s PC; not

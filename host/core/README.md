@@ -81,11 +81,13 @@ refused stream target · **3** a valid module whose lane is not built into
 this `adhostwin` yet.
 
 **`--capabilities`** prints one line on stdout and exits 0: what this build
-has, e.g. `lanes=pe32,ne16 configure=pe32,ne16 abis=afterdark,intermission,scrnsave,7thlevel
+has, e.g. `lanes=pe32,ne16 configure=pe32,ne16 abis=afterdark,desktoptoys,intermission,scrnsave,7thlevel
 status=1 state=1 seed=1 audio=1 numlock=1` (`lanes=` lists the linked lanes,
 `configure=` those whose `Lane::can_configure()` is true, `abis=` the union
 of their `Lane::abis()` in lane order — the module ABIs this build runs:
-`afterdark` (pe32 and ne16), `intermission`, `scrnsave` (ne16: a Windows
+`afterdark` (pe32 and ne16), `desktoptoys` (pe32: a toy of Cyclops' Desktop
+Toys engine, a whole Win32 program, a PE32 EXE, `docs/ABI.md` §2.15),
+`intermission`, `scrnsave` (ne16: a Windows
 3.1 screen saver's .SCR program, `docs/ABI.md` §3.15) and `7thlevel` (ne16:
 a scene of 7th Level's Runtime Player, a 7th Level resource file the probe
 knows by its first bytes, `"7L"` 02 00 or 01 00, `docs/ABI.md` §3.16), the catalog's

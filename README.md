@@ -4,14 +4,15 @@ The original After Dark screen savers, Flying Toasters and all, running on
 today's Windows (and on Linux, through Wine), along with LucasArts' Star
 Wars Screen Entertainment, Delrina's Intermission and its Opus 'n Bill,
 Flintstones, Far Side and Dilbert screen savers, Sierra's Johnny Castaway,
-and 7th Level's Take Your Best Shot and Monty Python's Desktop Pythonizer.
+7th Level's Take Your Best Shot and Monty Python's Desktop Pythonizer, and
+MTV's Beavis and Butt-head Screen Wreckers.
 
 ![The Long After Dark settings window in dark mode: box covers of four After Dark releases across the top, the module list on the left, and Flying Toasters! in the live preview](docs/images/settings.png)
 
 ## What it is
 
 Long After Dark brings back Berkeley Systems' After Dark screen savers from
-the 1990s, and eleven of their contemporaries: seven that ran on Delrina's
+the 1990s, and twelve of their contemporaries: seven that ran on Delrina's
 Intermission, which are Intermission 4.0 itself (1993), LucasArts' Star
 Wars Screen Entertainment (1994) and Delrina's own Opus 'n Bill Screen
 Saver (1993), Opus 'n Bill: On the Road Again!, The Flintstones Screen
@@ -19,20 +20,22 @@ Saver Collection, The Far Side Screen Saver Collection and Scott Adams'
 Dilbert Screen Saver Collection (all four from 1994), Sierra On-Line's
 Screen Antics: Johnny Castaway (1992), a screen saver program of its own,
 7th Level's Take Your Best Shot (1995), scenes of Bill Plympton's
-animation played by 7th Level's own player, and 7th Level's Monty
-Python's Flying Circus Desktop Pythonizer (1995) and its Limited Edition
-Desktop Extras, scenes of Flying Circus animation played by an earlier
-version of that player. It doesn't remake them. It runs the original
-modules, unchanged, on an emulated PC of the time: the x86 processor and
-the parts of Windows 95 they talk to. So they look, move and sound the way
-they did.
+animation played by 7th Level's own player, 7th Level's Monty Python's
+Flying Circus Desktop Pythonizer (1995) and its Limited Edition Desktop
+Extras, scenes of Flying Circus animation played by an earlier version of
+that player, and Viacom New Media's Beavis and Butt-head Screen Wreckers
+(1996), nine desktop toys from Cyclops Software that wreck your desktop,
+all played by one Windows 95 program. It doesn't remake them. It runs the
+original modules, unchanged, on an emulated PC of the time: the x86
+processor and the parts of Windows 95 they talk to. So they look, move
+and sound the way they did.
 
-It works with twenty-three releases for Windows, 470 modules in all: ten
+It works with twenty-four releases for Windows, 479 modules in all: ten
 of Berkeley Systems' After Dark, two of other companies' modules for After
 Dark, the seven Intermission releases, Johnny Castaway, Take Your Best
-Shot, and the Desktop Pythonizer and its Desktop Extras. Import one or all
-of them; each works on its own, but for the Desktop Extras, which play
-with the Desktop Pythonizer.
+Shot, the Desktop Pythonizer and its Desktop Extras, and Screen Wreckers.
+Import one or all of them; each works on its own, but for the Desktop
+Extras, which play with the Desktop Pythonizer.
 
 | Release | Year | Modules |
 |---|---|---|
@@ -58,6 +61,7 @@ with the Desktop Pythonizer.
 | Totally Twisted After Dark | 1995 | 13 |
 | The Disney Collection Screen Saver | 1995 | 16 |
 | After Dark 4.0 Deluxe | 1996 | 84 |
+| Beavis and Butt-head Screen Wreckers (Viacom New Media) | 1996 | 9 |
 | After Dark 10th Anniversary | 1999 | 46 |
 
 Star Wars Screen Entertainment is not an After Dark release, though it is
@@ -180,13 +184,33 @@ Pythonizer's own, an earlier version than Best Shot's), which Long After
 Dark runs unchanged, standing in for the Desktop Pythonizer program that
 started them.
 
+Beavis and Butt-head Screen Wreckers (1996) is Viacom New Media's, one of
+MTV's "Cheap Clicks", made by Cyclops Software as a set of its Desktop
+Toys: nine toys in which MTV's Beavis and Butt-head wreck your desktop.
+Beavis eats the sweets and caffeine that fly in while the Cornholio meter
+fills (Cornholio); the two tumble about in a tractor tire and drag skid
+marks through your windows (Tire Trouble); Beavis punches and kicks the
+TVs, pots and nachos hurled at him (Karate Beavis); they spray-paint and
+brush graffiti over the screen (Painting Dudes), kick a trash can until
+its garbage piles up (Kick The Can), throw slurpies, eggs and milk at the
+screen (Chuckfest), spray it with shaken sodas (Soda Jerks), shoot the
+targets flying across it (Shoot 'Em) and mow it into stripes (Digger). In
+most of them the damage stays and builds up. Its
+screen saver played a toy in "ghost mode", the toy playing itself over the
+desktop, and that is how Long After Dark plays each of them, over a
+picture of your desktop; with Caps Lock on, the toy is yours to play
+(see [Tips](#tips)). It is neither a
+module of any engine nor a Windows 3.1 program but the set's Windows 95
+program, which Long After Dark runs unchanged, the first 32-bit program it
+runs whole, starting it as the set's screen saver did.
+
 - **Every monitor.** It runs on all your monitors, or only the main one.
 - **Sound.** The modules' sound effects and music, and the Simpsons'
   voices, with one volume setting for all of it (or off).
 - **Games.** Caps Lock starts the games built into some modules, such as
-  Rodger Dodger, You Bet Your Head, Pinocchio, Best Shot's Head Shot and
-  the Desktop Pythonizer's Gopher Game, and Num Lock Star Trek's Final
-  Exam, without closing the screen saver.
+  Rodger Dodger, You Bet Your Head, Pinocchio, Best Shot's Head Shot, the
+  Desktop Pythonizer's Gopher Game and Screen Wreckers' toys, and Num Lock
+  Star Trek's Final Exam, without closing the screen saver.
 - **Living wallpaper.** The modules can also play on your desktop, behind
   its icons, in place of your wallpaper: see
   [Living wallpaper](#living-wallpaper).
@@ -232,8 +256,9 @@ options (see [On Linux](#on-linux)).
   - the Internet Archive. The importer can download each release for you:
     a CD image of 381.7 MB (4.0 Deluxe), 181.4 MB (the Desktop
     Pythonizer), 143.3 MB (10th Anniversary), 89.1 MB (Take Your Best
-    Shot), 58.8 MB (3.2), 37.9 MB (Totally Twisted), 6.9 MB (Star Wars
-    Screen Entertainment) or 5.8 MB (Star Trek: The Next Generation), Star
+    Shot), 58.8 MB (3.2), 46.1 MB (Screen Wreckers), 37.9 MB (Totally
+    Twisted), 6.9 MB (Star Wars Screen Entertainment) or 5.8 MB (Star
+    Trek: The Next Generation), Star
     Trek's two floppy images (2.8 MB), the Desktop Extras' floppy image
     (1.4 MB), Johnny Castaway's floppy image in a ZIP (1.3 MB),
     Intermission 4.0's three floppy images in a ZIP (3.3 MB), or
@@ -285,6 +310,12 @@ setup or the Desktop Pythonizer program. The Desktop Extras' two scenes
 import from the floppy, its image (the download), or a folder or ZIP of
 its files. Import the two releases in either order; the Extras' scenes
 play once both are imported.
+
+Screen Wreckers imports from its CD, its ISO image (the download) or a
+folder copied from the CD. The importer installs the program and the
+toys' pictures, sounds and help as the CD's InstallShield setup did, from
+the compressed libraries on the CD, and never runs the setup, the set's
+screen saver or its toy selector.
 
 ## Getting started
 
@@ -369,6 +400,12 @@ one in Windows' Screen Saver Settings, always show the plain picture;
   Head Shot, Hot Shot and Line Shot, and others). In the Desktop
   Pythonizer's scenes, and Best Shot's others, it lets your clicks and keys
   reach the scene, which is how the Pythonizer's three games are played.
+  In Screen Wreckers it starts the toy for you to play, as the set's own
+  toy selector did: the mouse and its buttons in most toys, F2 to switch
+  between Beavis and Butt-head, the arrow keys in Tire Trouble and Digger,
+  and clicks or the numeric keypad (with Num Lock on) in Karate Beavis.
+  The toy's own way out (Esc twice, Ctrl+Q or its EXIT) sends it back to
+  playing itself.
   While a game is on, the keys and the mouse belong to it. Press
   Caps Lock again to stop playing, or Alt to close the screen saver at
   once. Otherwise most keys, a click or moving the mouse close it.
@@ -400,8 +437,8 @@ one in Windows' Screen Saver Settings, always show the plain picture;
   shows only when two or more monitors are connected).
 - **Intermission modules (Star Wars, Opus 'n Bill, Flintstones, Far Side,
   Dilbert and Intermission's own), Star Trek (both releases), ScreamSavers
-  and Marvel modules, Johnny Castaway, and Best Shot's and the Monty Python
-  scenes,** always get 640×480, scaled up
+  and Marvel modules, Johnny Castaway, Best Shot's and the Monty Python
+  scenes, and Screen Wreckers' toys,** always get 640×480, scaled up
   to fit the screen in its 4:3 shape (with bars at the
   sides on a widescreen monitor). The Resolution setting applies to the
   rest. To have them fill the screen instead, stretched, with no bars,
@@ -478,7 +515,8 @@ unless you start it. From PowerShell, in the folder you unzipped:
   desktop, as the original did; its three games show their menu. The
   Monty Python scenes play as the Desktop Pythonizer's living wallpapers,
   over a backdrop of their own too, so your wallpaper doesn't show behind
-  them.
+  them. Screen Wreckers' toys play in ghost mode over your wallpaper, and
+  wreck it.
 - Your desktop works as before: keys and the mouse never reach the
   modules, and Caps Lock starts no game. Sound plays as the screen
   saver's does (**Sound** and **Volume** in the settings window).
@@ -593,7 +631,7 @@ screen saver.
 - [docs/BUILDING.md](docs/BUILDING.md): building, testing and the source
   tree.
 - [docs/DESIGN.md](docs/DESIGN.md): how the emulation works.
-- [docs/PACKAGES.md](docs/PACKAGES.md): the twenty-three releases and how
+- [docs/PACKAGES.md](docs/PACKAGES.md): the twenty-four releases and how
   each one is imported.
 
 ## License
@@ -618,7 +656,8 @@ Breathed (Opus 'n Bill), Hanna-Barbera (The Flintstones), Gary Larson,
 FarWorks and Universal Press Syndicate (The Far Side), Scott Adams and
 United Feature Syndicate / United Media (Dilbert), Sierra On-Line and
 Dynamix (Johnny Castaway), 7th Level and Bill Plympton (Take Your Best
-Shot), and 7th Level and Python (Monty) Pictures (the Desktop Pythonizer
-and its Desktop Extras).
+Shot), 7th Level and Python (Monty) Pictures (the Desktop Pythonizer and
+its Desktop Extras), and Viacom and MTV, Cyclops Software, and Mike Judge,
+who created Beavis and Butt-head (Screen Wreckers).
 None of their files are in this repository or in the programs it builds:
 you import your own copies.

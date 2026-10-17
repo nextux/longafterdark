@@ -3,7 +3,7 @@
 Puts the original Windows screen saver modules where the hosts read them
 (DESIGN.md §6, §7; the full specification is `docs/PACKAGES.md`), and keeps
 each release's box cover (DESIGN.md §9, `docs/COVERS.md` §2). It is Long
-After Dark's importer, and it knows twenty-three releases, the *packages* of its
+After Dark's importer, and it knows twenty-four releases, the *packages* of its
 built-in registry (`packages.h`): ten of Berkeley Systems' After Dark, the
 oldest being Star Trek: The Screen Saver (1992, After Dark 2.0b) and the
 latest added Star Trek: The Next Generation Screen Saver (1994, After Dark
@@ -17,11 +17,14 @@ Opus 'n Bill: On the Road Again! (1994), The Flintstones Screen Saver
 Collection, The Far Side Screen Saver Collection and Scott Adams' Dilbert
 Screen Saver Collection (all three 1994); Sierra On-Line's Screen
 Antics: Johnny Castaway (1992), a Windows 3.1 screen-saver program of its
-own; and three of 7th Level's, scenes of its Runtime Player, which the
+own; three of 7th Level's, scenes of its Runtime Player, which the
 importer installs beside them: Take Your Best Shot (1995), 17 scenes,
 Monty Python's Flying Circus Desktop Pythonizer (1995), 22 scenes of an
 older player of its own, and its Limited Edition Desktop Extras (1995),
-two scenes that play with the Pythonizer's player (`requires`).
+two scenes that play with the Pythonizer's player (`requires`); and
+Viacom New Media's Beavis and Butt-head Screen Wreckers (1996), nine toys
+of Cyclops Software's Desktop Toys, all played by one Windows 95
+program, which the catalog lists once per toy (`hostEnv`).
 
 | id | Release | Medium | Recipe | Installs to (`<win>` = `<assets root>\win`) | Modules | Internet Archive copy |
 |---|---|---|---|---|---|---|
@@ -48,6 +51,7 @@ two scenes that play with the Pythonizer's player (`requires`).
 | `bestshot` | Take Your Best Shot | CD (ISO-9660), 7th Level's Setup: plain files, the scenes left on the CD | `cdcopy` | `packages\bestshot\{BESTACT,BESTSHOT}` (no `ENGINE`) | 17 | the CD image, 89.1 MB |
 | `pythonizer` | Monty Python's Flying Circus Desktop Pythonizer | CD (ISO-9660; or the raw BIN of it), 7th Level's Setup: plain files, the scenes left on the CD | `cdcopy` | `packages\pythonizer\{INTERACT,PYTHON}` (no `ENGINE`) | 22 | the CD image, 181.4 MB |
 | `pythonle` | Monty Python's Limited Edition Desktop Extras | one 1.44 MB floppy (FAT12), 7th Level's Setup: plain files; scenes for the Desktop Pythonizer's player (`requires`) | `cdcopy` | `packages\pythonle` (its two scenes; no `ENGINE`, no player) | 2 | the floppy image, 1.4 MB |
+| `wreckers` | Beavis and Butt-head Screen Wreckers | CD (ISO-9660), InstallShield 3: compressed libraries with folders, each installed whole | `is3` | `packages\wreckers` (the program `DTTY3203.EXE`, its set's files and `DT03\`; no `ENGINE`) | 9 (one program, one entry per toy) | the CD image, 46.1 MB |
 
 ```
 adimport --image <image> [--image <image2> …] | --iso <image> | --from <drive or folder>
@@ -202,6 +206,7 @@ another ZIP fetched whole, as below; the twenty releases' last four on
 | `bestshot` | `takeyourbestshot/BESTSHOT.iso` (the CD) | the same name | 93456384 | `e0df0601…` | image |
 | `pythonizer` | `monty-python-flying-circus-pythonizer/MontyPythonFlyingCircus_Pythonizer-1995.iso` (the CD; the raw `.bin` beside it is a known image too, not downloaded) | the same name | 190212096 | `c0938e04…` | image |
 | `pythonle` | `monty-pythons-flying-circus/Monty_Pythons_Flying_Circus.img` (the floppy) | the same name | 1474560 | `5088f268…` | image |
+| `wreckers` | `screen-wreckers/Screen Wreckers.iso` (the CD) | the same name | 48351232 | `4ab43ef0…` | image |
 
 * **Disc images** (`kind` image): the md5 is one of the package's known
   images, so the import is exactly an `--image` import of that file:
@@ -383,9 +388,17 @@ identical in every volume of a set, entries of their exact sizes with
 NUL-terminated names that pass the name rules (code page 437 as UTF-8, no
 duplicates), members back to back with no gap or overlap, every size and
 sum, a complete set, and exactly one member crossing each boundary between
-two consecutive volumes (`IMAGES.1+IMAGES.2!XMEN2099.FIF`). It refuses by
-name what neither release has: a password, a stored member, a named or
-second directory, a member over three or more volumes, a boundary no member
+two consecutive volumes (`IMAGES.1+IMAGES.2!XMEN2099.FIF`). Since the
+eleventh round it reads InstallShield 3's libraries too (Screen Wreckers'
+`DATA03.Z` and `DATA0332.Z`): their folder table, the unnamed directory
+first and then each folder by its `\`-separated path
+(`DT03\TOYSPR\BEAVIS`, every component passing the name rules), each
+holding at least one member, the members grouped by directory in table
+order; a member's `path()` is its folder's and its name, and `find()`
+takes such a path (`/` or `\`, without case); a member's version fields
+may hold its file version. It refuses by name what none of the releases
+has: a password, a stored member, a named first or a second unnamed
+directory, a member over three or more volumes, a boundary no member
 crosses, and PKWARE's coded-literal mode. The DCL decoder (binary literals;
 dictionary bits 4–6, a 1, 2 or 4 KiB window) never copies from before the
 first byte written, never produces more than the member's recorded size and
@@ -542,6 +555,16 @@ same way, from memory (`FatImage` over the member's bytes).
      Best Shot's CD none of this one's). Its Desktop Extras: `PYTHONLE.DLL`,
      `FOOT.BIN`, `PENGUINS.BIN` and `SETUP.EXE` at the floppy's root (the
      floppy, its image, or a folder or flat ZIP of its files).
+   * `is3` packages (Screen Wreckers): InstallShield 3's `SETUP.INI` at the
+     source's root (the CD, its image, or a folder copied from it), a plain
+     file of at most 64 KiB, whose `[Startup] AppName` is the package's
+     `setup_title` ("Beavis and Butt-head Screen Wreckers", without ASCII
+     case), with the release's own script, `BB03.INS` (`Package::marker`,
+     never read), and its first library, `DATA03.Z`
+     (`required_archives[0]`), beside it (`is3_app_name`,
+     `is3_fingerprint`). The other Desktop Toys CDs have scripts and names
+     of their own, so match nothing. A copy without the second library,
+     `DATA0332.Z`, is identified and then refused for it.
 3. `--package <id>` restricts step 2 to that package and refuses a source
    that is something else.
 
@@ -860,6 +883,25 @@ Pythonizer's folder, beside `PYTHON.EXE`: the table is `FOOT.BIN` and
 may be imported first: neither import reads or writes the other's
 package.
 
+**`is3`** (Screen Wreckers; `plan_is3`): the CD's InstallShield 3 script
+`BB03.INS` copies two compressed libraries whole into the install folder
+(`CompressGet` of `data03.z` and `data0332.z`, `*.*`, with their
+folders), and the recipe does the same: every library in
+`required_archives` (`DATA03.Z`, the set's data, then `DATA0332.Z`, the
+program) must be there, else 2, and is read whole (`IszLibrary`, its
+InstallShield 3 folder table included), and every member is installed
+where its folder table puts it below the package root
+(`DT03\TOYSPR\BEAVIS\…`), with its own date. The library named by
+`tag_library` must hold `tag_member` (`DATA0332.Z`, `DTTY3203.EXE`), else
+2: another set's program is not this release's. A library or member the
+reader refuses is a corrupt source (2), never a verify failure. Result:
+457 files, 13,629,179 bytes, the manifest's. Only `SETUP.INI` (read to
+identify) and the two libraries are ever opened (I5): never the setup,
+its scripts and libraries, the third library `DATATW32.Z` (the toy
+selector `TOYSEL32.EXE`, the screen saver `TOYSAV32.SCR`, which only
+started the program, and `TODD.EXE`), `DIRECTX\`, `MSVCRT20.DLL`, the
+CD's `DATA\`, or the videos and their player.
+
 **The archive password** is never stored: it is derived from `INSTALL.INS`
 at import time (§8.4). Candidates are the script's strings of 4–32 printable
 bytes — its own length-prefixed strings (a 16-bit length, then the bytes:
@@ -943,7 +985,13 @@ wants `PYTHON\PYTHON.EXE` (a `cdcopy` package's player is its table's one
 program), and its `required` files are the player, its four libraries and
 every one of the 22 scenes. The Desktop Extras' package, an add-on's
 (`Package::requires_release`), holds no program at all: I3 refuses any
-`.EXE` in it, and its `required` files are its two scenes.
+`.EXE` in it, and its `required` files are its two scenes. An `is3`
+package (a Desktop Toys set: its program and its data, the install
+folder) wants the program and the toy list, `DTTY3203.EXE` and
+`DTTS03.DTX` (`Package::toys_program`, `toys_list`), and refuses any
+`ENGINE` or `WINDOWS` folder (the program's registry is the lane's);
+Screen Wreckers' `required` files are those two, `DTTS03.DTV` and
+`DT03\TOYS_PAL`.
 
 ## Destination and atomicity
 
@@ -1238,6 +1286,24 @@ id of the release whose player plays it (`"pythonizer"`), and
 entry has them. They are written whether or not that release is
 installed, so the entries are the same in either import order.
 
+**Desktop Toys** (Screen Wreckers; `toy_modules`): a package with
+`Package::toys_program` is not scanned for modules. It gets one entry per
+toy of `Package::toys`, in that order, each the program,
+`packages/wreckers/DTTY3203.EXE`, which must be a PE32 EXE (a DLL, or a
+file of another format, is skipped, logged). Lane `pe32`, `abi`
+`"desktoptoys"`, `entry` `""`, `about` `""`, no controls, no `needs`,
+`system` the program's imported DLLs, the program's md5 on all nine,
+`screen` the registry's (`"640x480"`), `"game": true`, and last
+`"hostEnv": {"ADTOY": "<n>"}`, the toy's number from 1, which the front
+ends set in the host's environment (`kToyHost`). The ids are
+`wreckers.<name>`, the registry's name in lower case, letters and digits
+only (`wreckers.cornholio`, `wreckers.shootem`); the names are the set's
+toy list's, `DTTS03.DTX` (`Package::toys_list`), read strictly
+(`parse_toy_list`: CRLF lines, the set's name, the nine toys, "Random
+Toy" and a `*` line, none empty, longer than 63 bytes or holding a
+control character, Windows-1252), else the registry's, logged. No entry
+gets `sameAs`: the nine share an md5, but each plays its own toy.
+
 An NE file is told apart exactly as the ne16 lane's `detect_kind` tells it
 (`host/ne16/package.cc`), so the catalog lists it as the lane will run it:
 by its exports' names (without case; a name needs no entry-table entry, as
@@ -1376,7 +1442,9 @@ Intermission, one button each (and 36 of Intermission 4.0's the Speed
 control after it), and `bestshot` 17 (all `ne16`, 7th Level scenes, `abi`
 `"7thlevel"`, each with `screen`, no controls, 3 with `game`),
 `pythonizer` 22 and `pythonle` 2 (the same, no `game`; `pythonle`'s two
-with `requires`): 470 with all twenty-three installed, 232 over the first
+with `requires`), and `wreckers` 9 (`pe32`, one program, `abi`
+`"desktoptoys"`, each with `screen`, `game` and `hostEnv`, no controls):
+479 with all twenty-four installed, 232 over the first
 seven, 73 of them `sameAs` an earlier entry (swse, startrek and the
 sixteen after them add none). Four
 of the twenty releases' new names meet older ones in the `ne16` lane and
@@ -1390,7 +1458,7 @@ oldest first, reads `startrek` (1992-11), `castaway` (1992-12), `opus`
 `farside`, `simpsons`, `swse`, `opusroad` (1994-09), `snoopy`, `dilbert`,
 `tng`, `pythonle` (1995-01), `bestshot` (1995-02), `pythonizer`
 (1995-03), `looney`, `screams`, `ad32`, `tt`, `disney`, `deluxe`,
-`ad10`.
+`wreckers` (1996-11), `ad10`.
 
 ## Covers
 
@@ -1428,6 +1496,7 @@ dialog's release strip shows them). The tile shows the first of:
 | `bestshot` | the box front in the Internet Archive's item of the CD (`takeyourbestshot/bestshot.jpg`); nothing on the CD (its pictures are the desktop program's wallpapers and icons) | 432×547 |
 | `pythonizer` | the Internet Archive's scan of the disc in the CD image's own item (`…Pythonizer-1995.jpg`, 3060×3109, cropped to the disc at 85,97, 2880×2880, art `disc`); no box scan was found online | 2048×2048 |
 | `pythonle` | the Internet Archive's photo of the floppy in its image's own item (`img20250111_20571690.jpg`, 2115×2172, cropped to its label at 216,40, 1654×1202, art `panel`, "Disk label") | 1654×1202 |
+| `wreckers` | the box front in the Internet Archive's item of the CD (`screen-wreckers/Cover.jpg`, no crop); nothing on the CD (its pictures are icons and the installer's sprites) | 136×148 |
 
 The box fronts are small (a tile is never shown larger than 160×200 px),
 but they are the retail boxes; a disc label or an installer splash is what
@@ -1736,7 +1805,13 @@ one, `BESTSHOT.BIN` left out, `game` last); the Desktop Pythonizer as a
 made-up CD (a folder and an ISO) and its Desktop Extras as a made-up
 floppy (a folder, an image and a flat ZIP), their decoys never
 installed, version-1 headers read as version 2's, and `requires` and
-`requiresTitle` last on the Extras' entries; a
+`requiresTitle` last on the Extras' entries; Screen Wreckers as a
+made-up InstallShield 3 CD (a folder and an ISO: libraries with folder
+tables, a made-up PE32 program, a made-up toy list), with another Desktop
+Toys set's CD, this CD with another set's `AppName`, the CD without
+`DATA0332.Z`, a `DATA0332.Z` holding another set's program and a damaged
+library as decoys, its installer files never opened, its folders kept,
+the nine toy entries with `hostEnv` last; a
 ScreamSavers source never taken for After Dark 3.2 nor 3.2 for it, disk 1
 alone (ScreamSavers': "needs every install disk"), I4 over `*_SOUND.DLL`,
 the Disney names and ScreamSavers' `screen`; Marvel Comics Screen Posters
@@ -2020,7 +2095,13 @@ Pythonizer and its Desktop Extras it also finds their ISO (or raw BIN)
 and floppy image (put `research/monty/dl` in `AD_SOURCE_ISO_DIR`),
 imports them (27 files, `INTERACT` 19 and `PYTHON` 8, 22 modules; 2 files
 in the package root, 2 modules) and checks the merged catalog of all
-twenty-three: 470 modules, still 73 `sameAs`.
+twenty-three: 470 modules, still 73 `sameAs`. With Screen Wreckers it
+also finds its ISO (put `research/bbsw/dl` in `AD_SOURCE_ISO_DIR`),
+imports it (457 files, `DT03` 453 and the program and the set's three
+files in the package root; nothing of the toy selector or the screen
+saver; 9 modules, each the program, a game with its toy in `hostEnv`) and
+checks the merged catalog of all twenty-four: 479 modules, still 73
+`sameAs`.
 
 **Before a release** (these stay opt-in: they need the real images, the
 network or both, and take minutes), in a Release build directory:

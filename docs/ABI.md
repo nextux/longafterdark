@@ -107,6 +107,14 @@ with its path at `+0x63`; an IMQ module, which exports `SAVERMAIN` itself,
 as its own reader with no path, refused when its QUERY clears the saver
 flag `0x1000` as a pure reader's does (§3.8.9).
 
+**A whole Win32 program (pe32; Screen Wreckers' Desktop Toys)** — a module
+file that is a PE32 EXE is no module: run it unchanged as the emulated
+machine's one process, with the command line its screen saver gave it
+(`C:\DTToys\dtty3203.exe /s /t<toy-1>`), the registry its installer wrote
+(emulated), its folder as `C:\DTToys`, and the window manager, message loop
+and menus Windows 95 gave an MFC 4.2 program; every frame ends inside the
+program and the next resumes it (§2.15).
+
 **Both lanes** — every clock read must advance virtual time: engines and
 modules busy-wait and calibrate CPU speed on the clock inside a single call
 (§4). Both need x87; the flat lane also needs `0x67` (16-bit addressing of
@@ -610,6 +618,214 @@ resources. Its dispatcher (`0x1000102c`, abi-review) acts only on 2
 (PREINITIALIZE: reads and clamps `+0x40` to 0..100, `+0x44` to 5..95, `+0x48`),
 3 (BLANK, uses `+0x2C..+0x38`), 4 (DRAWFRAME) and 5 (CLOSE); every other
 message returns 0, so it needs no events, restart or button handling.
+
+### 2.15 Desktop Toys: a whole Win32 program (Screen Wreckers) — VERIFIED
+
+Beavis and Butt-head Screen Wreckers (Viacom New Media, 1996; MTV's "Cheap
+Clicks"; made by Cyclops Software, its Desktop Toys series) has no modules:
+its nine toys are one **program**, `DTTY3203.EXE` (PE32 i386 GUI, MSVC 4.20
+with MFC 4.2 linked in statically, base 0x400000 with relocations, no TLS,
+TimeDateStamp 1996-11-04, version info "Desktop Toys Volume 1",
+InternalName Spawn; 340 imports from KERNEL32, USER32, GDI32, ADVAPI32,
+WINMM, DSOUND, SHELL32, COMDLG32, WINSPOOL, COMCTL32). Windows ran it for
+the toys' screen saver, `TOYSAV32.SCR` ("Desktop Toys.scr"). The host does
+the same (ABI `desktoptoys`, the pe32 lane, `host/pe32/program.cc`): a
+module file that is a PE32 **EXE** (IMAGE_FILE_DLL clear — every After Dark
+module is a DLL) is run unchanged as the emulated machine's one Win32
+process. All nine catalog entries name the same file; the toy comes from the
+host variable `ADTOY` (1..9), which the catalog sets per module.
+
+**The command line.** `TOYSAV32.SCR` (0x401856..0x40197e) read `ScrVol`
+(default "2") and `ScrToy` (default "0") from
+`HKLM\SOFTWARE\Cyclops Software\Desktop Toys Screensaver` and called
+`ShellExecuteA(NULL, "open", <Path>\dtty32<0 if ScrVol < 10><ScrVol>.exe,
+"/s /t<ScrToy>", <Path>, SW_SHOWNORMAL)`. `ScrVol` is the Desktop Toys
+*volume* (03: `dtty3203.exe`), not a loudness. `DTTY3203.EXE`'s
+`InitInstance` (0x42d440) takes the tokens of `m_lpCmdLine` that start with
+`/`: `/s` = screen-saver ("ghost") mode, with a random toy; `/t<k>` =
+toy `atoi(k) + 1` (1..9 kept; anything else is 0 in `/s` mode); `/r`
+another flag. So toy n runs with `/s /t<n-1>`, numbered as
+`DTTS03.DTX` lists them and as the program's keys `[1]`..`[9]` and
+`HELP01`..`HELP09.TXT` are: 1 Cornholio, 2 Tire Trouble, 3 Karate Beavis,
+4 Painting Dudes, 5 Kick The Can, 6 Chuckfest, 7 Soda Jerks, 8 Shoot 'Em,
+9 Digger. The guest's command line is `C:\DTToys\dtty3203.exe /s /t<n-1>`,
+`GetStartupInfoA` says `STARTF_USESHOWWINDOW`/`SW_SHOWNORMAL`, and the
+current directory is `C:\DTToys`, the installer's default folder
+(`BBDTW.INS`: `SdAskDestPath` with "DTToys" on the target disk).
+
+**The registry** (`host/win32/advapi32.cc`, an emulated tree; never the
+host's). `BBDTW.INS` wrote, all REG_SZ, under
+`HKLM\SOFTWARE\Cyclops Software\Desktop Toys Screensaver`: `Path` (the
+install folder), `TSAppName` `Toysel32.exe`, `Sound` `on`, `ScrnSaverSnd`
+`on`, `FavVol` `3`, `FavToy` `4`, `ScrVol` `3`, `ScrToy` `2`; the lane
+seeds those (`ScrToy` = n-1). The program reads them through its own
+`CReg` class (0x417d80: `RegOpenKeyExA` key by key, each created with
+`RegCreateKeyExA` when missing; a value that fails `RegQueryValueExA` and
+`RegQueryValueA` is written back with its default). In `/s` mode it reads
+`Path` (its data is `<Path>\dt03\`) and `ScrnSaverSnd` (else `Sound`);
+its random-toy path (0x43128b) reads `ScrToy`. In ghost mode it writes
+nothing. The guest's writes would go to the tree and, as REGEDIT4 text, to
+`C:\WINDOWS\REGISTRY.INI` in the state overlay (memory headless).
+
+**The disk.** `C:\DTToys` = the package folder (`DTTY3203.EXE`, `DTTS03.DTV`,
+`DTTS03.DTX`, `DTTS03.ICO`, `DT03\`: `TOYS_PAL`, `TOYSPR\<toy>\*.SPR`,
+`TOYWAV\<toy>\*.WAV`, `DATA\*.WAV`, `HELP*.TXT`, `README.TXT`), read-only
+under the upper `<state>\legacy-<fnv32>\DTTOYS` (the EXE sits in its
+package's root, not in a module dir under it, so the state takes a
+`legacy-` name, as the Desktop Extras' do: INTERACTION.md §7.1) or memory;
+`C:\WINDOWS` an overlay with no lower files. The program opens its palette
+and sprites with `CreateFileA` (mixed case: `dt03\ToySpr\misc\devl.spr`)
+and its sounds with `mmioOpenA` (RIFF descent, `mmioRead`, `mmioGetInfo`/
+`mmioAdvance`/`mmioSetInfo`); it never looks for the CD.
+
+**The process** (`host/win32/modules.hh` `load_exe`, `layout.hh`): in
+program mode there is no stand-in host EXE, so the EXE takes its preferred
+0x400000 (no relocation applied), and `GetModuleHandleA(NULL)`,
+`GetModuleFileNameA(NULL)` (`C:\DTToys\DTTY3203.EXE`) and
+`PEB.ImageBaseAddress` name it. The lane calls its entry point
+(`WinMainCRTStartup`, 0x434940) once, on the lane's guest fiber; it never
+returns while the program runs: the CRT's start (`GetVersion`, its heap,
+`GetCommandLineA`, `GetEnvironmentStringsW`, `GetStartupInfoA`,
+`SetUnhandledExceptionFilter`), then MFC's `AfxWinMain`:
+`AfxWinInit`, the thread's `WH_MSGFILTER` hook, `InitInstance` (the
+single-instance check: `GetTopWindow(NULL)`/`GetWindow(GW_HWNDNEXT)`
+looking for `GWL_USERDATA` 0x3ADE68B1, the tag its frame gets), the SDI
+document template, the frame and its view, then `CWinThread::Run`.
+
+**Windows** (`host/win32/user32_program.cc`). MFC creates its windows
+through a `WH_CBT` hook (`HCBT_CREATEWND` subclasses each one to
+`AfxWndProc`), registers `AfxFrameOrView42s` and
+`Afx:400000:0:40000:1010:80000` (`GetClassInfoA` first), and expects
+Windows 95's creation messages: `WM_GETMINMAXINFO`, `WM_NCCREATE`,
+`WM_NCCALCSIZE`, `WM_CREATE`, `WM_SIZE`, `WM_MOVE`, `WM_PARENTNOTIFY`,
+`WM_SHOWWINDOW`, then activation (`WM_ACTIVATEAPP`, `WM_NCACTIVATE`,
+`WM_ACTIVATE`, focus). The frame, "Screen Wreckers", is a `WS_POPUP`; MFC
+drops its `WS_EX_CLIENTEDGE` (its view has one); once it is shown the
+program reads `SM_CXSCREEN`/`SM_CYSCREEN` and `SM_CXBORDER`/`SM_CYBORDER`
+and `MoveWindow`s it to (-2, -2, w+4, h+4); its view (child
+`AFX_IDW_PANE_FIRST` 0xE900, `WS_EX_CLIENTEDGE`), laid out by
+`RecalcLayout` with `BeginDeferWindowPos`/`DeferWindowPos`, then has its
+client area exactly on the screen. Their class brush is `NULL_BRUSH`: the
+windows never erase, and the toy reads the desktop back through the view's
+DC (`GetDC(view)`, `BitBlt` of the whole screen into its own bitmaps), so
+the desktop seed (`ADSEEDIMG`) is the desktop the toys wreck. The toys
+follow the display's size (verified at 640x480, 1024x768 and the lane's
+x2 guest display for a 320x240 preview); the catalog asks for 640x480.
+
+**Frames and the message loop.** `CSpawnApp::OnIdle` (0x42d8c0) always
+returns TRUE, so `CWinThread::Run` is a busy loop of `PeekMessageA`
+(nothing queued) and `OnIdle`, which steps the toy (0x4309f0) when
+`GetTickCount` says `1000/fps` ms have passed. Every frame ends inside the
+program — at the first API call past the frame's share of the modelled
+machine (`ADMIPS`, lane.hh "Timing": ~2,900 API calls and ~220,000
+instructions a frame), between two 200,000-instruction slices of code that
+makes no API call (`Runtime::set_slice_hook`), or where `GetMessageA` finds
+nothing to deliver (`Runtime::yield_frame`) — and the next frame resumes it
+there. Deterministic headless (two runs of 900 frames of each toy give the
+same frames). An API-free stretch of `ADCALLBUDGET` instructions is a hang.
+
+**Input.** In ghost mode nothing reaches the program: it sees an empty
+input state (`GetAsyncKeyState`, which it polls, reports no key; the
+emulated pointer never moves) and the saver ends the run on input itself.
+Cursor and hook calls are emulated: `SetCursorPos` moves only the emulated
+pointer, hooks are guest procedures the runtime calls.
+
+**Caps Lock: play.** `/s` mode cannot be played: while the application's
+screen-saver flag (app+0x2e4, set by `/s`) is on, the view's button
+handlers (0x4182c0, 0x418370, 0x418410, 0x4185d0) and its mouse-move
+handler past a small threshold (0x418150) post `WM_CLOSE` to the frame
+(0x42db60), and its key poll (0x430de0) ends on Esc, as a screen saver
+does. The toys were played from the toy selector, `TOYSEL32.EXE`, which ran
+`ShellExecuteA(…, <Path>\dtty3203.exe, "/t<n-1>", <Path>, SW_SHOWNORMAL)`
+(0x403b13..0x403bdc; "/r" for a random toy): the toy at once, no ghost
+mode. So the lane does what a user did: **Caps Lock on** (the `CAPS` line,
+or `ADCAPS=1` at start) ends the ghost-mode process and starts the program
+again as `C:\DTToys\dtty3203.exe /t<n-1>`; **Caps Lock off** ends that one
+and starts `/s /t<n-1>` again. A process ends as a killed one did —
+abandoned where it waits (`AbandonGuestCall`), its sound stopped and freed
+(`win32::audio_end_process`: DirectSound buffers, `sndPlaySoundA`'s voice,
+waveOut streams, MCI songs), the runtime gone — and the new one starts on a
+fresh machine over the desktop seed (the killed program's windows gave the
+real desktop back), in the same frame; the registry is seeded again
+(`ScrToy`, and `Sound`/`ScrnSaverSnd` "on" while the saver's sound is on,
+whatever a past Ctrl+S left). From the `CAPS` line on the status is
+interactive (`ADWS_INTERACTIVE`, source AD4, not `ADWS_ROTATE_OK`) with the
+cursor while the program's cursor is on (a cursor set, `ShowCursor`'s count
+not below 0: `ADWS_CURSOR` from the first frame of play), and every input
+line is the program's (`eaten`). `KEY` and `MOUSE` lines become the
+messages of Windows 95's input queue (`user32_program_key/_mouse`, queued,
+no guest code run then): `WM_KEYDOWN`/`WM_KEYUP` (`WM_SYSKEY*` with Alt or
+F10) to the focus window with a US keyboard's scan code, the previous state
+and the transition in lParam; `WM_MOUSEMOVE` (coalesced) and the button
+messages to the capture window or the deepest visible window under the
+pointer, in its client coordinates, with `MK_*`, a second press within 500 ms
+and 4x4 pixels a double click on a `CS_DBLCLKS` class. `GetMessageA`/
+`PeekMessageA` read them after posted messages; `TranslateMessage` posts
+`WM_CHAR`. `GetAsyncKeyState` (the toy polls all 256 keys every step) and
+the mouse buttons read the saver's input state; `GetCursorPos` the emulated
+pointer, which the mouse moves. Karate Beavis's keypad moves need Num Lock
+on, as in 1996: the saver sends the keypad's `VK_NUMPAD1`..`9` only then.
+What each toy takes (all verified with scripted input): Cornholio — the
+mouse moves Beavis, a left click eats; Tire Trouble — the arrow keys steer
+the tire (skid marks); Karate Beavis — keypad 1/4/7 low/mid/high left, 3/6/9
+right, or a left click where the pointer is; Painting Dudes — a left drag
+sprays (Beavis) or brushes (Butt-head), a right click changes the colour, F2
+switches; Kick The Can — the mouse moves, a left click kicks, F2; Chuckfest
+— the mouse slides, holding the left button throws farther, a right click
+picks the object, F2; Soda Jerks — a left click shakes, a right click
+changes the drink, F2; Shoot 'Em — the mouse aims, a left click shoots, a
+right click switches the weapon, Space resets the score, F2; Digger — the
+arrow keys drive, Space mows or plows, F2. `[1]`..`[9]` and `[0]` switch the
+toy inside the program (the catalog's module stays the same; Caps Lock off
+returns to its own toy). **The program's own end while playing** — Esc
+twice (the first ends the toy and shows the selection screen, a TV with a
+remote; the second, with no toy, posts `WM_CLOSE`), Ctrl+Q, the remote's
+EXIT — is a game's end, as the 7th Level protocol treats one (INTERACTION.md
+§4.4): ghost mode again from the next frame, not interactive, until Caps
+Lock goes off and on (the next key or move then ends the saver). Alt ends
+the saver at once, as in every game.
+
+**The wallpaper** (`ADWALLPAPER=1`, `/wallpaper`): ghost mode over the
+seeded wallpaper and nothing else — never play, whatever `ADCAPS` says (the
+mode sends no input); the toys wreck the user's wallpaper picture, which is
+the desktop they read back. Its frames are those of ghost mode with the same
+seed.
+
+**Sound** (`ADSOUND=1`; `host/win32/dsound.cc` over the host's engine):
+with the saver's sound on, `DirectSoundCreate` succeeds and the toys' WAVs
+(8-bit mono 11025/22050 Hz, loaded through `mmioOpenA`) play through
+DirectSound buffers, in ghost mode (`ScrnSaverSnd`) and in play (`Sound`;
+the program's Ctrl+S mutes it until the next start); sound off, no driver.
+Captures (`ADAUDIOOUT`, `ADAUDIOLIVE=0`) are deterministic: two runs of each
+toy, ghost mode and play, give the same bytes, non-silent for 9-15 s of
+each 15 s.
+
+**The end.** `ExitProcess`, an unhandled exception (the CRT's filter ends
+in `ExitProcess`) or the entry point returning stops the run with the
+program's text and its last `MessageBox`, if any (exit 1); a message box
+never waits. At shutdown a running program is abandoned where it waits
+(`win32::AbandonGuestCall`), as the saver's process was ended.
+
+**Surprises.**
+- **The toy starts at its view's first `WM_SETFOCUS`.** The view's
+  `OnCreate` (0x430720) skips the setup the first time (0x4695d8 starts 1);
+  its `WM_SETFOCUS` handler (0x4184b0, message map 0x45b630) runs it
+  (0x432410 → 0x4307c0: the background bitmap, then the toy, 0x4318b0).
+  The view gets the focus only through MFC: `InitialUpdateFrame` finds it
+  with `GetDlgItem(frame, 0xE900)` and makes it the active view, and the
+  frame's `WM_SETFOCUS` hands the focus on. A `GetDlgItem` that knew only
+  dialogs left a frame with no active view and a black screen.
+- **No sound card: 45 `DirectSoundCreate` calls.** `DSOUND.DLL` is imported
+  statically (Windows 95 without DirectX could not load the program; the
+  installer offered DirectX 3). Each sound the toy loads calls
+  `DirectSoundCreate` again while it fails; the host answers
+  `DSERR_NODRIVER` with sound off. With sound on, one device, a primary
+  buffer and about 45 8-bit mono 11025/22050 Hz buffers
+  (`host/win32/dsound.cc` covers every method it calls;
+  `IDirectSoundBuffer::SetCurrentPosition` is outside ADXPL510's verified
+  set).
+- **`/t` is 0-based** and `ScrVol` names the program file, not a volume
+  level; `/s` alone would pick a random toy.
 
 ---
 
